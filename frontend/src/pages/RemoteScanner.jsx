@@ -10,6 +10,20 @@ export default function RemoteScanner() {
   const [lastScanned, setLastScanned] = useState('');
   const [status, setStatus] = useState('waiting'); // waiting, success, error
 
+  useEffect(() => {
+    // Dynamically change the App Icon and Title for this specific route!
+    const appleIcon = document.getElementById('dynamic-apple-icon');
+    const appTitle = document.getElementById('dynamic-app-title');
+    if (appleIcon) appleIcon.href = '/scanner-icon.png';
+    if (appTitle) appTitle.content = 'ERP Scanner';
+
+    return () => {
+      // Revert back when leaving (though usually PWA installs don't trigger cleanup like this)
+      if (appleIcon) appleIcon.href = '/erp-icon.png';
+      if (appTitle) appTitle.content = 'Transport ERP';
+    };
+  }, []);
+
   const handleLink = (e) => {
     e.preventDefault();
     if (code.length === 4) {
