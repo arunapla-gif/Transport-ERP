@@ -70,6 +70,51 @@ export default function WarehouseEntry() {
     }
   };
 
+  const processEwbData = async (ewbData) => {
+    if (ewbData.fromTrdName) {
+      const cnorName = ewbData.fromTrdName.replace(/\s+/g, ' ').trim();
+      setConsignorName(cnorName);
+      if (!consignors.find(c => c.name.trim().toLowerCase() === cnorName.toLowerCase())) {
+        try {
+          const newCnor = await api.post('/consignors', {
+            name: cnorName,
+            gstin: ewbData.fromGstin || '',
+            address: [ewbData.fromAddr1, ewbData.fromAddr2].filter(Boolean).join(', '),
+            city: ewbData.fromPlace || ewbData.fromAddr2 || '',
+            state: ewbData.fromStateCode ? ewbData.fromStateCode.toString() : '',
+            pincode: ewbData.fromPincode ? ewbData.fromPincode.toString() : ''
+          });
+          setConsignors(prev => [...prev, newCnor]);
+        } catch(e) { console.error(e); }
+      }
+    }
+
+    if (ewbData.toTrdName) {
+      const cneeName = ewbData.toTrdName.replace(/\s+/g, ' ').trim();
+      setConsigneeName(cneeName);
+      if (!consignees.find(c => c.name.trim().toLowerCase() === cneeName.toLowerCase())) {
+        try {
+          const newCnee = await api.post('/consignees', {
+            name: cneeName,
+            gstin: ewbData.toGstin || '',
+            address: [ewbData.toAddr1, ewbData.toAddr2].filter(Boolean).join(', '),
+            city: ewbData.toPlace || ewbData.toAddr2 || '',
+            state: ewbData.toStateCode ? ewbData.toStateCode.toString() : '',
+            pincode: ewbData.toPincode ? ewbData.toPincode.toString() : ''
+          });
+          setConsignees(prev => [...prev, newCnee]);
+        } catch(e) { console.error(e); }
+      }
+    }
+
+    if (ewbData.toPlace) setConsigneeCity(ewbData.toPlace);
+    
+    if (ewbData.itemList && ewbData.itemList.length > 0) {
+      const totalQty = ewbData.itemList.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
+      setArticles(totalQty.toString());
+    }
+  };
+
   const handleEwayBillSearch = async () => {
     if (!ewayBillNo.trim()) return;
     try {
@@ -80,15 +125,7 @@ export default function WarehouseEntry() {
       const cleanEwbNo = ewayBillNo.trim().replace(/\s+/g, '');
       const ewbData = await api.get(`/ewaybill/${cleanEwbNo}`);
       
-      // Auto-fill fields based on fetched E-Way Bill
-      if (ewbData.fromTrdName) setConsignorName(ewbData.fromTrdName);
-      if (ewbData.toTrdName) setConsigneeName(ewbData.toTrdName);
-      if (ewbData.toPlace) setConsigneeCity(ewbData.toPlace);
-      
-      if (ewbData.itemList && ewbData.itemList.length > 0) {
-        const totalQty = ewbData.itemList.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
-        setArticles(totalQty.toString());
-      }
+      await processEwbData(ewbData);
       
       setSuccess('E-Way Bill details fetched and filled successfully.');
       setTimeout(() => setSuccess(''), 3000);
@@ -109,14 +146,7 @@ export default function WarehouseEntry() {
       const cleanEwbNo = scannedCode.trim().replace(/\s+/g, '');
       const ewbData = await api.get(`/ewaybill/${cleanEwbNo}`);
       
-      if (ewbData.fromTrdName) setConsignorName(ewbData.fromTrdName);
-      if (ewbData.toTrdName) setConsigneeName(ewbData.toTrdName);
-      if (ewbData.toPlace) setConsigneeCity(ewbData.toPlace);
-      
-      if (ewbData.itemList && ewbData.itemList.length > 0) {
-        const totalQty = ewbData.itemList.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
-        setArticles(totalQty.toString());
-      }
+      await processEwbData(ewbData);
       
       setSuccess('E-Way Bill details fetched from Phone scanner!');
       setTimeout(() => setSuccess(''), 3000);
