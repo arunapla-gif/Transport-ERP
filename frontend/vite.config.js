@@ -8,6 +8,14 @@ export default defineConfig({
     tailwindcss(),
     react()
   ],
+  build: {
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        scanner: 'scanner.html'
+      }
+    }
+  },
   server: {
     proxy: {
       '/socket.io': {

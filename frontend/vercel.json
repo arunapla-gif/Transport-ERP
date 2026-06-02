@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/remote-scanner", "destination": "/scanner.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
