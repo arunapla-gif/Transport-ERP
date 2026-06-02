@@ -1,0 +1,258 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Consignor {
+  id       Int    @id @default(autoincrement())
+  name     String @unique
+  address  String?
+  city     String?
+  district String?
+  state    String?
+  pincode  String?
+  gstin    String?
+  phone    String?
+  email    String?
+  group    String?
+  addresses Json? @default("[]")
+  gcs      GC[]
+}
+
+model Consignee {
+  id       Int    @id @default(autoincrement())
+  name     String @unique
+  address  String?
+  city     String?
+  district String?
+  state    String?
+  pincode  String?
+  gstin    String?
+  phone    String?
+  email    String?
+  group    String?
+  addresses Json? @default("[]")
+  gcs      GC[]
+}
+
+model Vehicle {
+  id            Int     @id @default(autoincrement())
+  vehicleNumber String  @unique
+  type          String?
+  driverName    String?
+  license       String?
+  phone         String?
+  gdms          GDM[]
+  trips         Trip[]
+}
+
+model Godown {
+  id      Int     @id @default(autoincrement())
+  name    String  @unique
+  address String?
+  manager String?
+}
+
+model Unit {
+  id        Int    @id @default(autoincrement())
+  name      String @unique
+  shortName String?
+}
+
+model GC {
+  id             Int       @id @default(autoincrement())
+  gcNumber       String    @unique
+  financialYear  String?
+  type           String?
+  date           DateTime?
+  time           String?
+  status         String?   @default("Created")
+  
+  consignorId    Int?
+  consignor      Consignor? @relation(fields: [consignorId], references: [id])
+  
+  consigneeId    Int?
+  consignee      Consignee? @relation(fields: [consigneeId], references: [id])
+  
+  invoiceDate    DateTime?
+  invoiceNumber  String?
+  privateMark    String?
+  invoiceValue   Float?
+  godown         String?
+  
+  goods          GCItem[]
+  
+  freightFixed   String?
+  freightType    String?
+  freightRate    Float?
+  freightTotal   Float?
+  advancePaid    Float?
+  balanceFreight Float?
+  freightNote    String?
+  
+  // Settlement Allocations
+  paidToDriver   Float?    @default(0)
+  paidToTransport Float?   @default(0)
+
+  gdmId          Int?
+  gdm            GDM?      @relation(fields: [gdmId], references: [id])
+}
+
+model GCItem {
+  id           Int     @id @default(autoincrement())
+  gcId         Int
+  gc           GC      @relation(fields: [gcId], references: [id])
+  articleCount Int?
+  units        String?
+  hsn          String?
+  godown       String?
+  description  String?
+  weight       Float?
+  rate         Float?
+  amount       Float?
+}
+
+model GDM {
+  id            Int       @id @default(autoincrement())
+  gdmNumber     String    @unique
+  date          DateTime?
+  time          String?
+  status        String?   @default("Created")
+  
+  vehicleId     Int?
+  vehicle       Vehicle?  @relation(fields: [vehicleId], references: [id])
+  driverName    String?
+  driverPhone   String?
+  startKm       Int?
+  
+  memoAmount    Float?
+  advanceAmount Float?
+  balanceAmount Float?
+  
+  fromLocation  String?
+  toName        String?
+  deliveryAt    String?
+  destination   String? // Keeping this for backward compatibility if needed
+  
+  gcs           GC[]
+  
+  tripId        Int?
+  trip          Trip?     @relation(fields: [tripId], references: [id])
+}
+
+model Trip {
+  id              Int       @id @default(autoincrement())
+  tripNumber      String    @unique
+  date            DateTime?
+  status          String?   @default("Active")
+  
+  vehicleId       Int?
+  vehicle         Vehicle?  @relation(fields: [vehicleId], references: [id])
+  driverName      String?
+  driverPhone     String?
+  
+  // Financials negotiated per trip
+  lorryHire       Float?
+  advancePaid     Float?
+  balanceAmount   Float?
+  
+  // Sourcing & Commission Details
+  sourcedBy       String?   @default("Direct") // "Direct" or "Broker"
+  brokerName      String?
+  loadingPayer    String?   @default("Transport") // "Transport", "Lorry Owner", "Consignor"
+  loadingCharge   Float?    @default(0)
+  commissionAmount Float?   @default(0)
+  commissionDetails String?
+  
+  // Additional grey areas
+  additions       Float?    @default(0) // Halting, etc
+  deductions      Float?    @default(0) // Damage, Shortage
+  remarks         String?
+  
+  // Settlement Outcomes
+  crossingAmount  Float?    @default(0)
+  returnAmount    Float?    @default(0)
+  settledDate     DateTime?
+  
+  gdms            GDM[]
+}
+
+model FreightBill {
+  id              Int       @id @default(autoincrement())
+  billNumber      String    @unique
+  date            DateTime?
+  transporterName String?
+  lorryNumber     String?
+  fromLocation    String?
+  toLocation      String?
+  
+  gcNumbers       String?   // Comma separated or JSON
+  
+  grossFreight    Float?
+  advancePaid     Float?
+  commission      Float?
+  shortage        Float?
+  tds             Float?
+  netBalance      Float?
+  
+  paymentMode     String?
+  remarks         String?
+  status          String?   @default("Created")
+}
+
+model Company {
+  id              Int       @id @default(autoincrement())
+  gstin           String    @unique
+  tradeName       String?
+  legalName       String?
+  address         String?
+  city            String?
+  district        String?
+  state           String?
+  pincode         String?
+  phone           String?
+  email           String?
+  status          String?   @default("Active")
+}
+
+model DailyTransaction {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @default(now())
+  type        String   // 'INCOME' or 'EXPENSE'
+  category    String   // e.g., 'Fuel', 'Office Supplies', 'Tea/Snacks', 'Salary', 'Other'
+  amount      Float
+  paymentMode String?  // 'Cash', 'Bank Transfer', 'UPI'
+  description String?
+  reference   String?  // Bill number, receipt, etc.
+}
+
+model PartyPayment {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @default(now())
+  partyType   String   // 'Consignee' or 'Consignor'
+  partyId     Int
+  amount      Float
+  paymentMode String?  // 'Cash', 'Bank Transfer', 'UPI', 'Cheque'
+  reference   String?  // UTR number, etc.
+  remarks     String?
+}
+
+model WarehouseInward {
+  id             Int      @id @default(autoincrement())
+  receiptNo      Int?     @unique
+  createdAt      DateTime @default(now())
+  ewayBillNo     String?
+  consignorName  String
+  consigneeName  String
+  consigneeCity  String?
+  articles       Int
+  godownNo       String
+  remarks        String?
+}
