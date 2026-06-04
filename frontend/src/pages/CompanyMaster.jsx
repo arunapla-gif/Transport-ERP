@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
+import toast from 'react-hot-toast';
 import { Building2, Search, Save, Edit2, Trash2, CheckCircle2 } from 'lucide-react';
 
 const Input = ({ label, className = "", ...props }) => (
@@ -15,8 +16,6 @@ const Input = ({ label, className = "", ...props }) => (
 export default function CompanyMaster() {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   
   const [searchGstin, setSearchGstin] = useState('');
   const [isSearchingGst, setIsSearchingGst] = useState(false);
@@ -51,15 +50,12 @@ export default function CompanyMaster() {
 
   const handleSearchGst = async () => {
     if (!searchGstin.trim() || searchGstin.length !== 15) {
-      setError('Please enter a valid 15-digit GSTIN');
-      setTimeout(() => setError(''), 3000);
+      toast.error('Please enter a valid 15-digit GSTIN');
       return;
     }
     
     try {
       setIsSearchingGst(true);
-      setError('');
-      setSuccess('');
       
       const response = await api.get(`/gst-search/${searchGstin.trim()}`);
       
@@ -78,11 +74,9 @@ export default function CompanyMaster() {
         status: response.status || 'Active'
       });
       
-      setSuccess('GST Details Fetched Successfully!');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('GST Details Fetched Successfully!');
     } catch (err) {
-      setError(err.error || err.message || 'Failed to fetch GST details');
-      setTimeout(() => setError(''), 3000);
+      toast.error(err.error || err.message || 'Failed to fetch GST details');
     } finally {
       setIsSearchingGst(false);
     }
@@ -91,27 +85,25 @@ export default function CompanyMaster() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.gstin || !formData.tradeName) {
-      setError('GSTIN and Trade Name are required');
+      toast.error('GSTIN and Trade Name are required');
       return;
     }
 
     try {
       setLoading(true);
-      setError('');
       
       if (formData.id) {
         await api.put(`/companies/${formData.id}`, formData);
-        setSuccess('Company updated successfully!');
+        toast.success('Company updated successfully!');
       } else {
         await api.post('/companies', formData);
-        setSuccess('Company added successfully!');
+        toast.success('Company added successfully!');
       }
       
       resetForm();
       fetchCompanies();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.error || err.message || 'Failed to save company');
+      toast.error(err.error || err.message || 'Failed to save company');
     } finally {
       setLoading(false);
     }
@@ -128,10 +120,9 @@ export default function CompanyMaster() {
     try {
       await api.delete(`/companies/${id}`);
       fetchCompanies();
-      setSuccess('Company deleted successfully');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Company deleted successfully');
     } catch (err) {
-      setError('Failed to delete company');
+      toast.error('Failed to delete company');
     }
   };
 
@@ -167,9 +158,6 @@ export default function CompanyMaster() {
           </div>
         </div>
       </div>
-
-      {error && <div className="p-4 bg-rose-50 text-rose-700 rounded-xl border border-rose-200 font-bold flex items-center gap-2"><span className="text-xl">⚠️</span> {error}</div>}
-      {success && <div className="p-4 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-200 font-bold flex items-center gap-2"><CheckCircle2 size={20} /> {success}</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         

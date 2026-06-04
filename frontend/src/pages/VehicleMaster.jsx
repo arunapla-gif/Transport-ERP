@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
+import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { Edit2, Trash2, Save, Search, Truck } from 'lucide-react';
 
@@ -41,8 +42,6 @@ export default function VehicleMaster() {
     id: null, vehicleNumber: '', type: 'Lorry', driverName: '', license: '', phone: ''
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [vahanData, setVahanData] = useState(null);
   const [fetchingRc, setFetchingRc] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,17 +59,16 @@ export default function VehicleMaster() {
       const data = await api.get('/vehicles');
       setVehicles(data || []);
     } catch (err) {
-      setError('Failed to fetch data.');
+      toast.error('Failed to fetch data.');
     }
   };
 
   const handleFetchRC = async () => {
     if (!formData.vehicleNumber) {
-      setError('Please enter a vehicle number first');
+      toast.error('Please enter a vehicle number first');
       return;
     }
     setFetchingRc(true);
-    setError('');
     setVahanData(null);
     try {
       // Clean vehicle number (remove spaces)
@@ -84,36 +82,32 @@ export default function VehicleMaster() {
         ...prev,
         type: response.vehicleClass.includes('HGV') ? 'Lorry' : prev.type,
       }));
-      setSuccess('RC Details fetched successfully from VAHAN');
+      toast.success('RC Details fetched successfully from VAHAN');
     } catch (err) {
-      setError('Failed to fetch RC details from VAHAN');
+      toast.error('Failed to fetch RC details from VAHAN');
     } finally {
       setFetchingRc(false);
-      setTimeout(() => setSuccess(''), 3000);
     }
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.vehicleNumber) return setError("Vehicle Number is required");
+    if (!formData.vehicleNumber) return toast.error("Vehicle Number is required");
     
     setLoading(true);
-    setError('');
-    setSuccess('');
     try {
       if (formData.id) {
         await api.put(`/vehicles/${formData.id}`, formData);
-        setSuccess('Vehicle updated successfully');
+        toast.success('Vehicle updated successfully');
       } else {
         const { id, ...dataToCreate } = formData;
         await api.post('/vehicles', dataToCreate);
-        setSuccess('Vehicle created successfully');
+        toast.success('Vehicle created successfully');
       }
       setFormData({ id: null, vehicleNumber: '', type: 'Lorry', driverName: '', license: '', phone: '' });
       fetchVehicles();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError('Failed to save record: ' + (err.error || err.message || 'Unknown error'));
+      toast.error('Failed to save record: ' + (err.error || err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -136,10 +130,9 @@ export default function VehicleMaster() {
     try {
       await api.delete(`/vehicles/${id}`);
       fetchVehicles();
-      setSuccess('Record deleted');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Record deleted');
     } catch (err) {
-      setError('Failed to delete record');
+      toast.error('Failed to delete record');
     }
   };
 
@@ -164,9 +157,6 @@ export default function VehicleMaster() {
           </div>
         </div>
       </GlassCard>
-
-      {error && <div className="px-5 py-3 bg-rose-50/90 backdrop-blur-sm text-rose-700 rounded-xl border border-rose-200 text-sm font-bold shadow-sm">{error}</div>}
-      {success && <div className="px-5 py-3 bg-emerald-50/90 backdrop-blur-sm text-emerald-700 rounded-xl border border-emerald-200 text-sm font-bold shadow-sm">{success}</div>}
 
       {/* FORM CARD */}
       <GlassCard>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
+import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { Edit2, Trash2, Building2, Save, FileText, Search, MapPin } from 'lucide-react';
 
@@ -41,8 +42,6 @@ export default function ConsignorMaster() {
     id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: []
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   useKeyboardFlow({
@@ -58,14 +57,14 @@ export default function ConsignorMaster() {
       const data = await api.get('/consignors');
       setConsignors(data);
     } catch (err) {
-      setError('Failed to fetch data.');
+      toast.error('Failed to fetch data.');
     }
   };
 
   const handleVerifyGST = async () => {
-    if (!formData.gstin) return setError('Please enter a GSTIN to verify');
+    if (!formData.gstin) return toast.error('Please enter a GSTIN to verify');
     setLoading(true);
-    setError('');
+    
     try {
       const data = await api.verifyGST(formData.gstin);
       const info = data.taxpayerInfo;
@@ -93,10 +92,9 @@ export default function ConsignorMaster() {
         pincode: addr.pncd || addr.pincode || prev.pincode,
         addresses: additionalAddresses
       }));
-      setSuccess('GST verified and details auto-filled!');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('GST verified and details auto-filled!');
     } catch (err) {
-      setError(err.message || 'Failed to verify GSTIN');
+      toast.error(err.message || 'Failed to verify GSTIN');
     } finally {
       setLoading(false);
     }
@@ -104,25 +102,23 @@ export default function ConsignorMaster() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.name) return setError("Name is required");
+    if (!formData.name) return toast.error("Name is required");
     
     setLoading(true);
-    setError('');
-    setSuccess('');
+    
     try {
       if (formData.id) {
         await api.put(`/consignors/${formData.id}`, formData);
-        setSuccess('Consignor updated successfully');
+        toast.success('Consignor updated successfully');
       } else {
         const { id, ...dataToCreate } = formData;
         await api.post('/consignors', dataToCreate);
-        setSuccess('Consignor created successfully');
+        toast.success('Consignor created successfully');
       }
       setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] });
       fetchConsignors();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError('Failed to save record: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to save record: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -143,10 +139,9 @@ export default function ConsignorMaster() {
     try {
       await api.delete(`/consignors/${id}`);
       fetchConsignors();
-      setSuccess('Record deleted');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Record deleted');
     } catch (err) {
-      setError('Failed to delete record');
+      toast.error('Failed to delete record');
     }
   };
 
@@ -171,9 +166,6 @@ export default function ConsignorMaster() {
           </div>
         </div>
       </GlassCard>
-
-      {error && <div className="px-5 py-3 bg-rose-50/90 backdrop-blur-sm text-rose-700 rounded-xl border border-rose-200 text-sm font-bold shadow-sm">{error}</div>}
-      {success && <div className="px-5 py-3 bg-emerald-50/90 backdrop-blur-sm text-emerald-700 rounded-xl border border-emerald-200 text-sm font-bold shadow-sm">{success}</div>}
 
       {/* FORM CARD */}
       <GlassCard>

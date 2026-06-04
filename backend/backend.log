@@ -926,102 +926,102 @@ Emitted 'error' event on Server instance at:
 
 Node.js v24.15.0
 [31m[nodemon] app crashed - waiting for file changes before starting...[39m
-Stress Test Goods",
-                weight: null,
-                rate: null,
-                amount: null
-              }
-            ]
-          },
-      ?   type?: String | Null,
-      ?   time?: String | Null,
-      ?   status?: String | Null,
-      ?   invoiceDate?: DateTime | Null,
-      ?   invoiceNumber?: String | Null,
-      ?   privateMark?: String | Null,
-      ?   freightFixed?: String | Null,
-      ?   freightType?: String | Null,
-      ?   freightRate?: Float | Null,
-      ?   freightTotal?: Float | Null,
-      ?   advancePaid?: Float | Null,
-      ?   balanceFreight?: Float | Null,
-      ?   freightNote?: String | Null,
-      ?   consignor?: ConsignorCreateNestedOneWithoutGcsInput,
-      ?   consignee?: ConsigneeCreateNestedOneWithoutGcsInput,
-      ?   gdm?: GDMCreateNestedOneWithoutGcsInput
-        },
-        include: {
-          goods: true
-        }
-      })
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
 
-Unknown argument `companyMode`. Available options are marked with ?.
-    at wn (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:29:1363)
-    at $n.handleRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6958)
-    at $n.handleAndLogRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6623)
-    at $n.request (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6307)
-    at async l (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:130:9633)
-    at async /Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:484:16 {
-  clientVersion: '5.22.0'
+Error: listen EADDRINUSE: address already in use :::5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at Object.<anonymous> (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:1591:8)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 5005
 }
-Error creating GC: PrismaClientValidationError: 
-Invalid `prisma.gC.create()` invocation in
-/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:484:32
 
-  481 if (gcData.date) gcData.date = new Date(gcData.date);
-  482 if (gcData.invoiceDate) gcData.invoiceDate = new Date(gcData.invoiceDate);
-  483 
-→ 484 const gc = await prisma.gC.create({
-        data: {
-          gcNumber: "BELL-STRESS-1779988773480-13",
-          companyMode: "B",
-          ~~~~~~~~~~~
-          financialYear: "2026-2027",
-          consignorId: 35,
-          consigneeId: 27,
-          date: new Date("2026-05-28T00:00:00.000Z"),
-          invoiceValue: 5013,
-          goods: {
-            create: [
-              {
-                articleCount: 10,
-                units: "Boxes",
-                hsn: undefined,
-                godown: undefined,
-                description: "Stress Test Goods",
-                weight: null,
-                rate: null,
-                amount: null
-              }
-            ]
-          },
-      ?   type?: String | Null,
-      ?   time?: String | Null,
-      ?   status?: String | Null,
-      ?   invoiceDate?: DateTime | Null,
-      ?   invoiceNumber?: String | Null,
-      ?   privateMark?: String | Null,
-      ?   freightFixed?: String | Null,
-      ?   freightType?: String | Null,
-      ?   freightRate?: Float | Null,
-      ?   freightTotal?: Float | Null,
-      ?   advancePaid?: Float | Null,
-      ?   balanceFreight?: Float | Null,
-      ?   freightNote?: String | Null,
-      ?   consignor?: ConsignorCreateNestedOneWithoutGcsInput,
-      ?   consignee?: ConsigneeCreateNestedOneWithoutGcsInput,
-      ?   gdm?: GDMCreateNestedOneWithoutGcsInput
-        },
-        include: {
-          goods: true
-        }
-      })
+Node.js v24.15.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
 
-Unknown argument `companyMode`. Available options are marked with ?.
-    at wn (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:29:1363)
-    at $n.handleRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6958)
-    at $n.handleAndLogRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6623)
-    at $n.request (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6307)
+Error: listen EADDRINUSE: address already in use :::5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at Object.<anonymous> (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:1591:8)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 5005
+}
+
+Node.js v24.15.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Server is running on http://localhost:5005
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at Object.<anonymous> (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:1592:8)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 5005
+}
+
+Node.js v24.15.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Server is running on http://localhost:5005
+7)
     at async l (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:130:9633)
     at async /Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:484:16 {
   clientVersion: '5.22.0'
@@ -6969,6 +6969,127 @@ Error: listen EADDRINUSE: address already in use :::5005
     at listenInCluster (node:net:2065:12)
     at Server.listen (node:net:2170:7)
     at Object.<anonymous> (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:1535:8)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 5005
+}
+
+Node.js v24.15.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at Object.<anonymous> (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:1591:8)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 5005
+}
+
+Node.js v24.15.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Server is running on http://localhost:5005
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at Object.<anonymous> (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:1592:8)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 5005
+}
+
+Node.js v24.15.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at Object.<anonymous> (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:1592:8)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 5005
+}
+
+Node.js v24.15.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at Object.<anonymous> (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:1592:8)
     at Module._compile (node:internal/modules/cjs/loader:1830:14)
     at Object..js (node:internal/modules/cjs/loader:1961:10)
     at Module.load (node:internal/modules/cjs/loader:1553:32)

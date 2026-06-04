@@ -256,3 +256,12 @@ model WarehouseInward {
   godownNo       String
   remarks        String?
 }
+
+model ApiUsageLog {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  provider  String   // e.g., "WhiteBooks", "Neon DB", "Google Vision", "Render"
+  apiName   String   // e.g., "E-Way Bill Fetch", "RC Verification", "Database Read"
+  status    String   // "Success", "Failed"
+  cost      Float?   @default(0) // 0 if free, else exact amount in INR
+}

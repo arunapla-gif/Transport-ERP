@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
+import toast from 'react-hot-toast';
 import { Plus, Save, Trash2, Edit2, Package, Search } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 
@@ -16,8 +17,6 @@ const DenseInput = ({ label, className = "", ...props }) => (
 export default function GodownMaster() {
   const [godowns, setGodowns] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [search, setSearch] = useState('');
   
   const [editingId, setEditingId] = useState(null);
@@ -33,33 +32,31 @@ export default function GodownMaster() {
       const data = await api.get('/godowns');
       setGodowns(data);
     } catch (err) {
-      setError('Failed to fetch Godowns');
+      toast.error('Failed to fetch Godowns');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      setError("Godown name is required");
+      toast.error("Godown name is required");
       return;
     }
 
     try {
       setLoading(true);
-      setError('');
       if (editingId) {
         await api.put(`/godowns/${editingId}`, formData);
-        setSuccess('Godown updated successfully');
+        toast.success('Godown updated successfully');
       } else {
         await api.post('/godowns', formData);
-        setSuccess('Godown added successfully');
+        toast.success('Godown added successfully');
       }
       setFormData({ name: '' });
       setEditingId(null);
       fetchGodowns();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.error || err.message || 'Failed to save Godown');
+      toast.error(err.error || err.message || 'Failed to save Godown');
     } finally {
       setLoading(false);
     }
@@ -78,18 +75,16 @@ export default function GodownMaster() {
     if (!window.confirm('Are you sure you want to delete this Godown?')) return;
     try {
       await api.delete(`/godowns/${id}`);
-      setSuccess('Godown deleted successfully');
+      toast.success('Godown deleted successfully');
       fetchGodowns();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError('Failed to delete Godown. It might be used in GCs.');
+      toast.error('Failed to delete Godown. It might be used in GCs.');
     }
   };
 
   const handleCancel = () => {
     setEditingId(null);
     setFormData({ name: '' });
-    setError('');
   };
 
   const filteredGodowns = godowns.filter(g => 
@@ -99,9 +94,6 @@ export default function GodownMaster() {
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       
-      {error && <div className="p-3 bg-rose-50 text-rose-700 rounded-lg border border-rose-200 text-sm font-bold flex items-center gap-2 animate-in fade-in"><span className="text-xl">⚠️</span> {error}</div>}
-      {success && <div className="p-3 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 text-sm font-bold flex items-center gap-2 animate-in fade-in"><span className="text-xl">✓</span> {success}</div>}
-
       {/* Form Card */}
       <Card className="p-6 bg-white shadow-xl shadow-slate-200/40 border-slate-200 rounded-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">

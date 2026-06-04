@@ -50,6 +50,62 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Transport ERP Backend is running' });
 });
 
+// Helper to log API usage
+const logApiUsage = async (provider, apiName, status, cost = 0) => {
+  try {
+    await prisma.apiUsageLog.create({
+      data: { provider, apiName, status, cost }
+    });
+  } catch (err) {
+    console.error('Failed to log API usage:', err);
+  }
+};
+
+app.get('/api/usage/stats', async (req, res) => {
+  try {
+    const logs = await prisma.apiUsageLog.findMany({
+      orderBy: { timestamp: 'desc' }
+    });
+    
+    // Group by Daily, Monthly, Yearly
+    const stats = {
+      daily: {},
+      monthly: {},
+      yearly: {},
+      totalCost: 0,
+      recent: logs.slice(0, 100)
+    };
+    
+    logs.forEach(log => {
+      const date = new Date(log.timestamp);
+      const day = date.toISOString().split('T')[0];
+      const month = day.substring(0, 7);
+      const year = day.substring(0, 4);
+      
+      // Daily
+      if (!stats.daily[day]) stats.daily[day] = { count: 0, cost: 0 };
+      stats.daily[day].count += 1;
+      stats.daily[day].cost += log.cost || 0;
+      
+      // Monthly
+      if (!stats.monthly[month]) stats.monthly[month] = { count: 0, cost: 0 };
+      stats.monthly[month].count += 1;
+      stats.monthly[month].cost += log.cost || 0;
+      
+      // Yearly
+      if (!stats.yearly[year]) stats.yearly[year] = { count: 0, cost: 0 };
+      stats.yearly[year].count += 1;
+      stats.yearly[year].cost += log.cost || 0;
+      
+      stats.totalCost += log.cost || 0;
+    });
+    
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch API stats' });
+  }
+});
+
 // ==============================
 // CONSIGNOR ENDPOINTS
 // ==============================
@@ -475,7 +531,7 @@ app.get('/api/gst-search/:gstin', async (req, res) => {
     
     return await mapGstResponse(data, searchGstin, res);
   } catch (error) {
-    console.error("WhiteBooks GST Search Error:", error.message);
+    logApiUsage('WhiteBooks', 'VAHAN RC Search', 'Success', 0.10); // ₹15,000 for 1,50,000 requests = 10 Paisa per call
     res.status(500).json({ error: error.message || 'Failed to fetch GST details from WhiteBooks' });
   }
 });
@@ -949,6 +1005,7 @@ app.get('/api/ewaybill/:ewaybillno', async (req, res) => {
       }
 
       // 2. Fetch E-Way Bill
+      logApiUsage('WhiteBooks', 'Fetch E-Way Bill (NIC)', 'Success', 0.10); // ₹15,000 for 1,50,000 requests = 10 Paisa per call
       const ewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=${ewaybillno}`;
       const response = await fetch(ewbUrl, {
         method: "GET",

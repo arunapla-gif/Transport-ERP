@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
+import toast from 'react-hot-toast';
 import ScannerModal from '../components/ui/ScannerModal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Building2, Camera, PackageCheck, CheckCircle2, Save, Printer, Edit3, Smartphone, X } from 'lucide-react';
@@ -26,8 +27,6 @@ export default function WarehouseEntry() {
   const [isFetchingEwb, setIsFetchingEwb] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [godowns, setGodowns] = useState([]);
   const [consignors, setConsignors] = useState([]);
@@ -127,10 +126,9 @@ export default function WarehouseEntry() {
       
       await processEwbData(ewbData);
       
-      setSuccess('E-Way Bill details fetched and filled successfully.');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('E-Way Bill details fetched and filled successfully.');
     } catch (err) {
-      setError(err.error || err.message || 'Failed to fetch E-Way Bill');
+      toast.error(err.error || err.message || 'Failed to fetch E-Way Bill');
     } finally {
       setIsFetchingEwb(false);
     }
@@ -148,10 +146,9 @@ export default function WarehouseEntry() {
       
       await processEwbData(ewbData);
       
-      setSuccess('E-Way Bill details fetched from Phone scanner!');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('E-Way Bill details fetched from Phone scanner!');
     } catch (err) {
-      setError(err.error || err.message || 'Failed to fetch E-Way Bill from Phone scan');
+      toast.error(err.error || err.message || 'Failed to fetch E-Way Bill from Phone scan');
     } finally {
       setIsFetchingEwb(false);
     }
@@ -186,39 +183,30 @@ export default function WarehouseEntry() {
 
   const handleInward = async () => {
     if (!consignorName || !consigneeName || !articles || !godownNo) {
-      setError('Please fill all mandatory fields (Consignor, Consignee, Articles, Godown No)');
+      toast.error('Please fill all mandatory fields (Consignor, Consignee, Articles, Godown No)');
       return;
     }
 
-    try {
-      setLoading(true);
-      setError('');
-      
-      const payload = {
-        ewayBillNo,
-        consignorName,
-        consigneeName,
-        consigneeCity,
-        articles: parseInt(articles) || 0,
-        godownNo,
-        remarks
-      };
+    const payload = {
+      ewayBillNo,
+      consignorName,
+      consigneeName,
+      consigneeCity,
+      articles: parseInt(articles) || 0,
+      godownNo,
+      remarks
+    };
 
-      let savedEntry;
-      if (editingId) {
-        savedEntry = await api.put(`/warehouse-inward/${editingId}`, payload);
-        setSuccess('Entry updated successfully!');
+    if (editingId) {
+      // For editing, we still wait for the server to confirm changes
+      try {
+        setLoading(true);
+        const savedEntry = await api.put(`/warehouse-inward/${editingId}`, payload);
+        toast.success('Entry updated successfully!');
         setEditingId(null);
-      } else {
-        savedEntry = await api.post('/warehouse-inward', payload);
-        setSuccess('Goods successfully inwarded to Warehouse!');
-      }
-      
-      setRecentEntry(savedEntry);
-      
-      // Reset Form
-      setTimeout(() => {
-        setSuccess('');
+        setRecentEntry(savedEntry);
+        
+        // Clear form
         setEwayBillNo('');
         setConsignorName('');
         setConsigneeName('');
@@ -226,11 +214,41 @@ export default function WarehouseEntry() {
         setArticles('');
         setGodownNo('');
         setRemarks('');
-      }, 2000);
-    } catch (err) {
-      setError(err.message || 'Failed to inward goods');
-    } finally {
-      setLoading(false);
+      } catch (err) {
+        toast.error(err.message || 'Failed to update entry');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // OPTIMISTIC UPDATE: For new entries, clear form instantly to avoid lag
+      const optimisticEntry = {
+        id: 'temp-' + Date.now(),
+        receiptNo: '...', // Temporary placeholder while saving
+        createdAt: new Date().toISOString(),
+        ...payload
+      };
+      
+      // 1. Instantly update the UI box at the bottom
+      setRecentEntry(optimisticEntry);
+      
+      // 2. Instantly clear the form for the next scan
+      setEwayBillNo('');
+      setConsignorName('');
+      setConsigneeName('');
+      setConsigneeCity('');
+      setArticles('');
+      setGodownNo('');
+      setRemarks('');
+
+      // 3. Save to server in the background without freezing the UI
+      api.post('/warehouse-inward', payload)
+        .then(savedEntry => {
+          setRecentEntry(savedEntry); // Update with real ID and Receipt No
+          toast.success('Saved to server!');
+        })
+        .catch(err => {
+          toast.error(err.message || 'Background save failed! Please check connection.');
+        });
     }
   };
 
@@ -263,9 +281,6 @@ export default function WarehouseEntry() {
           <p className="text-xs font-bold text-slate-500 mt-1">Scan E-Way Bill or Enter manually</p>
         </div>
       </div>
-
-      {error && <div className="px-5 py-3 bg-rose-50/90 text-rose-700 rounded-xl border border-rose-200 text-sm font-bold shadow-sm flex items-center gap-2 print:hidden"><span className="text-xl leading-none">⚠️</span> {error}</div>}
-      {success && <div className="px-5 py-3 bg-emerald-50/90 text-emerald-700 rounded-xl border border-emerald-200 text-sm font-bold shadow-sm flex items-center gap-2 print:hidden"><CheckCircle2 size={18} className="text-emerald-500" /> {success}</div>}
 
       {/* EWB Scanner / Fetcher */}
       <GlassCard className="flex flex-col sm:flex-row gap-3 md:gap-4 items-end bg-gradient-to-br from-indigo-50/50 to-white print:hidden">
