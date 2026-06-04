@@ -7,9 +7,9 @@ import { Edit2, Trash2, MapPin, Save, FileText, Search } from 'lucide-react';
 // Premium Dense Primitives
 const DenseInput = ({ label, className = "", ...props }) => (
   <div className={`flex flex-col group ${className}`}>
-    {label && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 transition-colors group-focus-within:text-emerald-600">{label}</label>}
+    {label && <label className="text-[11px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 md:mb-0.5 transition-colors group-focus-within:text-emerald-600">{label}</label>}
     <input 
-      className="w-full h-9 px-2.5 border border-slate-200 rounded-lg bg-white/50 text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 hover:border-slate-300 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" 
+      className="w-full h-12 md:h-9 px-3 md:px-2.5 border border-slate-200 rounded-xl md:rounded-lg bg-white/70 md:bg-white/50 text-base md:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 hover:border-slate-300 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" 
       {...props} 
     />
   </div>
@@ -17,9 +17,9 @@ const DenseInput = ({ label, className = "", ...props }) => (
 
 const DenseSelect = ({ label, options, className = "", ...props }) => (
   <div className={`flex flex-col group ${className}`}>
-    {label && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 transition-colors group-focus-within:text-emerald-600">{label}</label>}
+    {label && <label className="text-[11px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 md:mb-0.5 transition-colors group-focus-within:text-emerald-600">{label}</label>}
     <select 
-      className="w-full h-9 px-2.5 border border-slate-200 rounded-lg bg-white/50 text-sm font-medium text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 hover:border-slate-300 transition-all appearance-none cursor-pointer shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" 
+      className="w-full h-12 md:h-9 px-3 md:px-2.5 border border-slate-200 rounded-xl md:rounded-lg bg-white/70 md:bg-white/50 text-base md:text-sm font-medium text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 hover:border-slate-300 transition-all appearance-none cursor-pointer shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" 
       {...props}
     >
       {options.map((opt, i) => (
@@ -173,7 +173,7 @@ export default function ConsigneeMaster() {
           <DenseInput label="Consignee Name *" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="lg:col-span-2 [&>input]:font-bold [&>input]:text-emerald-900" />
           <div className="flex items-end gap-2">
             <DenseInput label="GSTIN" value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value})} className="flex-1 [&>input]:uppercase" />
-            <button type="button" onClick={handleVerifyGST} disabled={loading} className="h-9 px-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg font-bold text-xs transition-colors border border-emerald-200 whitespace-nowrap">Verify</button>
+            <button type="button" onClick={handleVerifyGST} disabled={loading} className="h-12 md:h-9 px-4 md:px-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors border border-emerald-200 whitespace-nowrap">Verify</button>
           </div>
           
           <DenseInput label="Full Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="lg:col-span-3" />
@@ -188,11 +188,11 @@ export default function ConsigneeMaster() {
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-          <button onClick={() => setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] })} className="h-9 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50 transition-colors">
+          <button onClick={() => setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] })} className="h-12 md:h-9 px-6 md:px-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-lg font-bold text-sm md:text-xs hover:bg-slate-50 transition-colors">
             Clear
           </button>
-          <button onClick={handleSave} disabled={loading} className="h-9 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition-colors flex items-center gap-2 disabled:opacity-70">
-            <Save size={14} /> {formData.id ? 'Update Consignee' : 'Save Consignee'}
+          <button onClick={handleSave} disabled={loading} className="h-12 md:h-9 px-8 md:px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors flex items-center gap-2 disabled:opacity-70">
+            <Save size={16} className="md:w-3.5 md:h-3.5" /> {formData.id ? 'Update Consignee' : 'Save Consignee'}
           </button>
         </div>
       </GlassCard>
