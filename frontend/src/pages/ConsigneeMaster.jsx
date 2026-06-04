@@ -223,20 +223,46 @@ export default function ConsigneeMaster() {
 
       {/* LIST CARD */}
       <GlassCard className="!p-0">
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-slate-50/50">
           <h3 className="font-bold text-sm text-slate-800">Saved Records <span className="text-slate-400 font-medium ml-1">({consignees.length})</span></h3>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="relative w-full md:w-auto">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 md:w-3.5 md:h-3.5" />
             <input 
               type="text" 
               placeholder="Search party..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-8 pl-9 pr-3 w-64 border border-slate-200 rounded-lg bg-white text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+              className="h-12 md:h-8 pl-10 md:pl-9 pr-3 w-full md:w-64 border border-slate-200 rounded-xl md:rounded-lg bg-white text-base md:text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-sm md:shadow-none"
             />
           </div>
         </div>
-        <div className="overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
+
+        {/* MOBILE CARDS VIEW */}
+        <div className="md:hidden divide-y divide-slate-100 max-h-[60vh] overflow-y-auto">
+          {filteredConsignees.length > 0 ? filteredConsignees.map((c) => (
+            <div key={c.id} className="p-4 bg-white hover:bg-slate-50 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                <div className="pr-2">
+                  <h4 className="font-black text-slate-800 text-base leading-tight">{c.name}</h4>
+                  <p className="text-xs font-bold text-emerald-600 mt-1 uppercase tracking-wider">{c.gstin || 'NO GSTIN'}</p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => handleEdit(c)} className="p-2 text-blue-600 bg-blue-50 active:bg-blue-100 rounded-lg transition-colors"><Edit2 size={16} /></button>
+                  <button onClick={() => handleDelete(c.id)} className="p-2 text-rose-600 bg-rose-50 active:bg-rose-100 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm font-medium text-slate-600 mt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <div className="flex items-center gap-1.5 truncate"><MapPin size={14} className="text-slate-400 shrink-0"/> <span className="truncate">{c.city || '-'}</span></div>
+                <div className="flex items-center gap-1.5 truncate">📞 <span className="truncate">{c.phone || '-'}</span></div>
+              </div>
+            </div>
+          )) : (
+            <div className="p-8 text-center font-bold text-slate-500 text-sm">No records found.</div>
+          )}
+        </div>
+
+        {/* DESKTOP TABLE VIEW */}
+        <div className="hidden md:block overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-500 bg-slate-50/80 sticky top-0 backdrop-blur-md z-10 border-b border-slate-200">
               <tr>
