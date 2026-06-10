@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { api } from '../../api';
-import { X, Camera, QrCode, Type, Loader2 } from 'lucide-react';
+import { X, Camera, QrCode, Type, Loader2, Zap, ZapOff } from 'lucide-react';
 
 export default function ScannerModal({ isOpen, onClose, onScan }) {
   const [mode, setMode] = useState('qr'); // 'qr' or 'text'
   const [error, setError] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [ocrProgress, setOcrProgress] = useState('');
+  const [torchOn, setTorchOn] = useState(false);
+  
   
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -19,6 +21,7 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
     let timer;
     setError('');
     setIsScanning(false);
+    setTorchOn(false);
     
     if (mode === 'qr') {
       setIsScanning(true);
@@ -65,8 +68,50 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
+      setTorchOn(false);
     };
   }, [isOpen, mode, onScan]);
+
+  const toggleTorch = async () => {
+    let track = null;
+    
+    // Find the active video track based on the current mode
+    if (mode === 'qr') {
+      const videoEl = document.querySelector('#reader video');
+      if (videoEl && videoEl.srcObject) {
+        track = videoEl.srcObject.getVideoTracks()[0];
+      }
+    } else {
+      if (streamRef.current) {
+        track = streamRef.current.getVideoTracks()[0];
+      }
+    }
+
+    if (track) {
+      try {
+        const capabilities = track.getCapabilities && track.getCapabilities();
+        if (capabilities && capabilities.torch) {
+          const newTorchState = !torchOn;
+          await track.applyConstraints({
+            advanced: [{ torch: newTorchState }]
+          });
+          setTorchOn(newTorchState);
+        } else {
+          // Some iOS devices don't report capabilities correctly but still accept the constraint
+          const newTorchState = !torchOn;
+          await track.applyConstraints({
+            advanced: [{ torch: newTorchState }]
+          });
+          setTorchOn(newTorchState);
+        }
+      } catch (err) {
+        console.error('Torch error:', err);
+        setError('Flashlight is not supported or permission denied on this device/browser.');
+      }
+    } else {
+      setError('Camera not ready. Please wait a moment.');
+    }
+  };
 
   const captureAndScanText = async () => {
     if (!videoRef.current) return;
@@ -135,10 +180,19 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
         {/* Scanner Body */}
         <div className="p-4 flex flex-col items-center justify-center bg-slate-50 min-h-[350px] relative overflow-hidden">
           {error && (
-            <div className="absolute top-4 left-4 right-4 z-20 text-center text-rose-600 font-medium bg-rose-50 border border-rose-200 p-3 rounded-lg shadow-lg animate-in slide-in-from-top-4">
+            <div className="absolute top-4 left-4 right-4 z-40 text-center text-rose-600 font-medium bg-rose-50 border border-rose-200 p-3 rounded-lg shadow-lg animate-in slide-in-from-top-4">
               {error}
             </div>
           )}
+
+          {/* Torch Button (Flashlight) */}
+          <button 
+            onClick={toggleTorch}
+            className={`absolute top-4 right-4 z-30 p-2.5 rounded-full backdrop-blur-md border shadow-lg transition-all ${torchOn ? 'bg-amber-400 text-amber-900 border-amber-300' : 'bg-black/50 text-white border-white/20 hover:bg-black/70'}`}
+            title="Toggle Flashlight"
+          >
+            {torchOn ? <Zap size={20} className="fill-amber-900" /> : <ZapOff size={20} />}
+          </button>
 
           {mode === 'qr' ? (
             <div className="w-full relative rounded-xl overflow-hidden shadow-inner border border-slate-200 bg-black flex-1 flex flex-col">
