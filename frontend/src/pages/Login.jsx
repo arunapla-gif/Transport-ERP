@@ -1,19 +1,42 @@
 import React, { useState } from 'react';
 import { Lock, UserCircle, Truck } from 'lucide-react';
+import { API_BASE } from '../api';
 
 export default function Login({ onLogin }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (pin === '1234') {
-      onLogin('owner');
-    } else if (pin === '0000') {
-      onLogin('worker');
-    } else {
-      setError('Invalid PIN code. Please try again.');
+    if (pin.length !== 4) return;
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Bypass-Tunnel-Reminder': 'true'
+        },
+        body: JSON.stringify({ pin })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        setError(data.error || 'Invalid PIN code. Please try again.');
+        setPin('');
+      } else {
+        localStorage.setItem('erp_token', data.token);
+        onLogin(data.role);
+      }
+    } catch (err) {
+      setError('Connection error. Is the server running?');
       setPin('');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,15 +118,14 @@ export default function Login({ onLogin }) {
             <button 
               type="submit" 
               className={`w-full py-4 rounded-xl font-black text-lg transition-all ${pin.length === 4 ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)]' : 'bg-stone-700 text-stone-500 cursor-not-allowed'}`}
-              disabled={pin.length !== 4}
+              disabled={pin.length !== 4 || loading}
             >
-              Access System
+              {loading ? 'Authenticating...' : 'Access System'}
             </button>
           </form>
           
           <div className="mt-6 pt-6 border-t border-stone-700 text-center flex flex-col gap-1">
-             <span className="text-[10px] text-stone-500 font-bold">Owner PIN: 1234</span>
-             <span className="text-[10px] text-stone-500 font-bold">Worker PIN: 0000</span>
+             <span className="text-[10px] text-stone-500 font-bold">Please contact Admin if you forgot your PIN</span>
           </div>
         </div>
       </div>

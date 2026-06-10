@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import Tesseract from 'tesseract.js';
+import { api } from '../../api';
 import { X, Camera, QrCode, Type, Loader2 } from 'lucide-react';
 
 export default function ScannerModal({ isOpen, onClose, onScan }) {
@@ -83,34 +83,13 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
     
     const imageData = canvas.toDataURL('image/jpeg');
     
-    setOcrProgress('Running AI Text Recognition...');
+    setOcrProgress('Running Cloud AI Vision...');
     try {
-      const result = await Tesseract.recognize(
-        imageData,
-        'eng',
-        { logger: m => {
-            if (m.status === 'recognizing text') {
-               setOcrProgress(`Reading Text: ${Math.round(m.progress * 100)}%`);
-            }
-          } 
-        }
-      );
-      
-      const text = result.data.text;
-      
-      // Look for a 12 digit number, ignoring spaces/dashes.
-      const cleanNumberPattern = /\b(?:\d[\s-]*){12}\b/g;
-      const matches = text.match(cleanNumberPattern);
-      
-      if (matches && matches.length > 0) {
-        const ewbNo = matches[0].replace(/[\s-]/g, '');
-        onScan(ewbNo);
-      } else {
-        setError('No 12-digit number found. Please ensure the E-Way bill number is clearly visible.');
-      }
+      const response = await api.post('/scan-ewb', { imageBase64: imageData });
+      onScan(response.ewbNo);
     } catch (err) {
       console.error(err);
-      setError('OCR processing failed. Please try again.');
+      setError(err.message || 'AI processing failed. Please try again.');
     } finally {
       setIsScanning(false);
       setOcrProgress('');

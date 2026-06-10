@@ -7,9 +7,19 @@ import { Edit2, Trash2, Building2, Save, FileText, Search, MapPin } from 'lucide
 // Premium Dense Primitives
 const DenseInput = ({ label, className = "", ...props }) => (
   <div className={`flex flex-col group ${className}`}>
-    {label && <label className="text-[11px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 md:mb-0.5 transition-colors group-focus-within:text-indigo-600">{label}</label>}
+    {label && <label className="text-[11px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 md:mb-0.5 transition-colors group-focus-within:text-emerald-600">{label}</label>}
     <input 
-      className="w-full h-12 md:h-9 px-3 md:px-2.5 border border-slate-200 rounded-xl md:rounded-lg bg-white/70 md:bg-white/50 text-base md:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 hover:border-slate-300 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" 
+      className="w-full h-12 md:h-9 px-3 md:px-2.5 border border-slate-200 rounded-xl md:rounded-lg bg-white/70 md:bg-white/50 text-base md:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 hover:border-slate-300 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" 
+      {...props} 
+    />
+  </div>
+);
+
+const DenseTextarea = ({ label, className = "", ...props }) => (
+  <div className={`flex flex-col group ${className}`}>
+    {label && <label className="text-[11px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 md:mb-0.5 transition-colors group-focus-within:text-emerald-600">{label}</label>}
+    <textarea 
+      className="w-full px-3 py-2 md:px-2.5 border border-slate-200 rounded-xl md:rounded-lg bg-white/70 md:bg-white/50 text-base md:text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 hover:border-slate-300 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] resize-y min-h-[48px]" 
       {...props} 
     />
   </div>
@@ -43,6 +53,7 @@ export default function ConsignorMaster() {
   });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('API_ONLY');
 
   useKeyboardFlow({
     onSave: (e) => handleSave(e || { preventDefault: () => {} })
@@ -71,10 +82,30 @@ export default function ConsignorMaster() {
       if (!info) throw new Error('Invalid GSTIN details');
       const addr = info.pradr?.addr || {};
       
+      const companyName = info.tradeNam || info.lgnm || '';
+      
+      const cleanAddressParts = (parts) => {
+        let joined = parts.filter(Boolean).join(', ');
+        if (!companyName) return joined;
+        
+        try {
+          const cleanName = companyName.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+          if (cleanName) {
+            const regexPattern = cleanName.split(/\s+/).join('\\s*[^a-zA-Z0-9]*\\s*');
+            const regex = new RegExp('^' + regexPattern + '\\s*[^a-zA-Z0-9]*\\s*', 'i');
+            joined = joined.replace(regex, '');
+          }
+        } catch (e) {
+          // Fallback if regex fails
+        }
+        
+        return joined;
+      };
+
       const additionalAddresses = (info.adadr || []).map(a => {
         const adr = a.addr || {};
         return {
-          address: [adr.bno, adr.bnm, adr.st, adr.flno].filter(Boolean).join(', '),
+          address: cleanAddressParts([adr.bno, adr.bnm, adr.st, adr.flno]),
           city: adr.loc || adr.city || '',
           district: adr.dst || '',
           state: adr.stcd || '',
@@ -84,8 +115,8 @@ export default function ConsignorMaster() {
 
       setFormData(prev => ({
         ...prev,
-        name: info.tradeNam || info.lgnm || prev.name,
-        address: [addr.bno, addr.bnm, addr.st, addr.flno].filter(Boolean).join(', ') || prev.address,
+        name: companyName || prev.name,
+        address: cleanAddressParts([addr.bno, addr.bnm, addr.st, addr.flno]) || prev.address,
         city: addr.loc || addr.city || prev.city,
         district: addr.dst || prev.district,
         state: addr.stcd || prev.state,
@@ -145,11 +176,20 @@ export default function ConsignorMaster() {
     }
   };
 
-  const filteredConsignors = consignors.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const apiOnlyCount = consignors.filter(c => c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL').length;
+  const oldDataCount = consignors.filter(c => c.migrationType === 'OLD_DATA_ONLY').length;
+  const mergedCount = consignors.filter(c => c.migrationType === 'MERGED_NAME').length;
+
+  const filteredConsignors = consignors.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+    if (activeTab === 'API_ONLY') return matchesSearch && (c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL');
+    if (activeTab === 'OLD_DATA_ONLY') return matchesSearch && c.migrationType === 'OLD_DATA_ONLY';
+    if (activeTab === 'MERGED_NAME') return matchesSearch && c.migrationType === 'MERGED_NAME';
+    return false;
+  });
 
   return (
     <div className="space-y-4 max-w-[1200px] mx-auto pb-10" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
@@ -176,7 +216,7 @@ export default function ConsignorMaster() {
             <button type="button" onClick={handleVerifyGST} disabled={loading} className="h-12 md:h-9 px-4 md:px-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors border border-indigo-200 whitespace-nowrap">Verify</button>
           </div>
           
-          <DenseInput label="Full Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="lg:col-span-3" />
+          <DenseTextarea label="Full Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="lg:col-span-3" rows={2} />
           
           <DenseInput label="City" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
           <DenseInput label="District" value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} />
@@ -210,7 +250,7 @@ export default function ConsignorMaster() {
             {formData.addresses.map((addr, idx) => (
               <div key={idx} className="relative p-3 rounded-lg border border-slate-200 bg-white shadow-sm group">
                 <button onClick={() => setFormData(prev => ({ ...prev, addresses: prev.addresses.filter((_, i) => i !== idx) }))} className="absolute top-2 right-2 p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={12}/></button>
-                <p className="text-xs font-bold text-slate-700 mb-1 line-clamp-1 pr-6">{addr.address || 'No Street Address'}</p>
+                <p className="text-xs font-bold text-slate-700 mb-1 pr-6">{addr.address || 'No Street Address'}</p>
                 <div className="flex gap-2 text-[10px] text-slate-500">
                   <span>{addr.city}</span>•<span>{addr.district}</span>•<span>{addr.state}</span>
                 </div>
@@ -224,9 +264,13 @@ export default function ConsignorMaster() {
       {/* LIST CARD */}
       <GlassCard className="!p-0">
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-slate-50/50">
-          <h3 className="font-bold text-sm text-slate-800">Saved Records <span className="text-slate-400 font-medium ml-1">({consignors.length})</span></h3>
+          <div className="flex bg-slate-200/50 p-1 rounded-lg w-full md:w-auto">
+             <button onClick={() => setActiveTab('API_ONLY')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'API_ONLY' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>API Data ({apiOnlyCount})</button>
+             <button onClick={() => setActiveTab('OLD_DATA_ONLY')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'OLD_DATA_ONLY' ? 'bg-white text-rose-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Kept Old Data ({oldDataCount})</button>
+             <button onClick={() => setActiveTab('MERGED_NAME')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'MERGED_NAME' ? 'bg-white text-blue-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Merged Names ({mergedCount})</button>
+          </div>
           <div className="relative w-full md:w-auto">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 md:w-3.5 md:h-3.5" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 md:w-3.5 md:h-3.5" />
             <input 
               type="text" 
               placeholder="Search party..." 
@@ -237,14 +281,27 @@ export default function ConsignorMaster() {
           </div>
         </div>
 
-        {/* MOBILE CARDS VIEW */}
+        <>
+          {/* MOBILE CARDS VIEW */}
         <div className="md:hidden divide-y divide-slate-100 max-h-[60vh] overflow-y-auto">
           {filteredConsignors.length > 0 ? filteredConsignors.map((c) => (
             <div key={c.id} className="p-4 bg-white hover:bg-slate-50 transition-colors">
               <div className="flex justify-between items-start mb-2">
                 <div className="pr-2">
-                  <h4 className="font-black text-slate-800 text-base leading-tight">{c.name}</h4>
+                  <h4 className="font-black text-slate-800 text-base leading-tight flex items-center gap-1.5">
+                    {c.name}
+                    {c.gstin && c.migrationType !== 'OLD_DATA_ONLY' && <span title="GST Verified" className="flex items-center justify-center w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full border border-emerald-200 text-[10px] font-black shrink-0">✓</span>}
+                  </h4>
+                  {c.legalName && c.legalName !== c.name && (
+                    <p className="text-[11px] font-semibold text-slate-500 mt-1">Legal: {c.legalName}</p>
+                  )}
+                  {Array.isArray(c.tradeNames) && c.tradeNames.length > 0 && c.tradeNames[0] !== c.name && (
+                    <p className="text-[11px] font-semibold text-slate-500 mt-0.5">Trade: {c.tradeNames.join(', ')}</p>
+                  )}
                   <p className="text-xs font-bold text-indigo-600 mt-1 uppercase tracking-wider">{c.gstin || 'NO GSTIN'}</p>
+                  {Array.isArray(c.addresses) && c.addresses.length > 0 && (
+                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-1 inline-block">+{c.addresses.length} Addr</span>
+                  )}
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button onClick={() => handleEdit(c)} className="p-2 text-blue-600 bg-blue-50 active:bg-blue-100 rounded-lg transition-colors"><Edit2 size={16} /></button>
@@ -276,8 +333,28 @@ export default function ConsignorMaster() {
             <tbody className="divide-y divide-slate-100">
               {filteredConsignors.length > 0 ? filteredConsignors.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-4 py-3 font-medium text-slate-800">{c.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{c.city || '-'}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        {c.name}
+                        {c.gstin && c.migrationType !== 'OLD_DATA_ONLY' && <span title="GST Verified" className="flex items-center justify-center w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full border border-emerald-200 text-[10px] font-black shrink-0">✓</span>}
+                      </div>
+                      {c.legalName && c.legalName !== c.name && (
+                        <span className="text-[11px] text-slate-500 font-medium mt-0.5">Legal: {c.legalName}</span>
+                      )}
+                      {Array.isArray(c.tradeNames) && c.tradeNames.length > 0 && c.tradeNames[0] !== c.name && (
+                        <span className="text-[11px] text-slate-500 font-medium mt-0.5">Trade: {c.tradeNames.join(', ')}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    <div className="flex flex-col">
+                      <span>{c.city || '-'}</span>
+                      {Array.isArray(c.addresses) && c.addresses.length > 0 && (
+                        <span className="text-[10px] text-amber-600 font-medium mt-0.5">+{c.addresses.length} Addr</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-slate-600 font-mono text-xs uppercase">{c.gstin || '-'}</td>
                   <td className="px-4 py-3 text-slate-600">{c.phone || '-'}</td>
                   <td className="px-4 py-3">
@@ -295,6 +372,7 @@ export default function ConsignorMaster() {
             </tbody>
           </table>
         </div>
+        </>
       </GlassCard>
     </div>
   );

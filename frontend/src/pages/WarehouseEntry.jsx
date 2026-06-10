@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import ScannerModal from '../components/ui/ScannerModal';
@@ -34,6 +34,10 @@ export default function WarehouseEntry() {
   
   const [recentEntry, setRecentEntry] = useState(null);
   const [editingId, setEditingId] = useState(null);
+
+  // Memoize large dropdown options to prevent mobile lag on every keystroke
+  const consignorOptions = useMemo(() => consignors.map(c => ({ value: c.name, label: c.name })), [consignors]);
+  const consigneeOptions = useMemo(() => consignees.map(c => ({ value: c.name, label: c.name })), [consignees]);
 
   // Form Fields
   const [consignorName, setConsignorName] = useState('');
@@ -340,7 +344,7 @@ export default function WarehouseEntry() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
           <SearchableSelect 
             label="Consignor Name *" 
-            options={consignors.map(c => ({ value: c.name, label: c.name }))}
+            options={consignorOptions}
             value={consignorName} 
             onChange={val => setConsignorName(val)} 
             placeholder="Search Consignor..."
@@ -348,7 +352,7 @@ export default function WarehouseEntry() {
           />
           <SearchableSelect 
             label="Consignee Name *" 
-            options={consignees.map(c => ({ value: c.name, label: c.name }))}
+            options={consigneeOptions}
             value={consigneeName} 
             onChange={val => {
               setConsigneeName(val);

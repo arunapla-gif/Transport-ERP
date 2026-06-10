@@ -4,6 +4,8 @@ const { PrismaClient } = require('@prisma/client');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const http = require('http');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const server = http.createServer(app);
@@ -44,6 +46,73 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
+
+const globalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 300,
+  message: { error: "Too many requests from this IP, please try again later." }
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many login attempts, please try again after 10 minutes." }
+});
+
+const paidApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: { error: "Paid API limit reached. Please try again later." }
+});
+
+app.use('/api', globalLimiter);
+
+app.post('/api/login', loginLimiter, (req, res) => {
+  const { pin } = req.body;
+  const ownerPin = process.env.OWNER_PIN || '1234';
+  const workerPin = process.env.WORKER_PIN || '0000';
+
+  if (pin === ownerPin) {
+    const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ token, role: 'admin' });
+  } else if (pin === workerPin) {
+    const token = jwt.sign({ role: 'worker' }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ token, role: 'worker' });
+  } else {
+    return res.status(401).json({ error: 'Invalid PIN code' });
+  }
+});
+
+const authenticate = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  const token = authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized: Malformed token' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Forbidden: Invalid token' });
+    req.user = user;
+    next();
+  });
+};
+
+// Protect all /api routes EXCEPT the ones specified below (which include health and scanner polling)
+app.use('/api', (req, res, next) => {
+  const excludedPaths = ['/health', '/scanner/poll', '/scanner/push'];
+  // Also exclude /login because it was defined above this middleware, but just in case:
+  if (excludedPaths.some(p => req.path.startsWith(p)) || req.path === '/login') {
+    return next();
+  }
+  return authenticate(req, res, next);
+});
+
+const legacyGcRoutes = require('./routes/legacyGc');
+app.use('/api/legacy-gc', legacyGcRoutes);
+
+const appyflowRoutes = require('./routes/appyflow');
+app.use('/api/appyflow-gst', paidApiLimiter, appyflowRoutes);
 
 // Basic health check endpoint
 app.get('/api/health', (req, res) => {
@@ -128,7 +197,8 @@ app.post('/api/consignors', async (req, res) => {
     });
     res.json(consignor);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create consignor' });
+    console.error("Error creating consignor:", error);
+    res.status(500).json({ error: error.message || 'Failed to create consignor' });
   }
 });
 
@@ -140,7 +210,8 @@ app.put('/api/consignors/:id', async (req, res) => {
     });
     res.json(consignor);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update consignor' });
+    console.error("Error updating consignor:", error);
+    res.status(500).json({ error: error.message || 'Failed to update consignor' });
   }
 });
 
@@ -210,7 +281,8 @@ app.post('/api/consignees', async (req, res) => {
     });
     res.json(consignee);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create consignee' });
+    console.error("Error creating consignee:", error);
+    res.status(500).json({ error: error.message || 'Failed to create consignee' });
   }
 });
 
@@ -222,7 +294,8 @@ app.put('/api/consignees/:id', async (req, res) => {
     });
     res.json(consignee);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update consignee' });
+    console.error("Error updating consignee:", error);
+    res.status(500).json({ error: error.message || 'Failed to update consignee' });
   }
 });
 
@@ -472,7 +545,7 @@ app.delete('/api/godowns/:id', async (req, res) => {
 // ==============================
 // GST SEARCH API (WhiteBooks Live)
 // ==============================
-app.get('/api/gst-search/:gstin', async (req, res) => {
+app.get('/api/gst-search/:gstin', paidApiLimiter, async (req, res) => {
   const { gstin: searchGstin } = req.params;
   
   if (searchGstin.length !== 15) {
@@ -615,15 +688,38 @@ async function mapGstResponse(data, originalGstin, res) {
     ].filter(Boolean).join(", ");
   }
 
+  // Extract Additional Addresses
+  let additionalAddresses = [];
+  if (gstData.adadr && Array.isArray(gstData.adadr)) {
+    additionalAddresses = gstData.adadr.map(a => {
+      const adr = a.addr || {};
+      const fullAddr = [adr.bno, adr.bnm, adr.st, adr.flno].filter(Boolean).join(", ");
+      return {
+        address: fullAddr || 'Address not available',
+        city: adr.loc || adr.city || '',
+        district: adr.dst || '',
+        state: gstStateCodes[adr.stcd] || adr.stcd || '',
+        pincode: adr.pncd || adr.pincode || ''
+      };
+    });
+  }
+
+  // Extract Trade Names (some responses return an array or multiple fields)
+  let tradeNames = [];
+  const primaryTrade = gstData.tradeName || gstData.tradeNam || gstData.lgnm || '';
+  if (primaryTrade) tradeNames.push(primaryTrade);
+
   res.json({
     gstin: (gstData.gstin || searchGstin).toUpperCase(),
-    tradeName: gstData.tradeName || gstData.tradeNam || gstData.lgnm || '',
+    tradeName: primaryTrade,
     legalName: gstData.legalName || gstData.lgnm || '',
+    tradeNames: tradeNames,
     address: addr || 'Address not available',
     city: resolvedCity,
     district: resolvedDistrict,
     state: stateName,
     pincode: pincode,
+    addresses: additionalAddresses,
     status: gstData.status || gstData.sts || 'Active'
   });
 }
@@ -962,7 +1058,7 @@ app.put('/api/gdms/:id', async (req, res) => {
 // ==============================
 // E-WAY BILL ENDPOINTS (WhiteBooks Live GSP)
 // ==============================
-app.get('/api/ewaybill/:ewaybillno', async (req, res) => {
+app.get('/api/ewaybill/:ewaybillno', paidApiLimiter, async (req, res) => {
   try {
     const ewaybillno = req.params.ewaybillno?.replace(/\s+/g, '');
     const priorityIsBell = req.query.company === 'BELL';
@@ -1069,7 +1165,7 @@ app.get('/api/ewaybill/:ewaybillno', async (req, res) => {
 });
 
 // Generate Consolidated E-Way Bill (CEWB)
-app.post('/api/ewaybill/cewb', async (req, res) => {
+app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
   try {
     const { vehicleNo, fromPlace, transDocNo, transDocDate, ewbNos } = req.body;
     const isBell = req.query.company === 'BELL';
@@ -1453,6 +1549,46 @@ app.get('/api/godown-stock', async (req, res) => {
   } catch (error) {
     console.error('Godown Error:', error);
     res.status(500).json({ error: 'Failed to fetch godown stock' });
+  }
+});
+
+// ==========================================
+// OCR / VISION AI (Gemini)
+// ==========================================
+app.post('/api/scan-ewb', async (req, res) => {
+  try {
+    const { imageBase64 } = req.body;
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'Gemini API key is missing in backend.' });
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const prompt = `Extract the 12-digit E-Way Bill number from this image. 
+    It is typically a 12 digit number without spaces, though it might be formatted with spaces or dashes. 
+    Return ONLY the 12 digits as a continuous string. If you cannot find a 12-digit number, return "ERROR".`;
+
+    const imagePart = {
+      inlineData: {
+        data: imageBase64.split(',')[1] || imageBase64,
+        mimeType: "image/jpeg"
+      }
+    };
+
+    const result = await model.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    const text = response.text().trim().replace(/[^0-9]/g, '');
+
+    if (text.length >= 12) {
+      // In case it captures extra numbers, just take the first 12 consecutive ones if possible
+      res.json({ ewbNo: text.substring(0, 12) });
+    } else {
+      res.status(400).json({ error: 'Could not find a clear 12-digit E-Way bill number.' });
+    }
+  } catch (error) {
+    console.error('AI Scan Error:', error);
+    res.status(500).json({ error: 'AI processing failed on the server.' });
   }
 });
 

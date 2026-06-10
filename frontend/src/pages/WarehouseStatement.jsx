@@ -7,10 +7,6 @@ export default function WarehouseStatement() {
   const [inwards, setInwards] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchInwards();
-  }, [date]);
-
   const fetchInwards = async () => {
     try {
       setLoading(true);
@@ -23,6 +19,10 @@ export default function WarehouseStatement() {
     }
   };
 
+  useEffect(() => {
+    fetchInwards();
+  }, [date]);
+
   const totalArticles = inwards.reduce((sum, item) => sum + (item.articles || 0), 0);
 
   const handlePrint = () => {
@@ -34,7 +34,10 @@ export default function WarehouseStatement() {
       <style>
         {`
           @media print {
-            @page { margin: 10mm; } /* Removes browser URL/Date headers & footers */
+            @page { 
+              size: A4 landscape; 
+              margin: 10mm; 
+            }
           }
         `}
       </style>

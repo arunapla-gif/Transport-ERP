@@ -53,7 +53,7 @@ export default function GdmEntry() {
 
   // Despatch List (GCs)
   const [searchGcText, setSearchGcText] = useState('');
-  const [searchCompanyMode, setSearchCompanyMode] = useState('A'); // 'A' for AP, 'B' for BELL
+  const [gdmCompanyMode, setGdmCompanyMode] = useState('A'); // 'A' for AP, 'B' for BELL
   const [gcs, setGcs] = useState([]);
 
   // Legacy Comparison Toggles
@@ -109,7 +109,7 @@ export default function GdmEntry() {
   const handleSearchGc = async () => {
     if (!searchGcText.trim()) return;
     
-    const prefix = searchCompanyMode === 'A' ? 'AP-' : 'BELL-';
+    const prefix = gdmCompanyMode === 'A' ? 'AP-' : 'BELL-';
     const fullGcNumber = `${prefix}${searchGcText.trim()}`;
 
     // Prevent adding duplicates
@@ -203,8 +203,7 @@ export default function GdmEntry() {
     setSuccess('Initiating Smart CEWB Split Generation...');
     
     try {
-      const bellEwbs = gcsForCewb.filter(gc => gc.gcNumber.startsWith('BELL')).map(gc => gc.privateMark).filter(Boolean);
-      const apEwbs = gcsForCewb.filter(gc => !gc.gcNumber.startsWith('BELL')).map(gc => gc.privateMark).filter(Boolean);
+      const gdmEwbs = gcsForCewb.map(gc => gc.privateMark).filter(Boolean);
       
       const basePayload = {
         vehicleNo: lorryDetails.lorryNo.replace(/[^A-Z0-9]/gi, ''), 
@@ -214,17 +213,12 @@ export default function GdmEntry() {
       };
 
       const generatedCewbs = [];
+      const companyString = gdmCompanyMode === 'A' ? 'AP' : 'BELL';
       
-      // 1. Generate for BELL GCs
-      if (bellEwbs.length > 0) {
-        const resBell = await api.post(`/ewaybill/cewb?company=BELL`, { ...basePayload, ewbNos: bellEwbs });
-        if (resBell && resBell.cEwbNo) generatedCewbs.push(`BELL: ${resBell.cEwbNo}`);
-      }
-      
-      // 2. Generate for AP GCs
-      if (apEwbs.length > 0) {
-        const resAp = await api.post(`/ewaybill/cewb?company=AP`, { ...basePayload, ewbNos: apEwbs });
-        if (resAp && resAp.cEwbNo) generatedCewbs.push(`AP: ${resAp.cEwbNo}`);
+      // Generate for strictly single company mode
+      if (gdmEwbs.length > 0) {
+        const res = await api.post(`/ewaybill/cewb?company=${companyString}`, { ...basePayload, ewbNos: gdmEwbs });
+        if (res && res.cEwbNo) generatedCewbs.push(`${companyString}: ${res.cEwbNo}`);
       }
       
       // On success, update UI to show valid
@@ -340,6 +334,10 @@ export default function GdmEntry() {
       }
 
       if (gdm.gcs && gdm.gcs.length > 0) {
+        // Infer company mode from the first GC
+        const isBell = gdm.gcs[0].gcNumber?.startsWith('BELL-');
+        setGdmCompanyMode(isBell ? 'B' : 'A');
+        
         setGcs(gdm.gcs.map(gc => ({
           ...gc,
           ewbStatus: gc.status === 'Created' ? 'Pending' : 'Valid', 
@@ -409,9 +407,46 @@ export default function GdmEntry() {
         {/* Delivery Memo (Right - 66%) */}
         <div className="lg:col-span-2">
           <GlassCard>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="bg-indigo-50 text-indigo-600 p-2 rounded-lg shadow-inner border border-indigo-100/50"><PackageCheck size={18} /></div>
-              <h3 className="font-bold text-lg text-slate-800 tracking-tight">Delivery Memo</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-indigo-50 text-indigo-600 p-2 rounded-lg shadow-inner border border-indigo-100/50"><PackageCheck size={18} /></div>
+                <h3 className="font-bold text-lg text-slate-800 tracking-tight">Delivery Memo</h3>
+              </div>
+              
+              {/* Strict GDM Company Toggle */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">GDM Company:</span>
+                <div className="flex bg-slate-100/80 p-0.5 rounded-lg border border-slate-200 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] h-8">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (gcs.length > 0) {
+                        setError('Cannot switch company mode while GCs are loaded. Clear the list first.');
+                        setTimeout(() => setError(''), 3000);
+                        return;
+                      }
+                      setGdmCompanyMode('A');
+                    }}
+                    className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${gdmCompanyMode === 'A' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    AP
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (gcs.length > 0) {
+                        setError('Cannot switch company mode while GCs are loaded. Clear the list first.');
+                        setTimeout(() => setError(''), 3000);
+                        return;
+                      }
+                      setGdmCompanyMode('B');
+                    }}
+                    className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${gdmCompanyMode === 'B' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    BELL
+                  </button>
+                </div>
+              </div>
             </div>
             
             <div className="space-y-3">
@@ -513,28 +548,10 @@ export default function GdmEntry() {
               </div>
               
               <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200/60 shadow-inner shrink-0 w-full sm:w-auto overflow-x-auto">
-                {/* Multi-GSTIN Company Toggle */}
-                <div className="flex bg-slate-100/80 p-0.5 rounded-lg border border-slate-200 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] h-9">
-                  <button 
-                    type="button"
-                    onClick={() => setSearchCompanyMode('A')}
-                    className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${searchCompanyMode === 'A' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    AP
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setSearchCompanyMode('B')}
-                    className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${searchCompanyMode === 'B' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    BELL
-                  </button>
-                </div>
-
                 <div className="flex flex-col group w-48">
                   <div className="flex h-9 rounded-lg overflow-hidden border border-slate-200 bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
                     <span className="flex items-center justify-center px-2 bg-slate-50 text-slate-500 font-bold text-xs border-r border-slate-200">
-                      {searchCompanyMode === 'A' ? 'AP' : 'BELL'}-
+                      {gdmCompanyMode === 'A' ? 'AP' : 'BELL'}-
                     </span>
                     <input 
                       id="gdm-gc-search"

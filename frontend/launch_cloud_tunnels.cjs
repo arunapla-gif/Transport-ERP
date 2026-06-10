@@ -18,12 +18,12 @@ const path = require('path');
     
     // Store original just in case
     if (!apiContent.includes('ORIGINAL_API_BASE')) {
-      const originalApiBaseMatch = apiContent.match(/const API_BASE = (.*);/);
+      const originalApiBaseMatch = apiContent.match(/(?:export )?const API_BASE = (.*);/);
       if (originalApiBaseMatch) {
-         apiContent = apiContent.replace(originalApiBaseMatch[0], `// ORIGINAL_API_BASE=${originalApiBaseMatch[1]}\nconst API_BASE = '${backendTunnel.url}/api';`);
+         apiContent = apiContent.replace(originalApiBaseMatch[0], `// ORIGINAL_API_BASE=${originalApiBaseMatch[1]}\nexport const API_BASE = '${backendTunnel.url}/api';`);
       }
     } else {
-      apiContent = apiContent.replace(/const API_BASE = '.*';/, `const API_BASE = '${backendTunnel.url}/api';`);
+      apiContent = apiContent.replace(/(?:export )?const API_BASE = '.*';/, `export const API_BASE = '${backendTunnel.url}/api';`);
     }
     
     fs.writeFileSync(apiPath, apiContent);

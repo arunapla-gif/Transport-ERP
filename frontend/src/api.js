@@ -1,57 +1,71 @@
-const API_BASE = import.meta.env?.VITE_API_URL || 'http://localhost:5005/api';
+export const API_BASE = import.meta.env?.VITE_API_URL || 'http://localhost:5005/api';
+
+const getHeaders = () => {
+  const token = localStorage.getItem('erp_token');
+  const headers = { 'Bypass-Tunnel-Reminder': 'true' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+const handleResponse = async (res) => {
+  if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem('erp_token');
+    localStorage.removeItem('erp_role');
+    window.location.reload();
+    throw new Error('Session expired. Please log in again.');
+  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Network response was not ok');
+  return data;
+};
 
 export const api = {
   // Generic CRUD
   get: async (endpoint) => {
     const res = await fetch(`${API_BASE}${endpoint}`, {
-      headers: { 'Bypass-Tunnel-Reminder': 'true' }
+      headers: getHeaders()
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Network response was not ok');
-    return data;
+    return handleResponse(res);
   },
   post: async (endpoint, payload) => {
     const res = await fetch(`${API_BASE}${endpoint}`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Bypass-Tunnel-Reminder': 'true'
+        ...getHeaders()
       },
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Network response was not ok');
-    return data;
+    return handleResponse(res);
   },
   put: async (endpoint, payload) => {
     const res = await fetch(`${API_BASE}${endpoint}`, {
       method: 'PUT',
       headers: { 
         'Content-Type': 'application/json',
-        'Bypass-Tunnel-Reminder': 'true'
+        ...getHeaders()
       },
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Network response was not ok');
-    return data;
+    return handleResponse(res);
   },
   delete: async (endpoint) => {
     const res = await fetch(`${API_BASE}${endpoint}`, { 
       method: 'DELETE',
-      headers: { 'Bypass-Tunnel-Reminder': 'true' }
+      headers: { ...getHeaders(), 'Bypass-Tunnel-Reminder': 'true' }
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Network response was not ok');
-    return data;
+    return handleResponse(res);
   },
 
-  // Third Party APIs
+  // Third Party APIs via Backend
   verifyGST: async (gstNo) => {
-    // Using the same API from Crackers ERP
-    const res = await fetch(`https://appyflow.in/api/verifyGST?gstNo=${gstNo}&key_secret=7eWP3WelRNexYGJ172L3Hb8JNrY2`);
+    const res = await fetch(`${API_BASE}/appyflow-gst/${gstNo}`, {
+      headers: { ...getHeaders(), 'Bypass-Tunnel-Reminder': 'true' }
+    });
     const data = await res.json();
-    if (data.error) throw new Error(data.message || 'Invalid GST');
+    if (!res.ok) throw new Error(data.error || 'Invalid GST');
     return data;
   },
   verifyPincode: async (pincode) => {

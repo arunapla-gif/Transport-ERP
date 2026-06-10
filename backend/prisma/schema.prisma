@@ -22,7 +22,10 @@ model Consignor {
   phone    String?
   email    String?
   group    String?
+  migrationType String? @default("MANUAL")
   addresses Json? @default("[]")
+  tradeNames Json? @default("[]")
+  legalName  String?
   gcs      GC[]
 }
 
@@ -38,7 +41,10 @@ model Consignee {
   phone    String?
   email    String?
   group    String?
+  migrationType String? @default("MANUAL")
   addresses Json? @default("[]")
+  tradeNames Json? @default("[]")
+  legalName  String?
   gcs      GC[]
 }
 
@@ -264,4 +270,35 @@ model ApiUsageLog {
   apiName   String   // e.g., "E-Way Bill Fetch", "RC Verification", "Database Read"
   status    String   // "Success", "Failed"
   cost      Float?   @default(0) // 0 if free, else exact amount in INR
+}
+
+model LegacyMaster {
+  id          Int      @id @default(autoincrement())
+  partyType   String   // "CONSIGNOR" or "CONSIGNEE"
+  
+  // Excel Data (Old ERP)
+  oldId       String?
+  oldName     String?
+  oldAddress  String?
+  oldCity     String?
+  oldGstin    String?
+  oldPhone    String?
+  
+  // API Fetched Data
+  apiName         String?
+  apiAddress      String?
+  apiCity         String?
+  apiDistrict     String?
+  apiState        String?
+  apiPincode      String?
+  apiAddresses    Json?    @default("[]")
+  apiLegalName    String?
+  apiTradeNames   Json?    @default("[]")
+  
+  // Staging Status
+  status      String   @default("PENDING") // PENDING, APPROVED, FAILED, MISMATCH
+  provider    String?  // "APPYFLOW" or "WHITEBOOKS"
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
