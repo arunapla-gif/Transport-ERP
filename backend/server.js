@@ -96,7 +96,7 @@ app.get('/api/system-pulse', async (req, res) => {
     const dbStatus = "Connected";
     let urgentAlert = null;
 
-    if (pendingGCs > 100) {
+    if (pendingGCs > 1000) {
       urgentAlert = `Warning: High backlog! ${pendingGCs} GCs are pending dispatch.`;
     } else if (apiCallsToday > 500) {
       urgentAlert = `Warning: High API usage! ${apiCallsToday} API calls made today. Check limits.`;
