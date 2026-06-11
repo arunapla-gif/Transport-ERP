@@ -41,6 +41,11 @@ export default function Login({ onLogin }) {
   };
 
   const handleKeyPress = (digit) => {
+    // Fire haptic feedback on supported devices (Android)
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(40);
+    }
+    
     if (pin.length < 4) {
       setPin(prev => prev + digit);
       setError('');
@@ -48,6 +53,9 @@ export default function Login({ onLogin }) {
   };
 
   const handleDelete = () => {
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(40);
+    }
     setPin(prev => prev.slice(0, -1));
   };
 
@@ -93,7 +101,7 @@ export default function Login({ onLogin }) {
                   key={digit}
                   type="button"
                   onClick={() => handleKeyPress(digit.toString())}
-                  className="h-14 bg-stone-900 rounded-2xl text-xl font-bold text-white hover:bg-stone-700 transition-colors border border-stone-700/50 shadow-sm active:scale-95"
+                  className="h-14 bg-stone-900 rounded-2xl text-xl font-bold text-white hover:bg-stone-700 transition-colors border border-stone-700/50 shadow-sm active:scale-95 touch-manipulation select-none"
                 >
                   {digit}
                 </button>
@@ -102,14 +110,14 @@ export default function Login({ onLogin }) {
               <button
                 type="button"
                 onClick={() => handleKeyPress('0')}
-                className="h-14 bg-stone-900 rounded-2xl text-xl font-bold text-white hover:bg-stone-700 transition-colors border border-stone-700/50 shadow-sm active:scale-95"
+                className="h-14 bg-stone-900 rounded-2xl text-xl font-bold text-white hover:bg-stone-700 transition-colors border border-stone-700/50 shadow-sm active:scale-95 touch-manipulation select-none"
               >
                 0
               </button>
               <button
                 type="button"
                 onClick={handleDelete}
-                className="h-14 bg-stone-900 rounded-2xl text-lg font-bold text-stone-400 hover:text-white hover:bg-stone-700 transition-colors border border-stone-700/50 shadow-sm flex items-center justify-center active:scale-95"
+                className="h-14 bg-stone-900 rounded-2xl text-lg font-bold text-stone-400 hover:text-white hover:bg-stone-700 transition-colors border border-stone-700/50 shadow-sm flex items-center justify-center active:scale-95 touch-manipulation select-none"
               >
                 ⌫
               </button>
