@@ -9,6 +9,7 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
   const [isScanning, setIsScanning] = useState(false);
   const [ocrProgress, setOcrProgress] = useState('');
   const [torchOn, setTorchOn] = useState(false);
+  const [capturedFrame, setCapturedFrame] = useState(null);
   
   
   const videoRef = useRef(null);
@@ -22,6 +23,7 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
     setError('');
     setIsScanning(false);
     setTorchOn(false);
+    setCapturedFrame(null);
     
     if (mode === 'qr') {
       setIsScanning(true);
@@ -118,6 +120,11 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
   const captureAndScanText = async () => {
     if (!videoRef.current) return;
     
+    // Haptic feedback (shutter feel)
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+    
     setIsScanning(true);
     setError('');
     setOcrProgress('Capturing Image...');
@@ -128,7 +135,8 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     
-    const imageData = canvas.toDataURL('image/jpeg');
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    setCapturedFrame(imageData);
     
     setOcrProgress('Running Cloud AI Vision...');
     try {
@@ -139,6 +147,7 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
       setError(err.message || 'AI processing failed. Please try again.');
     } finally {
       setIsScanning(false);
+      setCapturedFrame(null);
       setOcrProgress('');
     }
   };
@@ -147,6 +156,16 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <style>{`
+        @keyframes scanline {
+          0% { top: 0%; }
+          50% { top: 100%; }
+          100% { top: 0%; }
+        }
+        .animate-scanline {
+          animation: scanline 2.5s ease-in-out infinite;
+        }
+      `}</style>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative border border-slate-200 flex flex-col max-h-[90vh]">
         
         {/* Header */}
@@ -218,31 +237,36 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
                 {torchOn ? <Zap size={20} className="fill-amber-900" /> : <ZapOff size={20} />}
               </button>
 
-              <video 
-                ref={videoRef} 
-                className="w-full h-full object-cover" 
-                playsInline 
-                autoPlay 
-                muted
-              ></video>
-              
-              {!isScanning && (
-                <div className="absolute bottom-4 left-0 w-full flex justify-center z-10">
-                  <button 
-                    onClick={captureAndScanText}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full font-bold shadow-[0_4px_12px_rgba(16,185,129,0.4)] transition-all flex items-center gap-2 active:scale-95"
-                  >
-                    <Camera size={18} /> Read Text
-                  </button>
+              {capturedFrame ? (
+                <div className="absolute inset-0 z-20 bg-black overflow-hidden">
+                  <img src={capturedFrame} className="w-full h-full object-cover opacity-50 grayscale" alt="Captured" />
+                  <div className="absolute top-0 left-0 w-full h-[3px] bg-green-500 shadow-[0_0_20px_5px_rgba(34,197,94,0.9)] animate-scanline z-30"></div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center z-40 text-white p-6 text-center">
+                    <p className="font-bold text-lg mb-2 drop-shadow-md">{ocrProgress}</p>
+                    <p className="text-xs text-slate-300 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-md">Scanning for 12-digit E-Way Bill...</p>
+                  </div>
                 </div>
-              )}
-              
-              {isScanning && (
-                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center z-20 text-white p-6 text-center">
-                  <Loader2 size={32} className="animate-spin text-emerald-400 mb-4" />
-                  <p className="font-bold text-lg mb-1">{ocrProgress}</p>
-                  <p className="text-xs text-slate-300">Searching for 12-digit E-Way Bill Number...</p>
-                </div>
+              ) : (
+                <>
+                  <video 
+                    ref={videoRef} 
+                    className="w-full h-full object-cover" 
+                    playsInline 
+                    autoPlay 
+                    muted
+                  ></video>
+                  
+                  {!isScanning && (
+                    <div className="absolute bottom-4 left-0 w-full flex justify-center z-10">
+                      <button 
+                        onClick={captureAndScanText}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full font-bold shadow-[0_4px_12px_rgba(16,185,129,0.4)] transition-all flex items-center gap-2 active:scale-95"
+                      >
+                        <Camera size={18} /> Read Text
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
