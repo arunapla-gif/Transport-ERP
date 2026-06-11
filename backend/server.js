@@ -69,6 +69,56 @@ const paidApiLimiter = rateLimit({
 
 app.use('/api', globalLimiter);
 
+// ==========================================
+// SYSTEM PULSE (For Google Apps Script Ping)
+// ==========================================
+app.get('/api/system-pulse', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. Total Inwards Today
+    const inwardsToday = await prisma.warehouseInward.count({
+      where: { createdAt: { gte: today } }
+    });
+
+    // 2. Total Pending GCs (Created but not dispatched)
+    const pendingGCs = await prisma.gC.count({
+      where: { status: 'Created' }
+    });
+
+    // 3. Total API Usage Today
+    const apiCallsToday = await prisma.apiUsageLog.count({
+      where: { timestamp: { gte: today } }
+    });
+
+    // Determine System Health
+    const dbStatus = "Connected";
+    let urgentAlert = null;
+
+    if (pendingGCs > 100) {
+      urgentAlert = `Warning: High backlog! ${pendingGCs} GCs are pending dispatch.`;
+    } else if (apiCallsToday > 500) {
+      urgentAlert = `Warning: High API usage! ${apiCallsToday} API calls made today. Check limits.`;
+    }
+
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      stats: {
+        inwardsToday,
+        pendingGCs,
+        apiCallsToday,
+        dbStatus
+      },
+      urgentAlert
+    });
+  } catch (error) {
+    console.error('System Pulse Error:', error);
+    res.status(500).json({ error: 'Failed to fetch pulse.' });
+  }
+});
+
 app.post('/api/login', loginLimiter, (req, res) => {
   const { pin } = req.body;
   const ownerPin = process.env.OWNER_PIN || '1234';
