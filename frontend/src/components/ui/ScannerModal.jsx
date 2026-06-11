@@ -185,17 +185,17 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
             </div>
           )}
 
-          {/* Torch Button (Flashlight) */}
-          <button 
-            onClick={toggleTorch}
-            className={`absolute top-4 right-4 z-30 p-2.5 rounded-full backdrop-blur-md border shadow-lg transition-all ${torchOn ? 'bg-amber-400 text-amber-900 border-amber-300' : 'bg-black/50 text-white border-white/20 hover:bg-black/70'}`}
-            title="Toggle Flashlight"
-          >
-            {torchOn ? <Zap size={20} className="fill-amber-900" /> : <ZapOff size={20} />}
-          </button>
-
           {mode === 'qr' ? (
             <div className="w-full relative rounded-xl overflow-hidden shadow-inner border border-slate-200 bg-black flex-1 flex flex-col">
+              {/* Torch Button (Flashlight) inside QR frame */}
+              <button 
+                onClick={toggleTorch}
+                className={`absolute top-3 right-3 z-30 p-2.5 rounded-full backdrop-blur-md border shadow-lg transition-all ${torchOn ? 'bg-amber-400 text-amber-900 border-amber-300' : 'bg-black/50 text-white border-white/20 hover:bg-black/70'}`}
+                title="Toggle Flashlight"
+              >
+                {torchOn ? <Zap size={20} className="fill-amber-900" /> : <ZapOff size={20} />}
+              </button>
+
               <div id="reader" className="w-full h-full flex-1"></div>
               {isScanning && !error && (
                 <div className="absolute top-4 left-0 w-full text-center z-10 pointer-events-none">
@@ -207,6 +207,15 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
             </div>
           ) : (
             <div className="w-full relative rounded-xl overflow-hidden shadow-inner border border-slate-200 bg-black flex-1 flex flex-col">
+              {/* Torch Button (Flashlight) inside AI Text frame */}
+              <button 
+                onClick={toggleTorch}
+                className={`absolute top-3 right-3 z-30 p-2.5 rounded-full backdrop-blur-md border shadow-lg transition-all ${torchOn ? 'bg-amber-400 text-amber-900 border-amber-300' : 'bg-black/50 text-white border-white/20 hover:bg-black/70'}`}
+                title="Toggle Flashlight"
+              >
+                {torchOn ? <Zap size={20} className="fill-amber-900" /> : <ZapOff size={20} />}
+              </button>
+
               <video 
                 ref={videoRef} 
                 className="w-full h-full object-cover" 
