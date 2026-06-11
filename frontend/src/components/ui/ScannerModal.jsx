@@ -256,8 +256,23 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
                     muted
                   ></video>
                   
+                  {/* High-Tech Target Reticle Overlay */}
                   {!isScanning && (
-                    <div className="absolute bottom-4 left-0 w-full flex justify-center z-10">
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10 pb-16">
+                      <div className="w-64 h-16 border border-white/30 bg-white/5 relative flex items-center justify-center">
+                        {/* 4 Corner Accents */}
+                        <div className="absolute top-[-2px] left-[-2px] w-4 h-4 border-t-4 border-l-4 border-emerald-400"></div>
+                        <div className="absolute top-[-2px] right-[-2px] w-4 h-4 border-t-4 border-r-4 border-emerald-400"></div>
+                        <div className="absolute bottom-[-2px] left-[-2px] w-4 h-4 border-b-4 border-l-4 border-emerald-400"></div>
+                        <div className="absolute bottom-[-2px] right-[-2px] w-4 h-4 border-b-4 border-r-4 border-emerald-400"></div>
+                        {/* Optional subtle guidance text inside the box */}
+                        <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Align Number Here</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!isScanning && (
+                    <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
                       <button 
                         onClick={captureAndScanText}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full font-bold shadow-[0_4px_12px_rgba(16,185,129,0.4)] transition-all flex items-center gap-2 active:scale-95"
