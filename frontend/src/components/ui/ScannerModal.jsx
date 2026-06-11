@@ -41,7 +41,8 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
           () => {} // Ignore continuous errors
         ).catch((err) => {
           console.error("Camera error:", err);
-          setError("Failed to access camera for QR.");
+          const errorMsg = err.name || err.message || String(err);
+          setError(`Camera failed (QR): ${errorMsg}. Check permissions or close other camera apps.`);
           setIsScanning(false);
         });
       }, 200);
@@ -56,7 +57,8 @@ export default function ScannerModal({ isOpen, onClose, onScan }) {
         })
         .catch(err => {
           console.error("Video stream error:", err);
-          setError("Failed to access camera for Text Scanner.");
+          const errorMsg = err.name || err.message || String(err);
+          setError(`Camera failed (Text): ${errorMsg}. Check permissions or close other camera apps.`);
         });
     }
 
