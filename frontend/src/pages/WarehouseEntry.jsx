@@ -122,8 +122,6 @@ export default function WarehouseEntry() {
     if (!ewayBillNo.trim()) return;
     try {
       setIsFetchingEwb(true);
-      setError('');
-      setSuccess('');
       
       const cleanEwbNo = ewayBillNo.trim().replace(/\s+/g, '');
       const ewbData = await api.get(`/ewaybill/${cleanEwbNo}`);
@@ -142,8 +140,6 @@ export default function WarehouseEntry() {
     if (!scannedCode.trim()) return;
     try {
       setIsFetchingEwb(true);
-      setError('');
-      setSuccess('');
       
       const cleanEwbNo = scannedCode.trim().replace(/\s+/g, '');
       const ewbData = await api.get(`/ewaybill/${cleanEwbNo}`);

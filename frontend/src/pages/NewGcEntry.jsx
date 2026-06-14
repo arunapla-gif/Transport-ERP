@@ -141,8 +141,6 @@ export default function NewGcEntry() {
     if (!ewayBillNo.trim()) return;
     try {
       setIsFetchingEwb(true);
-      setError('');
-      setSuccess('');
       
       const cleanEwbNo = ewayBillNo.trim().replace(/\s+/g, '');
       const ewbData = await api.get(`/ewaybill/${cleanEwbNo}?company=${gcDetails.companyMode === 'B' ? 'BELL' : 'AP'}`);
@@ -273,8 +271,6 @@ export default function NewGcEntry() {
     
     try {
       setIsReassigning(true);
-      setError('');
-      setSuccess('');
       await api.post('/ewaybill/reassign', {
         ewbNo: fetchedEwbDetails.ewbNo,
         currentCompany: fetchedEwbDetails.company,
@@ -294,8 +290,6 @@ export default function NewGcEntry() {
     if (!searchEditGc.trim()) return;
     try {
       setLoading(true);
-      setError('');
-      setSuccess('');
       
       const gc = await api.get(`/gcs/${searchEditGc.trim()}`);
       
@@ -403,7 +397,6 @@ export default function NewGcEntry() {
   const handleSaveGC = async () => {
     try {
       setLoading(true);
-      setError('');
       
       if (!partyDetails.consignorId || !partyDetails.consigneeId) {
         throw new Error('Please select both Consignor and Consignee');
