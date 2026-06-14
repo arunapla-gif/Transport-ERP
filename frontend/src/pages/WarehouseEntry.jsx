@@ -74,16 +74,33 @@ export default function WarehouseEntry() {
   };
 
   const processEwbData = async (ewbData) => {
+    // Helper to get refined city via Pincode
+    const getRefinedCity = async (pincode, fallbackCity) => {
+      if (!pincode) return fallbackCity ? fallbackCity.trim().toUpperCase() : '';
+      try {
+        const postOffices = await api.verifyPincode(pincode);
+        if (postOffices && postOffices.length > 0 && postOffices[0].District) {
+          return postOffices[0].District.toUpperCase();
+        }
+      } catch (err) {
+        console.warn("Pincode verification failed, using fallback");
+      }
+      return fallbackCity ? fallbackCity.trim().toUpperCase() : '';
+    };
+
     if (ewbData.fromTrdName) {
-      const cnorName = ewbData.fromTrdName.replace(/\s+/g, ' ').trim();
+      const cnorName = ewbData.fromTrdName.replace(/\s+/g, ' ').trim().toUpperCase();
       setConsignorName(cnorName);
-      if (!consignors.find(c => c.name.trim().toLowerCase() === cnorName.toLowerCase())) {
+      
+      const existingCnor = consignors.find(c => c.name.trim().toLowerCase() === cnorName.toLowerCase());
+      if (!existingCnor) {
         try {
+          const refinedCity = await getRefinedCity(ewbData.fromPincode, ewbData.fromPlace || ewbData.fromAddr2);
           const newCnor = await api.post('/consignors', {
             name: cnorName,
             gstin: ewbData.fromGstin || '',
             address: [ewbData.fromAddr1, ewbData.fromAddr2].filter(Boolean).join(', '),
-            city: ewbData.fromPlace || ewbData.fromAddr2 || '',
+            city: refinedCity,
             state: ewbData.fromStateCode ? ewbData.fromStateCode.toString() : '',
             pincode: ewbData.fromPincode ? ewbData.fromPincode.toString() : ''
           });
@@ -93,24 +110,36 @@ export default function WarehouseEntry() {
     }
 
     if (ewbData.toTrdName) {
-      const cneeName = ewbData.toTrdName.replace(/\s+/g, ' ').trim();
+      const cneeName = ewbData.toTrdName.replace(/\s+/g, ' ').trim().toUpperCase();
       setConsigneeName(cneeName);
-      if (!consignees.find(c => c.name.trim().toLowerCase() === cneeName.toLowerCase())) {
+      
+      const existingCnee = consignees.find(c => c.name.trim().toLowerCase() === cneeName.toLowerCase());
+      if (existingCnee) {
+        // Party exists! Use the clean City from our Master DB.
+        if (existingCnee.city) setConsigneeCity(existingCnee.city.toUpperCase());
+      } else {
+        // Brand new Party! Intercept and Refine before saving to Master DB.
         try {
+          const refinedCity = await getRefinedCity(ewbData.toPincode, ewbData.toPlace || ewbData.toAddr2);
           const newCnee = await api.post('/consignees', {
             name: cneeName,
             gstin: ewbData.toGstin || '',
             address: [ewbData.toAddr1, ewbData.toAddr2].filter(Boolean).join(', '),
-            city: ewbData.toPlace || ewbData.toAddr2 || '',
+            city: refinedCity,
             state: ewbData.toStateCode ? ewbData.toStateCode.toString() : '',
             pincode: ewbData.toPincode ? ewbData.toPincode.toString() : ''
           });
           setConsignees(prev => [...prev, newCnee]);
-        } catch(e) { console.error(e); }
+          setConsigneeCity(refinedCity);
+        } catch(e) { 
+          console.error(e); 
+          // Fallback if save fails
+          setConsigneeCity(ewbData.toPlace ? ewbData.toPlace.toUpperCase() : '');
+        }
       }
+    } else if (ewbData.toPlace) {
+      setConsigneeCity(ewbData.toPlace.toUpperCase());
     }
-
-    if (ewbData.toPlace) setConsigneeCity(ewbData.toPlace);
     
     if (ewbData.itemList && ewbData.itemList.length > 0) {
       const totalQty = ewbData.itemList.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
