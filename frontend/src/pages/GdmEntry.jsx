@@ -370,6 +370,7 @@ export default function GdmEntry() {
     
     setLoading(true);
     setIsBulkGenerating(true);
+    setIsCewbGenerating(true);
     setSuccess('Initiating Smart E-Way Bill Auto-Healing & Generation...');
     
     try {
@@ -507,6 +508,7 @@ export default function GdmEntry() {
     } finally {
       setLoading(false);
       setIsBulkGenerating(false);
+      setIsCewbGenerating(false);
     }
   };
 
@@ -1126,19 +1128,7 @@ export default function GdmEntry() {
                 
                 <div className="flex gap-2">
                 <button 
-                  onClick={() => {
-                    setLoading(true);
-                    setIsCewbGenerating(true);
-                    setSuccess("Simulating Consolidated E-Way Bill Generation...");
-                    setTimeout(() => {
-                      const demoCewb = "CEWB-" + Math.floor(1000000000 + Math.random() * 9000000000);
-                      setSuccess(`Consolidated E-Way Bill Generated: ${demoCewb}`);
-                      setGdmDetails(prev => ({ ...prev, cewbNumber: demoCewb }));
-                      setGcs(prev => prev.map(gc => ({ ...gc, ewbStatus: 'Valid', ewbAge: 0 })));
-                      setLoading(false);
-                      setIsCewbGenerating(false);
-                    }, 2000);
-                  }}
+                  onClick={handleBulkGenerateEwayBills}
                   disabled={loading || gcs.length === 0 || isCewbGenerating} 
                   className="h-11 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-wait text-white rounded-xl font-bold text-sm shadow-sm transition-all flex items-center gap-2"
                 >
