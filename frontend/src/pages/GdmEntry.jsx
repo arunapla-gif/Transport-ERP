@@ -154,7 +154,8 @@ export default function GdmEntry() {
       if (unitsRes && unitsRes.length > 0) {
         setAllUnitOptions(unitsRes.map(u => ({
           label: u.description,
-          code: u.code
+          code: u.code,
+          category: u.category
         })));
       }
 
@@ -329,11 +330,16 @@ export default function GdmEntry() {
         gc.goods.forEach(item => {
           const qty = parseInt(item.articleCount) || 0;
           total += qty;
-          const match = allUnitOptions.find(o => o.label.toLowerCase() === (item.units || '').toLowerCase());
-          const code = match ? match.code : null;
-          if (code === 'C/S') cases += qty;
-          else if (code === 'C/N') cartons += qty;
-          else if (code === 'BD/S') bundles += qty;
+          const unitStr = (item.units || '').toLowerCase().trim();
+          const match = allUnitOptions.find(o => 
+            (o.label || '').toLowerCase().trim() === unitStr || 
+            (o.code || '').toLowerCase().trim() === unitStr ||
+            (o.category || '').toLowerCase().trim() === unitStr
+          );
+          const cat = match ? (match.category || '').toLowerCase() : null;
+          if (cat === 'cases') cases += qty;
+          else if (cat === 'cartons') cartons += qty;
+          else if (cat === 'bundles') bundles += qty;
         });
       }
       
@@ -993,11 +999,16 @@ export default function GdmEntry() {
                         gc.goods.forEach(item => {
                           const qty = parseInt(item.articleCount) || 0;
                           totalPkgs += qty;
-                          const match = allUnitOptions.find(o => o.label.toLowerCase() === (item.units || '').toLowerCase());
-                          const code = match ? match.code : null;
-                          if (code === 'C/S') c += qty;
-                          else if (code === 'C/N') n += qty;
-                          else if (code === 'BD/S') b += qty;
+                          const unitStr = (item.units || '').toLowerCase().trim();
+                          const match = allUnitOptions.find(o => 
+                            (o.label || '').toLowerCase().trim() === unitStr || 
+                            (o.code || '').toLowerCase().trim() === unitStr ||
+                            (o.category || '').toLowerCase().trim() === unitStr
+                          );
+                          const cat = match ? (match.category || '').toLowerCase() : null;
+                          if (cat === 'cases') c += qty;
+                          else if (cat === 'cartons') n += qty;
+                          else if (cat === 'bundles') b += qty;
                         });
                       }
                       
