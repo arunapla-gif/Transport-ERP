@@ -1771,7 +1771,7 @@ app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
     const companyStr = req.query.company || company || 'AP';
     const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
 
-    const updUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/updatevehicle?email=${encodeURIComponent(email)}`;
+    const updUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/vehewb?email=${encodeURIComponent(email)}`;
     
     const payload = {
       ewbNo: Number(ewbNo),
@@ -1780,9 +1780,7 @@ app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
       fromState: 33, // TN Code
       reasonCode: "1", // 1 = Due to Break Down / First Time
       reasonRem: "Initial Lorry Assignment",
-      transMode: "1", // 1 = Road
-      transDocNo: "",
-      transDocDate: ""
+      transMode: "1" // 1 = Road
     };
 
     const response = await fetch(updUrl, {
