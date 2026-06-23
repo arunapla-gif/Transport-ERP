@@ -105,11 +105,16 @@ export default function VehicleMaster() {
     
     setLoading(true);
     try {
+      const payloadToSave = {
+        ...formData,
+        grossWeight: formData.grossWeight ? parseInt(formData.grossWeight) : null,
+      };
+
       if (formData.id) {
-        await api.put(`/vehicles/${formData.id}`, formData);
+        await api.put(`/vehicles/${payloadToSave.id}`, payloadToSave);
         toast.success('Vehicle updated successfully');
       } else {
-        const { id, ...dataToCreate } = formData;
+        const { id, ...dataToCreate } = payloadToSave;
         await api.post('/vehicles', dataToCreate);
         toast.success('Vehicle created successfully');
       }
