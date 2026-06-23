@@ -552,12 +552,13 @@ export default function NewGcEntry() {
       const totalAmount = branch === 'BNG' ? goods.reduce((sum, item) => sum + ((parseFloat(item.weight) || 0) * (parseFloat(item.rate) || 0)), 0) : 0;
 
       const { companyMode, ...safeGcDetails } = gcDetails;
+      const { consignorData, consigneeData, isNewConsignor, isNewConsignee, ...safePartyDetails } = partyDetails;
       const finalGcNumber = `${companyMode === 'A' ? 'AP' : 'BELL'}-${safeGcDetails.gcNumber}`;
 
       const payload = {
         ...safeGcDetails,
         gcNumber: finalGcNumber,
-        ...partyDetails,
+        ...safePartyDetails,
         consignorId: parseInt(partyDetails.consignorId),
         consigneeId: parseInt(partyDetails.consigneeId),
         invoiceValue: parseFloat(partyDetails.invoiceValue) || 0,
