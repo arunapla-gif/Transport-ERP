@@ -314,6 +314,7 @@ export default function NewGcEntry() {
         invoiceDate: parsedDate,
         invoiceNumber: ewbData.docNo || ewbData.documentNo || prev.invoiceNumber,
         invoiceValue: ewbData.totInvValue ? ewbData.totInvValue.toString() : prev.invoiceValue,
+        privateMark: cleanEwbNo,
       }));
 
       // We explicitly DO NOT update the `goods` array here.
