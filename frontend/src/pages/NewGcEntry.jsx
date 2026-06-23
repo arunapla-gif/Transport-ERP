@@ -359,11 +359,18 @@ export default function NewGcEntry() {
   };
 
   const loadGcForEdit = async () => {
-    if (!searchEditGc.trim()) return;
+    let searchTerm = searchEditGc.trim();
+    if (!searchTerm) return;
+
+    // Auto-prepend company prefix if user just typed the number
+    if (/^\d+$/.test(searchTerm)) {
+      searchTerm = `${gcDetails.companyMode === 'A' ? 'AP' : 'BELL'}-${searchTerm}`;
+    }
+
     try {
       setLoading(true);
       
-      const gc = await api.get(`/gcs/${searchEditGc.trim()}`);
+      const gc = await api.get(`/gcs/${searchTerm}`);
       
       setActiveGcId(gc.id);
       
