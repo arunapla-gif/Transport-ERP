@@ -1649,7 +1649,7 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
         "client_id": clientId,
         "client_secret": clientSecret,
         "gstin": gstin,
-        "AuthToken": authData.authtoken || authData.data?.authtoken || authData.AuthToken
+        "ip_address": "127.0.0.1"
       },
       body: JSON.stringify(payload)
     });
@@ -1747,7 +1747,7 @@ app.post('/api/ewaybill/regenerate', paidApiLimiter, async (req, res) => {
         "client_id": clientId,
         "client_secret": clientSecret,
         "gstin": gstin,
-        "AuthToken": authData.authtoken || authData.data?.authtoken || authData.AuthToken
+        "ip_address": "127.0.0.1"
       },
       body: JSON.stringify(payload)
     });
@@ -1790,7 +1790,7 @@ app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
         "client_id": clientId,
         "client_secret": clientSecret,
         "gstin": gstin,
-        "AuthToken": authData.authtoken || authData.data?.authtoken || authData.AuthToken
+        "ip_address": "127.0.0.1"
       },
       body: JSON.stringify(payload)
     });
@@ -1963,7 +1963,7 @@ app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
         "client_id": clientId,
         "client_secret": clientSecret,
         "gstin": gstin,
-        "AuthToken": authData.authtoken || authData.data?.authtoken || authData.AuthToken
+        "ip_address": "127.0.0.1"
       },
       body: JSON.stringify(cewbPayload)
     });
