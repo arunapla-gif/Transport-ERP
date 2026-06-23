@@ -4,7 +4,7 @@ import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
-import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp, Loader2, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -968,7 +968,7 @@ export default function GdmEntry() {
                   disabled={loading || isBulkGenerating}
                   className="h-9 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-70 disabled:cursor-wait text-white rounded-lg font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1.5"
                 >
-                  {isBulkGenerating && <Loader2 size={14} className="animate-spin" />}
+                  {isBulkGenerating ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                   {isBulkGenerating ? 'Generating...' : 'Bulk Generate E-Way Bills'}
                 </button>
               </div>
