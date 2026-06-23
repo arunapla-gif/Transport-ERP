@@ -4,7 +4,7 @@ import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
-import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -31,6 +31,8 @@ export default function GdmEntry() {
   const branch = query.get('branch') || 'MAIN';
 
   const [loading, setLoading] = useState(false);
+  const [isBulkGenerating, setIsBulkGenerating] = useState(false);
+  const [isCewbGenerating, setIsCewbGenerating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -367,6 +369,7 @@ export default function GdmEntry() {
     const gcsForCewb = gcs.filter(gc => gc.includeInCewb !== false);
     
     setLoading(true);
+    setIsBulkGenerating(true);
     setSuccess('Initiating Smart E-Way Bill Auto-Healing & Generation...');
     
     try {
@@ -503,6 +506,7 @@ export default function GdmEntry() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
+      setIsBulkGenerating(false);
     }
   };
 
@@ -961,10 +965,11 @@ export default function GdmEntry() {
                 </div>
                 <button 
                   onClick={handleBulkGenerateEwayBills}
-                  disabled={loading}
-                  className="h-9 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white rounded-lg font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1.5"
+                  disabled={loading || isBulkGenerating}
+                  className="h-9 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-70 disabled:cursor-wait text-white rounded-lg font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1.5"
                 >
-                  Bulk Generate E-Way Bills
+                  {isBulkGenerating && <Loader2 size={14} className="animate-spin" />}
+                  {isBulkGenerating ? 'Generating...' : 'Bulk Generate E-Way Bills'}
                 </button>
               </div>
             )}
@@ -1122,18 +1127,23 @@ export default function GdmEntry() {
                 <div className="flex gap-2">
                 <button 
                   onClick={() => {
+                    setLoading(true);
+                    setIsCewbGenerating(true);
                     setSuccess("Simulating Consolidated E-Way Bill Generation...");
                     setTimeout(() => {
                       const demoCewb = "CEWB-" + Math.floor(1000000000 + Math.random() * 9000000000);
                       setSuccess(`Consolidated E-Way Bill Generated: ${demoCewb}`);
                       setGdmDetails(prev => ({ ...prev, cewbNumber: demoCewb }));
                       setGcs(prev => prev.map(gc => ({ ...gc, ewbStatus: 'Valid', ewbAge: 0 })));
+                      setLoading(false);
+                      setIsCewbGenerating(false);
                     }, 2000);
                   }}
-                  disabled={loading || gcs.length === 0} 
-                  className="h-11 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:from-slate-300 disabled:to-slate-300 text-white rounded-xl font-bold text-sm shadow-sm transition-all flex items-center gap-2"
+                  disabled={loading || gcs.length === 0 || isCewbGenerating} 
+                  className="h-11 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-wait text-white rounded-xl font-bold text-sm shadow-sm transition-all flex items-center gap-2"
                 >
-                  <PackageCheck size={16} /> Generate CEWB
+                  {isCewbGenerating ? <Loader2 size={16} className="animate-spin" /> : <PackageCheck size={16} />} 
+                  {isCewbGenerating ? 'Generating...' : 'Generate CEWB'}
                 </button>
                 <button 
                   onClick={handleSaveGDM} 
