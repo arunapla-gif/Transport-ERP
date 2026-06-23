@@ -316,18 +316,10 @@ export default function NewGcEntry() {
         invoiceValue: ewbData.totInvValue ? ewbData.totInvValue.toString() : prev.invoiceValue,
       }));
 
-      // Auto-populate HSN and Description from EWB, and default units to Cases to ensure tallying
-      if (ewbData.itemList && ewbData.itemList.length > 0) {
-        const defaultItem = unitHierarchy && unitHierarchy['Cases'] ? unitHierarchy['Cases'][0] : null;
-        
-        setGoods(ewbData.itemList.map((item, index) => ({
-          id: Date.now() + index,
-          articles: '',
-          units: branch === 'BNG' ? '' : (defaultItem ? defaultItem.label : 'Cases Of Fireworks'),
-          hsn: item.hsnCode?.toString() || (branch === 'BNG' ? '' : (defaultItem?.hsn || '')),
-          description: item.productName || (branch === 'BNG' ? '' : (defaultItem?.goodsDesc || ''))
-        })));
-      }
+      // We explicitly DO NOT update the `goods` array here.
+      // The user wants to preserve whatever Unit and Description is already set in the GC table
+      // (e.g. the default 'Cases of Fireworks') rather than having it split into multiple rows
+      // or overwritten by the EWB's itemList.
       
       setSuccess('E-Way Bill details fetched successfully.');
       setFetchedEwbDetails({ 
