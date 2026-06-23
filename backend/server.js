@@ -1640,6 +1640,10 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
         sgstRate, cgstRate, igstRate, cessRate: 0
       }))
     };
+    
+    if (!payload.vehicleNo) delete payload.vehicleNo;
+    if (!payload.fromAddr2) delete payload.fromAddr2;
+    if (!payload.toAddr2) delete payload.toAddr2;
 
     const genUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`;
     const response = await fetch(genUrl, {
@@ -1953,6 +1957,9 @@ app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
       transDocDate: transDocDate,
       tripSheetEwbBills: ewbNos.map(no => ({ ewbNo: Number(no) }))
     };
+
+    if (!cewbPayload.transDocNo) delete cewbPayload.transDocNo;
+    if (!cewbPayload.transDocDate) delete cewbPayload.transDocDate;
 
     // 3. Post to WhiteBooks CEWB URL
     const cewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/generatecewb?email=${encodeURIComponent(email)}`;
