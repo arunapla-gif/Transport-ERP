@@ -1594,10 +1594,10 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
       supplyType: "O",
       subSupplyType: "1",
       docType: "INV",
-      docNo: gcData.invoiceNumber || gcData.gcNumber,
+      docNo: (gcData.invoiceNumber || gcData.gcNumber).toUpperCase(),
       docDate: formatDateNIC(gcData.invoiceDate || gcData.date),
       
-      fromGstin: gcData.consignor?.gstin || "URP",
+      fromGstin: (gcData.consignor?.gstin || "URP").toUpperCase(),
       fromTrdName: gcData.consignor?.name || "CONSIGNOR",
       fromAddr1: gcData.consignor?.address1 || gcData.consignor?.city || "Sivakasi",
       fromAddr2: gcData.consignor?.address2 || "",
@@ -1606,7 +1606,7 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
       fromStateCode: Number(gcData.ewbRawData?.fromStateCode) || (gcData.consignor?.gstin?.length >= 2 && !isNaN(gcData.consignor?.gstin?.substring(0,2)) ? Number(gcData.consignor.gstin.substring(0,2)) : 33),
       actualFromStateCode: Number(gcData.ewbRawData?.fromStateCode) || (gcData.consignor?.gstin?.length >= 2 && !isNaN(gcData.consignor?.gstin?.substring(0,2)) ? Number(gcData.consignor.gstin.substring(0,2)) : 33),
       
-      toGstin: gcData.consignee?.gstin || "URP",
+      toGstin: (gcData.consignee?.gstin || "URP").toUpperCase(),
       toTrdName: gcData.consignee?.name || "CONSIGNEE",
       toAddr1: gcData.consignee?.address1 || gcData.consignee?.city || "Destination",
       toAddr2: gcData.consignee?.address2 || "",
@@ -1622,9 +1622,9 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
       cessValue: 0,
       totInvValue: Math.round(gcData.invoiceValue || 0),
       
-      transporterId: gstin,
+      transporterId: gstin.toUpperCase(),
       transporterName: companyStr === 'BELL' ? "BELL COMPANY" : "AP TRANSPORT",
-      transDocNo: gcData.gcNumber,
+      transDocNo: gcData.gcNumber.toUpperCase(),
       transMode: "1",
       transDistance: "0", 
       vehicleNo: vehicleNo || "",
