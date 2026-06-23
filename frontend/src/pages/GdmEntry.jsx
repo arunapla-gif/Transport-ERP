@@ -322,7 +322,7 @@ export default function GdmEntry() {
   };
 
   const totals = useMemo(() => {
-    let cases = 0, cartons = 0, bundles = 0, total = 0;
+    let cases = 0, cartons = 0, bundles = 0, others = 0, total = 0;
     let totalFreightAmount = 0;
 
     gcs.forEach(gc => {
@@ -340,6 +340,7 @@ export default function GdmEntry() {
           if (cat === 'cases') cases += qty;
           else if (cat === 'cartons') cartons += qty;
           else if (cat === 'bundles') bundles += qty;
+          else others += qty;
         });
       }
       
@@ -353,7 +354,7 @@ export default function GdmEntry() {
       totalFreightAmount = parseFloat(overallRate) || 0;
     }
 
-    return { cases, cartons, bundles, total, totalFreightAmount };
+    return { cases, cartons, bundles, others, total, totalFreightAmount };
   }, [gcs, freightMode, overallRate, allUnitOptions]);
 
   const handleBulkGenerateEwayBills = async () => {
@@ -1101,6 +1102,12 @@ export default function GdmEntry() {
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Bundles</span>
                   <span className="text-2xl font-black text-indigo-900">{totals.bundles}</span>
                 </div>
+                {totals.others > 0 && (
+                  <div className="flex flex-col border-l border-slate-200 pl-4">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Others</span>
+                    <span className="text-2xl font-black text-slate-700">{totals.others}</span>
+                  </div>
+                )}
                 <div className="flex flex-col border-l border-slate-200 pl-4">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Packages</span>
                   <span className="text-2xl font-black text-indigo-900">{totals.total}</span>
