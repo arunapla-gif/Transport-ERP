@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, ChevronDown, X } from 'lucide-react';
 
-export function SearchableSelect({ label, options, value, onChange, placeholder = "Search...", autoFocus = false, className = "", id, nextFocusId }) {
+export const SearchableSelect = React.memo(function SearchableSelect({ label, options, value, onChange, placeholder = "Search...", autoFocus = false, className = "", id, nextFocusId }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -140,6 +140,10 @@ export function SearchableSelect({ label, options, value, onChange, placeholder 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={() => setIsOpen(true)}
+            autoComplete="off"
+            spellCheck="false"
+            autoCorrect="off"
+            autoCapitalize="none"
           />
         )}
 
@@ -179,4 +183,4 @@ export function SearchableSelect({ label, options, value, onChange, placeholder 
       )}
     </div>
   );
-}
+});

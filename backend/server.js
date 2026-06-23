@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -121,15 +122,19 @@ app.get('/api/system-pulse', async (req, res) => {
 
 app.post('/api/login', loginLimiter, (req, res) => {
   const { pin } = req.body;
-  const ownerPin = process.env.OWNER_PIN || '1234';
-  const workerPin = process.env.WORKER_PIN || '0000';
+  const adminPin = process.env.OWNER_PIN || '1234';
+  const mainPin = process.env.WORKER_PIN || '0000';
+  const bngPin = process.env.WORKER_PIN_BNG || '1111';
 
-  if (pin === ownerPin) {
-    const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
-    return res.json({ token, role: 'admin' });
-  } else if (pin === workerPin) {
-    const token = jwt.sign({ role: 'worker' }, JWT_SECRET, { expiresIn: '7d' });
-    return res.json({ token, role: 'worker' });
+  if (pin === adminPin) {
+    const token = jwt.sign({ role: 'admin', branch: 'ALL' }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ token, role: 'admin', branch: 'ALL' });
+  } else if (pin === mainPin) {
+    const token = jwt.sign({ role: 'worker', branch: 'MAIN' }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ token, role: 'worker', branch: 'MAIN' });
+  } else if (pin === bngPin) {
+    const token = jwt.sign({ role: 'worker', branch: 'AP_BNG' }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ token, role: 'worker', branch: 'AP_BNG' });
   } else {
     return res.status(401).json({ error: 'Invalid PIN code' });
   }
@@ -158,11 +163,20 @@ app.use('/api', (req, res, next) => {
   return authenticate(req, res, next);
 });
 
-const legacyGcRoutes = require('./routes/legacyGc');
-app.use('/api/legacy-gc', legacyGcRoutes);
 
 const appyflowRoutes = require('./routes/appyflow');
 app.use('/api/appyflow-gst', paidApiLimiter, appyflowRoutes);
+
+const legacyMdbRoutes = require('./routes/legacyMdb');
+app.use('/api/legacy-mdb', legacyMdbRoutes);
+
+const ulipRoutes = require('./routes/ulip');
+app.use('/api/ulip', paidApiLimiter, ulipRoutes);
+
+const fastagRoutes = require('./routes/fastag');
+app.use('/api/fastag', paidApiLimiter, fastagRoutes);
+
+
 
 // Basic health check endpoint
 app.get('/api/health', (req, res) => {
@@ -230,20 +244,45 @@ app.get('/api/usage/stats', async (req, res) => {
 // ==============================
 app.get('/api/consignors', async (req, res) => {
   try {
-    const consignors = await prisma.consignor.findMany({ orderBy: { id: 'desc' } });
+    const branch = req.query.branch || 'MAIN';
+    const consignors = await prisma.consignor.findMany({ 
+      where: { branch },
+      orderBy: { id: 'desc' } 
+    });
     res.json(consignors);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch consignors' });
   }
 });
 
+app.get('/api/consignors/search', async (req, res) => {
+  try {
+    const { branch = 'MAIN', q = '' } = req.query;
+    if (!q || q.trim() === '') return res.json([]);
+    const results = await prisma.consignor.findMany({
+      where: {
+        branch,
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { gstin: { contains: q, mode: 'insensitive' } }
+        ]
+      },
+      take: 50,
+      orderBy: { name: 'asc' }
+    });
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
 app.post('/api/consignors', async (req, res) => {
   try {
-    const { name, ...rest } = req.body;
+    const { name, branch = 'MAIN', ...rest } = req.body;
     const consignor = await prisma.consignor.upsert({
-      where: { name },
-      update: rest,
-      create: { name, ...rest }
+      where: { name_branch: { name, branch } },
+      update: { ...rest, branch },
+      create: { name, branch, ...rest }
     });
     res.json(consignor);
   } catch (error) {
@@ -314,20 +353,45 @@ app.post('/api/freight-bills', async (req, res) => {
 // ==============================
 app.get('/api/consignees', async (req, res) => {
   try {
-    const consignees = await prisma.consignee.findMany({ orderBy: { id: 'desc' } });
+    const branch = req.query.branch || 'MAIN';
+    const consignees = await prisma.consignee.findMany({ 
+      where: { branch },
+      orderBy: { id: 'desc' } 
+    });
     res.json(consignees);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch consignees' });
   }
 });
 
+app.get('/api/consignees/search', async (req, res) => {
+  try {
+    const { branch = 'MAIN', q = '' } = req.query;
+    if (!q || q.trim() === '') return res.json([]);
+    const results = await prisma.consignee.findMany({
+      where: {
+        branch,
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { gstin: { contains: q, mode: 'insensitive' } }
+        ]
+      },
+      take: 50,
+      orderBy: { name: 'asc' }
+    });
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
 app.post('/api/consignees', async (req, res) => {
   try {
-    const { name, ...rest } = req.body;
+    const { name, branch = 'MAIN', ...rest } = req.body;
     const consignee = await prisma.consignee.upsert({
-      where: { name },
-      update: rest,
-      create: { name, ...rest }
+      where: { name_branch: { name, branch } },
+      update: { ...rest, branch },
+      create: { name, branch, ...rest }
     });
     res.json(consignee);
   } catch (error) {
@@ -406,6 +470,20 @@ app.delete('/api/vehicles/:id', async (req, res) => {
 });
 
 // ==============================
+// HEALTH & BOOT ENDPOINT
+// ==============================
+app.get('/api/health', async (req, res) => {
+  try {
+    // Lightweight query to ensure Neon database connection is active
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ status: 'healthy', db: 'connected', timestamp: new Date() });
+  } catch (error) {
+    console.error("Health check failed:", error);
+    res.status(503).json({ status: 'unhealthy', db: 'disconnected', error: error.message });
+  }
+});
+
+// ==============================
 // COMPANY ENDPOINTS
 // ==============================
 app.get('/api/companies', async (req, res) => {
@@ -452,6 +530,91 @@ app.delete('/api/companies/:id', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete company' });
+  }
+});
+
+// ==============================
+// UNIT MASTER ENDPOINTS
+// ==============================
+app.get('/api/units', async (req, res) => {
+  try {
+    const units = await prisma.unitMaster.findMany({ 
+      orderBy: [
+        { category: 'asc' },
+        { id: 'asc' }
+      ] 
+    });
+    res.json(units);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/units', async (req, res) => {
+  try {
+    const { category, description, code, color, hsn, goodsDesc } = req.body;
+    const unit = await prisma.unitMaster.create({
+      data: { category, description, code, color: color || 'slate', hsn, goodsDesc }
+    });
+    res.status(201).json(unit);
+  } catch (error) {
+    if (error.code === 'P2002') return res.status(400).json({ error: 'This unit combination already exists.' });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.put('/api/units/:id', async (req, res) => {
+  try {
+    const { category, description, code, color, hsn, goodsDesc } = req.body;
+    const unit = await prisma.unitMaster.update({
+      where: { id: parseInt(req.params.id) },
+      data: { category, description, code, color, hsn, goodsDesc }
+    });
+    res.json(unit);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.delete('/api/units/:id', async (req, res) => {
+  try {
+    await prisma.unitMaster.delete({ where: { id: parseInt(req.params.id) } });
+    res.status(204).send();
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ==============================
+// HSN MASTER ENDPOINTS
+// ==============================
+app.get('/api/hsn', async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (query) {
+      const hsn = await prisma.hSNMaster.findFirst({
+        where: { hsnCode: query }
+      });
+      return res.json(hsn || { error: 'Not found' });
+    }
+    const hsnList = await prisma.hSNMaster.findMany({ orderBy: { hsnCode: 'asc' } });
+    res.json(hsnList);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/hsn', async (req, res) => {
+  try {
+    const { hsnCode, description, gstRate } = req.body;
+    const hsn = await prisma.hSNMaster.upsert({
+      where: { hsnCode },
+      update: { description, gstRate: parseFloat(gstRate) },
+      create: { hsnCode, description, gstRate: parseFloat(gstRate) }
+    });
+    res.status(201).json(hsn);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 
@@ -777,21 +940,68 @@ async function mapGstResponse(data, originalGstin, res) {
 // ==============================
 // GC ENDPOINTS
 // ==============================
+
+// Endpoint to calculate the next GC Number for a specific company mode
+app.get('/api/gcs/next-number', async (req, res) => {
+  try {
+    const mode = req.query.mode || 'A';
+    const branch = req.query.branch || 'MAIN';
+    const prefix = mode === 'A' ? 'AP-' : 'BELL-';
+    
+    // Find all GC numbers starting with the prefix for this branch
+    const gcs = await prisma.gC.findMany({
+      where: {
+        branch,
+        gcNumber: { startsWith: prefix }
+      },
+      select: { gcNumber: true }
+    });
+
+    if (gcs.length === 0) {
+      // If no GCs exist yet for this company, start from 5000
+      return res.json({ nextNumber: '5000' });
+    }
+
+    // Extract the numeric part and find the max
+    let maxNumber = 4999;
+    for (const gc of gcs) {
+      const numStr = gc.gcNumber.replace(prefix, '');
+      const num = parseInt(numStr, 10);
+      if (!isNaN(num) && num > maxNumber) {
+        maxNumber = num;
+      }
+    }
+
+    // The next number is the max + 1
+    res.json({ nextNumber: (maxNumber + 1).toString() });
+  } catch (error) {
+    console.error("Error calculating next GC number:", error);
+    res.status(500).json({ error: 'Failed to calculate next GC number' });
+  }
+});
 app.get('/api/gcs', async (req, res) => {
   try {
+    const branch = req.query.branch || 'MAIN';
+    const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
     const gcs = await prisma.gC.findMany({ 
+      where: { branch },
       orderBy: { id: 'desc' },
+      take: limit,
       include: {
         consignor: true,
         consignee: true,
         goods: true,
         gdm: {
           include: { vehicle: true }
+        },
+        trackingLogs: {
+          orderBy: { timestamp: 'desc' }
         }
       }
     });
     res.json(gcs);
   } catch (error) {
+    console.error("GET /api/gcs failed:", error);
     res.status(500).json({ error: 'Failed to fetch GCs' });
   }
 });
@@ -816,7 +1026,7 @@ app.get('/api/gcs/:gcNumber', async (req, res) => {
     }
     
     // Single fetching (backwards compatibility)
-    const gc = await prisma.gC.findUnique({
+    const gc = await prisma.gC.findFirst({
       where: { gcNumber: gcNumberParam },
       include: {
         consignor: true,
@@ -827,7 +1037,8 @@ app.get('/api/gcs/:gcNumber', async (req, res) => {
     if (!gc) return res.status(404).json({ error: 'GC not found' });
     res.json(gc);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch GC' });
+    console.error("GET GC Error:", error);
+    res.status(500).json({ error: 'Failed to fetch GC: ' + error.message });
   }
 });
 
@@ -853,9 +1064,40 @@ app.put('/api/gcs/:id/freight', async (req, res) => {
   }
 });
 
+app.put('/api/gcs/:id/ewb', async (req, res) => {
+  try {
+    const { privateMark } = req.body;
+    const gcId = parseInt(req.params.id);
+    
+    // Fetch the old GC first to preserve the old E-Way Bill
+    const oldGc = await prisma.gC.findUnique({ where: { id: gcId } });
+    
+    const gc = await prisma.gC.update({
+      where: { id: gcId },
+      data: { privateMark }
+    });
+    
+    // Log the change so we never lose the old EWB history!
+    if (oldGc && oldGc.privateMark && oldGc.privateMark !== privateMark) {
+      await prisma.gcTrackingLog.create({
+        data: {
+          gcId: gcId,
+          actionType: 'EWB_REGENERATED',
+          description: `E-Way Bill automatically regenerated. Old EWB: ${oldGc.privateMark} -> New EWB: ${privateMark}`,
+          metaData: { oldEwb: oldGc.privateMark, newEwb: privateMark }
+        }
+      });
+    }
+
+    res.json(gc);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/gcs', async (req, res) => {
   try {
-    const { goods, consignorGstin, consigneeGstin, consignorAddressPreview, consigneeAddressPreview, ...gcData } = req.body;
+    const { goods, consignorGstin, consigneeGstin, consignorAddressPreview, consigneeAddressPreview, branch = 'MAIN', ...gcData } = req.body;
     
     // Parse numeric fields properly before saving
     if (gcData.freightRate) gcData.freightRate = parseFloat(gcData.freightRate);
@@ -869,6 +1111,7 @@ app.post('/api/gcs', async (req, res) => {
     const gc = await prisma.gC.create({
       data: {
         ...gcData,
+        branch,
         goods: {
           create: goods.map(item => ({
             articleCount: item.articles ? parseInt(item.articles) : null,
@@ -880,10 +1123,20 @@ app.post('/api/gcs', async (req, res) => {
             rate: item.rate ? parseFloat(item.rate) : null,
             amount: item.amount ? parseFloat(item.amount) : null,
           }))
-        }
+        },
+        ...(gcData.ewbNumber ? {
+          trackingLogs: {
+            create: [{
+              actionType: 'EWB_FETCHED',
+              description: `E-Way Bill ${gcData.ewbNumber} fetched and raw data securely stored.`,
+              metaData: gcData.ewbRawData
+            }]
+          }
+        } : {})
       },
       include: {
-        goods: true
+        goods: true,
+        trackingLogs: true
       }
     });
     res.json(gc);
@@ -946,7 +1199,11 @@ app.put('/api/gcs/:id', async (req, res) => {
 // --- GDM ENDPOINTS ---
 app.get('/api/gdms', async (req, res) => {
   try {
+    const branch = req.query.branch || 'MAIN';
     const gdms = await prisma.gDM.findMany({
+      where: { branch },
+      orderBy: { id: 'desc' },
+      take: 50,
       include: {
         vehicle: true,
         gcs: {
@@ -960,6 +1217,7 @@ app.get('/api/gdms', async (req, res) => {
     });
     res.json(gdms);
   } catch (error) {
+    console.error("GET /api/gdms failed:", error);
     res.status(500).json({ error: 'Failed to fetch GDMs' });
   }
 });
@@ -989,7 +1247,7 @@ app.get('/api/gdms/:gdmNumber', async (req, res) => {
     }
     
     // Single fetching
-    const gdm = await prisma.gDM.findUnique({
+    const gdm = await prisma.gDM.findFirst({
       where: { gdmNumber: gdmNumberParam },
       include: {
         vehicle: true,
@@ -1013,13 +1271,42 @@ app.post('/api/gdms', async (req, res) => {
   try {
     const { 
       gdmNumber, date, time, vehicleId, driverName, driverPhone, startKm, 
-      destination, fromLocation, toName, deliveryAt, memoAmount, advanceAmount, balanceAmount, gcIds 
+      destination, fromLocation, toName, deliveryAt, memoAmount, advanceAmount, balanceAmount, gcIds, branch = 'MAIN', dlData
     } = req.body;
+
+    // Auto-Build Driver Profile
+    if (dlData && dlData.licenseNumber) {
+      await prisma.driver.upsert({
+        where: { licenseNumber: dlData.licenseNumber },
+        update: {
+          name: dlData.name || undefined,
+          phone: dlData.phone || undefined,
+          rto: dlData.rto,
+          status: dlData.status,
+          validityNt: dlData.validityNt,
+          validityTr: dlData.validityTr,
+          vehicleClasses: dlData.vehicleClasses,
+          dob: dlData.dob,
+        },
+        create: {
+          licenseNumber: dlData.licenseNumber,
+          name: dlData.name || driverName || 'Unknown',
+          phone: dlData.phone || driverPhone,
+          rto: dlData.rto,
+          status: dlData.status,
+          validityNt: dlData.validityNt,
+          validityTr: dlData.validityTr,
+          vehicleClasses: dlData.vehicleClasses,
+          dob: dlData.dob,
+        }
+      });
+    }
 
     // 1. Create the GDM record
     const gdm = await prisma.gDM.create({
       data: {
         gdmNumber,
+        branch,
         date: date ? new Date(date) : null,
         time: time || null,
         vehicleId: vehicleId ? parseInt(vehicleId) : null,
@@ -1033,6 +1320,7 @@ app.post('/api/gdms', async (req, res) => {
         memoAmount: memoAmount !== undefined && memoAmount !== "" ? parseFloat(memoAmount) : null,
         advanceAmount: advanceAmount !== undefined && advanceAmount !== "" ? parseFloat(advanceAmount) : null,
         balanceAmount: balanceAmount !== undefined && balanceAmount !== "" ? parseFloat(balanceAmount) : null,
+        cewbNumber: req.body.cewbNumber || null
       }
     });
 
@@ -1061,8 +1349,36 @@ app.put('/api/gdms/:id', async (req, res) => {
     const gdmId = parseInt(req.params.id);
     const { 
       date, time, vehicleId, driverName, driverPhone, startKm, 
-      destination, fromLocation, toName, deliveryAt, memoAmount, advanceAmount, balanceAmount, gcIds 
+      destination, fromLocation, toName, deliveryAt, memoAmount, advanceAmount, balanceAmount, gcIds, dlData
     } = req.body;
+
+    // Auto-Build Driver Profile
+    if (dlData && dlData.licenseNumber) {
+      await prisma.driver.upsert({
+        where: { licenseNumber: dlData.licenseNumber },
+        update: {
+          name: dlData.name || undefined,
+          phone: dlData.phone || undefined,
+          rto: dlData.rto,
+          status: dlData.status,
+          validityNt: dlData.validityNt,
+          validityTr: dlData.validityTr,
+          vehicleClasses: dlData.vehicleClasses,
+          dob: dlData.dob,
+        },
+        create: {
+          licenseNumber: dlData.licenseNumber,
+          name: dlData.name || driverName || 'Unknown',
+          phone: dlData.phone || driverPhone,
+          rto: dlData.rto,
+          status: dlData.status,
+          validityNt: dlData.validityNt,
+          validityTr: dlData.validityTr,
+          vehicleClasses: dlData.vehicleClasses,
+          dob: dlData.dob,
+        }
+      });
+    }
 
     // 1. Update the GDM record
     const gdm = await prisma.gDM.update({
@@ -1081,6 +1397,7 @@ app.put('/api/gdms/:id', async (req, res) => {
         memoAmount: memoAmount !== undefined && memoAmount !== "" ? parseFloat(memoAmount) : null,
         advanceAmount: advanceAmount !== undefined && advanceAmount !== "" ? parseFloat(advanceAmount) : null,
         balanceAmount: balanceAmount !== undefined && balanceAmount !== "" ? parseFloat(balanceAmount) : null,
+        cewbNumber: req.body.cewbNumber || null
       }
     });
 
@@ -1186,6 +1503,9 @@ app.get('/api/ewaybill/:ewaybillno', paidApiLimiter, async (req, res) => {
     // 3. Map to existing frontend schema
     res.json({
       detectedCompany,
+      status: ewb.status,
+      validUpto: ewb.validUpto,
+      transporterId: ewb.transporterId,
       ewayBillNo: ewb.ewbNo || ewaybillno,
       ewayBillDate: ewb.ewayBillDate || new Date().toISOString(),
       docNo: ewb.docNo || ewb.documentNo,
@@ -1205,7 +1525,8 @@ app.get('/api/ewaybill/:ewaybillno', paidApiLimiter, async (req, res) => {
       toPlace: ewb.toPlace || ewb.toAddr2 || '',
       toPincode: ewb.toPincode,
       toStateCode: ewb.toStateCode,
-      itemList: ewb.itemList || []
+      itemList: ewb.itemList || [],
+      rawData: ewb // Critical for Bucket 2 Regeneration
     });
 
   } catch (error) {
@@ -1214,7 +1535,373 @@ app.get('/api/ewaybill/:ewaybillno', paidApiLimiter, async (req, res) => {
   }
 });
 
-// Generate Consolidated E-Way Bill (CEWB)
+async function getWhitebooksAuth(companyStr) {
+  const clientId = process.env.WHITEBOOKS_CLIENT_ID?.trim();
+  const clientSecret = process.env.WHITEBOOKS_CLIENT_SECRET?.trim();
+  const email = process.env.WHITEBOOKS_EMAIL?.trim();
+
+  let username, password, gstin;
+  if (companyStr === 'BELL') {
+    username = process.env.BELL_WHITEBOOKS_USERNAME?.trim();
+    password = process.env.BELL_WHITEBOOKS_PASSWORD?.trim();
+    gstin = process.env.BELL_WHITEBOOKS_GSTIN?.trim();
+  } else {
+    username = process.env.WHITEBOOKS_USERNAME?.trim();
+    password = process.env.WHITEBOOKS_PASSWORD?.trim();
+    gstin = process.env.WHITEBOOKS_GSTIN?.trim() || process.env.TRANSPORTER_GSTIN?.trim();
+  }
+  
+  if (!username || !password || !gstin || !clientId || !clientSecret || !email) {
+    throw new Error(`Missing WhiteBooks Credentials for ${companyStr}`);
+  }
+
+  const authUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+  const authResponse = await fetch(authUrl, {
+    method: "GET",
+    headers: { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" }
+  });
+  const authData = await authResponse.json();
+  if (!authResponse.ok || authData.status_cd === "0") {
+     throw new Error(`Auth Failed for ${companyStr}`);
+  }
+  return { authData, gstin, clientId, clientSecret, email };
+}
+
+app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
+  try {
+    const { company, gcData, taxInfo, vehicleNo } = req.body;
+    const companyStr = req.query.company || company || 'AP';
+    const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
+    
+    // Convert dates to NIC dd/mm/yyyy
+    const formatDateNIC = (dateStr) => {
+      if (!dateStr) return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+    };
+
+    // Calculate rates
+    let igstRate = 0, cgstRate = 0, sgstRate = 0;
+    if (taxInfo && taxInfo.totalTaxable > 0) {
+      if (taxInfo.totalIgst > 0) igstRate = Math.round((taxInfo.totalIgst / taxInfo.totalTaxable) * 100);
+      else if (taxInfo.totalCgst > 0) {
+        cgstRate = Math.round((taxInfo.totalCgst / taxInfo.totalTaxable) * 100);
+        sgstRate = Math.round((taxInfo.totalSgst / taxInfo.totalTaxable) * 100);
+      }
+    }
+
+    const payload = {
+      supplyType: "O",
+      subSupplyType: "1",
+      docType: "INV",
+      docNo: gcData.invoiceNumber || gcData.gcNumber,
+      docDate: formatDateNIC(gcData.invoiceDate || gcData.date),
+      
+      fromGstin: gcData.consignor?.gstin || "URP",
+      fromTrdName: gcData.consignor?.name || "CONSIGNOR",
+      fromAddr1: gcData.consignor?.address1 || gcData.consignor?.city || "Sivakasi",
+      fromAddr2: gcData.consignor?.address2 || "",
+      fromPlace: gcData.consignor?.city || "Sivakasi",
+      fromPincode: Number(gcData.consignor?.pincode) || 626123,
+      fromStateCode: Number(gcData.consignor?.stateCode) || 33,
+      actualFromStateCode: Number(gcData.consignor?.stateCode) || 33,
+      
+      toGstin: gcData.consignee?.gstin || "URP",
+      toTrdName: gcData.consignee?.name || "CONSIGNEE",
+      toAddr1: gcData.consignee?.address1 || gcData.consignee?.city || "Destination",
+      toAddr2: gcData.consignee?.address2 || "",
+      toPlace: gcData.consignee?.city || "Destination",
+      toPincode: Number(gcData.consignee?.pincode) || 626123,
+      toStateCode: Number(gcData.consignee?.stateCode) || 33,
+      actualToStateCode: Number(gcData.consignee?.stateCode) || 33,
+      
+      totalValue: Math.round(taxInfo?.totalTaxable || 0),
+      cgstValue: Math.round(taxInfo?.totalCgst || 0),
+      sgstValue: Math.round(taxInfo?.totalSgst || 0),
+      igstValue: Math.round(taxInfo?.totalIgst || 0),
+      cessValue: 0,
+      totInvValue: Math.round(gcData.invoiceValue || 0),
+      
+      transporterId: gstin,
+      transporterName: companyStr === 'BELL' ? "BELL COMPANY" : "AP TRANSPORT",
+      transDocNo: gcData.gcNumber,
+      transMode: "1",
+      transDistance: "0", 
+      vehicleNo: vehicleNo || "",
+      vehicleType: "R",
+      
+      itemList: (gcData.goods && gcData.goods.length > 0 ? gcData.goods : [{ hsn: 3604, description: 'Goods', articleCount: 1 }]).map(item => ({
+        productName: item.description || "Goods",
+        productDesc: item.description || "Goods",
+        hsnCode: Number(item.hsn) || 3604,
+        quantity: Number(item.articleCount) || 1,
+        qtyUnit: "NOS",
+        taxableAmount: Math.round(taxInfo?.totalTaxable || 0),
+        sgstRate, cgstRate, igstRate, cessRate: 0
+      }))
+    };
+
+    const genUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`;
+    const response = await fetch(genUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "client_id": clientId,
+        "client_secret": clientSecret,
+        "gstin": gstin,
+        "AuthToken": authData.authtoken || authData.data?.authtoken || authData.AuthToken
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    if (!response.ok || data.status_cd === "0") {
+       let errorMsg = data.error?.message || data.error?.error_desc || "Failed to generate EWB";
+       throw new Error(`NIC Rejected Generation: ${errorMsg}`);
+    }
+
+    const newEwbNo = data.data?.ewayBillNo || data.ewayBillNo;
+    res.json({ success: true, ewayBillNo: newEwbNo, status: 'Generated', rawPayload: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/ewaybill/regenerate', paidApiLimiter, async (req, res) => {
+  try {
+    const { company, ewbRawData, vehicleNo } = req.body;
+    const companyStr = req.query.company || company || 'AP';
+    const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
+    
+    if (!ewbRawData) throw new Error("No raw data provided for regeneration.");
+
+    // Parse existing EWB payload
+    const oldEwb = typeof ewbRawData === 'string' ? JSON.parse(ewbRawData) : ewbRawData;
+
+    // Convert dates to NIC dd/mm/yyyy
+    const formatDateNIC = (dateStr) => {
+      if (!dateStr) return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+    };
+    
+    const payload = {
+      supplyType: oldEwb.supplyType || "O",
+      subSupplyType: oldEwb.subSupplyType || "1",
+      docType: oldEwb.docType || "INV",
+      docNo: oldEwb.docNo || oldEwb.documentNo || `REG-${Math.floor(Date.now() / 1000)}`,
+      docDate: oldEwb.docDate || oldEwb.documentDate || formatDateNIC(new Date()), // Retain original invoice date!
+      
+      fromGstin: oldEwb.fromGstin || "URP",
+      fromTrdName: oldEwb.fromTrdName || oldEwb.fromTradeName || "",
+      fromAddr1: oldEwb.fromAddr1 || oldEwb.fromAddress1 || "",
+      fromAddr2: oldEwb.fromAddr2 || oldEwb.fromAddress2 || "",
+      fromPlace: oldEwb.fromPlace || "",
+      fromPincode: Number(oldEwb.fromPincode),
+      fromStateCode: Number(oldEwb.fromStateCode),
+      actualFromStateCode: Number(oldEwb.actualFromStateCode || oldEwb.fromStateCode),
+      
+      toGstin: oldEwb.toGstin || "URP",
+      toTrdName: oldEwb.toTrdName || oldEwb.toTradeName || "",
+      toAddr1: oldEwb.toAddr1 || oldEwb.toAddress1 || "",
+      toAddr2: oldEwb.toAddr2 || oldEwb.toAddress2 || "",
+      toPlace: oldEwb.toPlace || "",
+      toPincode: Number(oldEwb.toPincode),
+      toStateCode: Number(oldEwb.toStateCode),
+      actualToStateCode: Number(oldEwb.actualToStateCode || oldEwb.toStateCode),
+      
+      totalValue: Number(oldEwb.totalValue),
+      cgstValue: Number(oldEwb.cgstValue),
+      sgstValue: Number(oldEwb.sgstValue),
+      igstValue: Number(oldEwb.igstValue),
+      cessValue: Number(oldEwb.cessValue || 0),
+      totInvValue: Number(oldEwb.totInvValue),
+      
+      transporterId: gstin, // Reassign to current GSTIN securely
+      transporterName: companyStr === 'BELL' ? "BELL COMPANY" : "AP TRANSPORT",
+      transDocNo: oldEwb.transDocNo || "",
+      transMode: "1",
+      transDistance: "0", // Auto calc
+      vehicleNo: vehicleNo || "",
+      vehicleType: oldEwb.vehicleType || "R",
+      
+      itemList: (oldEwb.itemList || []).map(i => ({
+        productName: i.productName,
+        productDesc: i.productDesc,
+        hsnCode: Number(i.hsnCode),
+        quantity: Number(i.quantity),
+        qtyUnit: i.qtyUnit || "NOS",
+        taxableAmount: Number(i.taxableAmount),
+        sgstRate: Number(i.sgstRate),
+        cgstRate: Number(i.cgstRate),
+        igstRate: Number(i.igstRate),
+        cessRate: Number(i.cessRate || 0)
+      }))
+    };
+
+    const genUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`;
+    const response = await fetch(genUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "client_id": clientId,
+        "client_secret": clientSecret,
+        "gstin": gstin,
+        "AuthToken": authData.authtoken || authData.data?.authtoken || authData.AuthToken
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    if (!response.ok || data.status_cd === "0") {
+       let errorMsg = data.error?.message || data.error?.error_desc || "Failed to regenerate EWB";
+       throw new Error(`NIC Rejected Regeneration: ${errorMsg}`);
+    }
+
+    const newEwbNo = data.data?.ewayBillNo || data.ewayBillNo;
+    res.json({ success: true, ewayBillNo: newEwbNo, status: 'Regenerated', rawPayload: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
+  try {
+    const { company, ewbNo, vehicleNo } = req.body;
+    const companyStr = req.query.company || company || 'AP';
+    const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
+
+    const updUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/updatevehicle?email=${encodeURIComponent(email)}`;
+    
+    const payload = {
+      ewbNo: Number(ewbNo),
+      vehicleNo: vehicleNo,
+      fromPlace: "Sivakasi", // Assuming Origin
+      fromState: 33, // TN Code
+      reasonCode: "1", // 1 = Due to Break Down / First Time
+      reasonRem: "Initial Lorry Assignment",
+      transMode: "1", // 1 = Road
+      transDocNo: "",
+      transDocDate: ""
+    };
+
+    const response = await fetch(updUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "client_id": clientId,
+        "client_secret": clientSecret,
+        "gstin": gstin,
+        "AuthToken": authData.authtoken || authData.data?.authtoken || authData.AuthToken
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const data = await response.json();
+    if (!response.ok || data.status_cd === "0") {
+      let errorMsg = data.error?.message || data.error?.error_desc || data.error?.error_code || "Failed to update Part B";
+      if (typeof errorMsg === 'string' && errorMsg.includes('errorCodes')) {
+        try {
+           const codeStr = JSON.parse(errorMsg).errorCodes || "";
+           if (codeStr.includes('343')) errorMsg = "343: E-Way Bill Expired";
+           else if (codeStr.includes('238')) errorMsg = "238: Invalid GSTIN";
+        } catch(e) {}
+      }
+      throw new Error(errorMsg);
+    }
+
+    res.json({ success: true, ewayBillNo: ewbNo, data: data.data || data, status: 'Updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/ewaybill/reassign', paidApiLimiter, async (req, res) => {
+  try {
+    const { ewbNo, currentCompany, targetCompany } = req.body;
+    
+    if (!ewbNo || !currentCompany || !targetCompany) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    const clientId = process.env.WHITEBOOKS_CLIENT_ID?.trim();
+    const clientSecret = process.env.WHITEBOOKS_CLIENT_SECRET?.trim();
+    const email = process.env.WHITEBOOKS_EMAIL?.trim();
+
+    let username, password, gstin;
+    if (currentCompany === 'BELL') {
+      username = process.env.BELL_WHITEBOOKS_USERNAME?.trim();
+      password = process.env.BELL_WHITEBOOKS_PASSWORD?.trim();
+      gstin = process.env.BELL_WHITEBOOKS_GSTIN?.trim();
+    } else {
+      username = process.env.WHITEBOOKS_USERNAME?.trim();
+      password = process.env.WHITEBOOKS_PASSWORD?.trim();
+      gstin = process.env.WHITEBOOKS_GSTIN?.trim() || process.env.TRANSPORTER_GSTIN?.trim();
+    }
+    
+    let targetGstin;
+    if (targetCompany === 'BELL') {
+      targetGstin = process.env.BELL_WHITEBOOKS_GSTIN?.trim();
+    } else {
+      targetGstin = process.env.WHITEBOOKS_GSTIN?.trim() || process.env.TRANSPORTER_GSTIN?.trim();
+    }
+
+    if (!username || !password || !gstin || !targetGstin) {
+      throw new Error(`Missing WhiteBooks Credentials for reassignment`);
+    }
+
+    // 1. Authenticate with CURRENT company credentials
+    const authUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+    const authResponse = await fetch(authUrl, {
+      method: "GET",
+      headers: { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" }
+    });
+    const authData = await authResponse.json();
+    if (!authResponse.ok || authData.status_cd === "0") {
+       throw new Error(`Auth Failed for ${currentCompany}`);
+    }
+
+    // 2. Reassign to TARGET company GSTIN
+    const updUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/updatetransporter?email=${encodeURIComponent(email)}`;
+    const response = await fetch(updUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" },
+      body: JSON.stringify({
+        ewbNo: parseInt(ewbNo, 10),
+        transporterId: targetGstin
+      })
+    });
+    
+    const data = await response.json();
+    if (!response.ok || data.status_cd === "0") {
+       console.log("WhiteBooks Update Error:", data);
+       
+       let errorMsg = data.error?.message || data.error?.error_desc || data.error?.error_code || `Failed to reassign transporter on NIC portal`;
+       
+       // Parse NIC internal errorCodes string if present (e.g. '{"errorCodes":"301,"}')
+       if (typeof data.error?.message === 'string' && data.error.message.includes('errorCodes')) {
+         try {
+           const parsedNIC = JSON.parse(data.error.message);
+           const codeStr = parsedNIC.errorCodes || "";
+           if (codeStr.includes('301')) errorMsg = "Invalid E-Way Bill Number";
+           else if (codeStr.includes('338')) errorMsg = "Cannot reassign: Vehicle/Part-B is already assigned.";
+           else if (codeStr.includes('312')) errorMsg = "Invalid Target Transporter GSTIN.";
+           else if (codeStr.includes('280')) errorMsg = "Not Authorized: Only the EWB Generator or currently assigned Transporter can reassign.";
+           else errorMsg = `NIC Portal Error Code: ${codeStr.replace(/,$/, '')}`;
+         } catch(e) {}
+       }
+       
+       throw new Error(errorMsg);
+    }
+
+    res.json({ success: true, message: `Successfully reassigned to ${targetCompany}` });
+
+  } catch (error) {
+    console.error("Transporter Reassign Error:", error);
+    res.status(500).json({ error: error.message || 'Failed to reassign transporter' });
+  }
+});
+
 app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
   try {
     const { vehicleNo, fromPlace, transDocNo, transDocDate, ewbNos } = req.body;
@@ -1301,8 +1988,9 @@ app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
 // Get all unassigned GDMs (GDMs without a Trip)
 app.get('/api/gdms-unassigned', async (req, res) => {
   try {
+    const branch = req.query.branch || 'MAIN';
     const gdms = await prisma.gDM.findMany({
-      where: { tripId: null },
+      where: { tripId: null, branch },
       include: {
         vehicle: true,
         gcs: {
@@ -1775,6 +2463,6 @@ app.delete('/api/daily-transactions/:id', async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on http://0.0.0.0:${PORT}`);
 });

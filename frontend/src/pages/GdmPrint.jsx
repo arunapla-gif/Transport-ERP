@@ -30,132 +30,166 @@ export default function GdmPrint() {
   return (
     <div className="bg-slate-200 min-h-screen flex flex-col items-center justify-start print:bg-white print:min-h-0 print:block">
       {gdms.map((gdm, index) => {
-        const totalArticles = gdm.gcs?.reduce((sum, gc) => {
-          const gcArts = gc.goods?.reduce((s, g) => s + (g.articleCount || 0), 0) || 0;
-          return sum + gcArts;
-        }, 0) || 0;
+        let globalCases = 0, globalCartons = 0, globalBundles = 0;
+        gdm.gcs?.forEach(gc => {
+          gc.goods?.forEach(g => {
+             const c = g.articleCount || 0;
+             if (g.unitCategory === 'Cases') globalCases += c;
+             else if (g.unitCategory === 'Cartons') globalCartons += c;
+             else if (g.unitCategory === 'Bundles') globalBundles += c;
+             else globalCases += c;
+          });
+        });
+        let globalStr = [];
+        if (globalCases > 0) globalStr.push(`${globalCases} c/s`);
+        if (globalCartons > 0) globalStr.push(`${globalCartons} c/n`);
+        if (globalBundles > 0) globalStr.push(`${globalBundles} bdl/s`);
+        const totalArticlesDisplay = globalStr.length > 0 ? globalStr.join(' + ') : '0';
 
         return (
           <div key={gdm.id} className={`w-full flex justify-center p-4 print:p-0 ${index !== gdms.length - 1 ? 'print:break-after-page mb-8 print:mb-0' : ''}`}>
             {/* Container dimensions strictly A4 Portrait (210mm x 297mm) */}
             <div 
-              className="w-[210mm] min-h-[297mm] bg-white text-black shadow-lg print:shadow-none font-mono text-[11px] p-6 flex flex-col justify-start relative"
+              className="w-[210mm] min-h-[297mm] bg-white text-slate-900 shadow-lg print:shadow-none font-sans text-[11px] p-6 flex flex-col justify-start relative"
+              style={{ boxSizing: 'border-box', fontFamily: '"Inter", "Helvetica Neue", Helvetica, sans-serif' }}
               style={{ boxSizing: 'border-box' }}
             >
         
-        {/* Header / Branding Block */}
-        <div className="flex justify-between items-center mb-1 text-[10px] font-bold">
-          <span>TIN : 33BBBBB0000B1Z1</span>
-          <span>CELL : 9876543210</span>
-        </div>
-        
-        <div className="text-center block text-sm font-bold mb-2">
-          ஸ்ரீ கணேச துணை (Sri Ganesa Thunai)
-        </div>
-
-        <div className="flex items-center border-t-2 border-b-2 border-black py-3 mb-2">
-          <div className="h-20 w-20 border-[3px] border-black rounded-full flex items-center justify-center font-black text-2xl ml-4">
-            BL
+        {/* 1. Header / Branding Block */}
+        <div className="flex justify-between items-start border-b-2 border-slate-800 pb-4 mb-4">
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 border-[3px] border-slate-800 rounded-full flex items-center justify-center font-black text-2xl tracking-tighter">
+              BL
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 mb-1">ஸ்ரீ கணேச துணை</div>
+              <h1 className="text-3xl font-black tracking-wider font-serif leading-none text-slate-900 mb-1">
+                BELL LOGISTICS
+              </h1>
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                123 Logistics Park, Transport Road, Sivakasi - 626123
+              </p>
+            </div>
           </div>
-          <div className="flex-1 text-center pr-12">
-            <h1 className="text-[32px] font-black tracking-widest font-serif leading-none mb-1">
-              BELL LOGISTICS
-            </h1>
-            <p className="text-[11px] font-bold uppercase">123 Logistics Park, Transport Road, Sivakasi - 626123</p>
-          </div>
-        </div>
-
-        {/* Metadata Block 1 */}
-        <div className="grid grid-cols-4 divide-x divide-black border-2 border-black border-b-0 text-[11px] font-bold">
-          <div className="flex gap-2 p-1.5"><span className="w-8">No:</span> <span className="font-black">{gdm.gdmNumber}</span></div>
-          <div className="flex gap-2 p-1.5"><span className="w-10">Date:</span> <span className="font-black">{new Date(gdm.date).toLocaleDateString('en-GB')}</span></div>
-          <div className="flex gap-2 p-1.5"><span className="w-10">Time:</span> <span className="font-black">{gdm.time}</span></div>
-          <div className="flex gap-2 p-1.5"><span className="w-14">Vehicle:</span> <span className="font-black truncate">{gdm.vehicle?.vehicleNumber || gdm.vehicleNumber}</span></div>
-        </div>
-
-        {/* Metadata Block 2 (Lorry No Header) */}
-        <div className="text-center text-xl font-black border-2 border-black border-b-0 py-1.5 uppercase tracking-widest bg-gray-50/50">
-          LORRY NO: {gdm.vehicle?.vehicleNumber || gdm.vehicleNumber}
-        </div>
-
-        {/* Metadata Block 3 (Parties & Driver) */}
-        <div className="grid grid-cols-[4.5fr_2.75fr_2.75fr] divide-x divide-black border-2 border-black border-b-0 text-[10px] min-h-[75px] font-bold">
-          <div className="p-2 flex flex-col">
-            <span className="underline mb-1">To:</span>
-            <span className="font-black text-sm uppercase">{gdm.destination || 'N/A'}</span>
-          </div>
-          <div className="p-2 flex flex-col gap-1">
-            <span className="underline mb-0.5">Owner:</span>
-            <span className="uppercase">{gdm.vehicle?.ownerName || '-'}</span>
-          </div>
-          <div className="p-2 flex flex-col gap-1">
-            <span className="underline mb-0.5">Driver:</span>
-            <span className="uppercase">{gdm.vehicle?.driverName || '-'}</span>
-            <span>Ph: {gdm.vehicle?.driverPhone || '-'}</span>
+          <div className="text-right text-[10px] font-bold text-slate-600 flex flex-col gap-1">
+            <div className="bg-slate-100 px-3 py-1 border border-slate-300 rounded-md">
+              <span className="text-slate-400">TIN:</span> <span className="text-slate-800">33BBBBB0000B1Z1</span>
+            </div>
+            <div className="bg-slate-100 px-3 py-1 border border-slate-300 rounded-md">
+              <span className="text-slate-400">CELL:</span> <span className="text-slate-800">9876543210</span>
+            </div>
           </div>
         </div>
 
-        {/* Main GC Table */}
-        <div className="border-2 border-black border-b-0 flex-1">
-          <table className="w-full text-left border-collapse text-[10px] font-bold">
+        {/* 2. Document Meta Grid */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          {/* Lorry & Document details */}
+          <div className="col-span-1 border border-slate-400 rounded-md p-2 flex flex-col gap-2">
+            <div className="flex justify-between border-b border-slate-200 pb-1">
+              <span className="text-[9px] text-slate-500 uppercase font-bold">GDM No</span>
+              <span className="text-xs font-black text-slate-900">{gdm.gdmNumber}</span>
+            </div>
+            <div className="flex justify-between border-b border-slate-200 pb-1">
+              <span className="text-[9px] text-slate-500 uppercase font-bold">Date / Time</span>
+              <span className="text-[10px] font-bold text-slate-900">{new Date(gdm.date).toLocaleDateString('en-GB')} - {gdm.time}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[9px] text-slate-500 uppercase font-bold">Lorry No</span>
+              <span className="text-sm font-black text-slate-900">{gdm.vehicle?.vehicleNumber || gdm.vehicleNumber}</span>
+            </div>
+          </div>
+
+          {/* CEWB Block (High Emphasis) */}
+          <div className="col-span-1 border-2 border-slate-800 rounded-md p-3 flex flex-col justify-center items-center bg-slate-50">
+            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Master CEWB Number</span>
+            <span className="text-lg font-black text-indigo-700 tracking-wider">{gdm.cewbNumber || 'PENDING'}</span>
+          </div>
+
+          {/* Parties Block */}
+          <div className="col-span-1 border border-slate-400 rounded-md p-2 flex flex-col gap-2">
+             <div className="flex flex-col border-b border-slate-200 pb-1">
+              <span className="text-[9px] text-slate-500 uppercase font-bold">Destination</span>
+              <span className="text-xs font-black text-slate-900 truncate">{gdm.destination || 'N/A'}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] text-slate-500 uppercase font-bold">Driver Info</span>
+              <span className="text-[10px] font-bold text-slate-900 truncate">{gdm.vehicle?.driverName || '-'} (Ph: {gdm.vehicle?.driverPhone || '-'})</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Main Goods Table */}
+        <div className="border border-slate-800 flex-1 flex flex-col mb-4 rounded-md overflow-hidden">
+          <table className="w-full text-left border-collapse text-[10px]">
             <thead>
-              <tr className="border-b-2 border-black bg-gray-50/50">
-                <th className="px-2 py-1.5 border-r border-black w-[10%] text-center">GC.NO</th>
-                <th className="px-2 py-1.5 border-r border-black w-[40%]">CONSIGNOR</th>
-                <th className="px-2 py-1.5 border-r border-black w-[35%]">CONSIGNEE NAME</th>
-                <th className="px-2 py-1.5 border-r border-black w-[10%] text-center">DESPATCH</th>
-                <th className="px-2 py-1.5 w-[5%] text-center leading-tight">FREIGHT<br/>TO-PAY</th>
+              <tr className="bg-slate-800 text-white">
+                <th rowSpan="2" className="px-3 py-2 border-r border-slate-600 w-[15%] align-middle font-bold tracking-wider">GC.NO / EWB</th>
+                <th rowSpan="2" className="px-3 py-2 border-r border-slate-600 w-[28%] align-middle font-bold tracking-wider">CONSIGNOR</th>
+                <th rowSpan="2" className="px-3 py-2 border-r border-slate-600 w-[28%] align-middle font-bold tracking-wider">CONSIGNEE</th>
+                <th colSpan="3" className="px-3 py-1 border-r border-slate-600 text-center border-b border-slate-600 font-bold tracking-wider">ARTICLES</th>
+                <th rowSpan="2" className="px-3 py-2 w-[10%] text-right align-middle font-bold tracking-wider">FREIGHT</th>
+              </tr>
+              <tr className="bg-slate-700 text-slate-200 text-center text-[9px]">
+                <th className="py-1 border-r border-slate-600 w-[6%] font-semibold">C/S</th>
+                <th className="py-1 border-r border-slate-600 w-[6%] font-semibold">C/N</th>
+                <th className="py-1 border-r border-slate-600 w-[6%] font-semibold">BDL/S</th>
               </tr>
             </thead>
             <tbody>
               {gdm.gcs?.map((gc, index) => {
-                const arts = gc.goods?.reduce((s, g) => s + (g.articleCount || 0), 0) || 0;
+                let rowCases = 0, rowCartons = 0, rowBundles = 0;
+                gc.goods?.forEach(g => {
+                   const c = g.articleCount || 0;
+                   if (g.unitCategory === 'Cases') rowCases += c;
+                   else if (g.unitCategory === 'Cartons') rowCartons += c;
+                   else if (g.unitCategory === 'Bundles') rowBundles += c;
+                   else rowCases += c;
+                });
                 return (
-                  <tr key={gc.id} className="border-b border-black last:border-b-0">
-                    <td className="px-2 py-1 border-r border-black text-center">{gc.gcNumber.replace('BELL-', '').replace('AP-', '')}</td>
-                    <td className="px-2 py-1 border-r border-black uppercase truncate max-w-[200px]">{gc.consignor?.name}</td>
-                    <td className="px-2 py-1 border-r border-black uppercase truncate max-w-[180px]">{gc.consignee?.name}</td>
-                    <td className="px-2 py-1 border-r border-black text-center">{arts}</td>
-                    <td className="px-2 py-1 text-right">{gc.freightTotal || '-'}</td>
+                  <tr key={gc.id} className="border-b border-slate-300 last:border-b-0 align-middle hover:bg-slate-50">
+                    <td className="px-3 py-2 border-r border-slate-300 text-center">
+                      <div className="font-bold text-slate-900 text-[11px]">{gc.gcNumber.replace('BELL-', '').replace('AP-', '')}</div>
+                      {gc.privateMark && <div className="text-[8px] font-medium text-slate-500 tracking-tight mt-0.5 font-mono">{gc.privateMark}</div>}
+                    </td>
+                    <td className="px-3 py-2 border-r border-slate-300 uppercase truncate max-w-[150px] font-bold text-slate-700">{gc.consignor?.name}</td>
+                    <td className="px-3 py-2 border-r border-slate-300 uppercase truncate max-w-[150px] font-bold text-slate-700">{gc.consignee?.name}</td>
+                    <td className="px-1 py-2 border-r border-slate-300 text-center font-black text-slate-900">{rowCases > 0 ? rowCases : '-'}</td>
+                    <td className="px-1 py-2 border-r border-slate-300 text-center font-black text-slate-900">{rowCartons > 0 ? rowCartons : '-'}</td>
+                    <td className="px-1 py-2 border-r border-slate-300 text-center font-black text-slate-900">{rowBundles > 0 ? rowBundles : '-'}</td>
+                    <td className="px-3 py-2 text-right font-bold text-slate-900">{gc.freightTotal || '-'}</td>
                   </tr>
                 );
               })}
               
-              {/* Padding rows if few GCs exist to maintain layout height */}
-              {Array.from({ length: Math.max(0, 20 - (gdm.gcs?.length || 0)) }).map((_, i) => (
-                <tr key={`empty-${i}`} className="border-b border-black last:border-b-0 h-[22px]">
-                  <td className="border-r border-black"></td>
-                  <td className="border-r border-black"></td>
-                  <td className="border-r border-black"></td>
-                  <td className="border-r border-black"></td>
+              {/* Padding rows */}
+              {Array.from({ length: Math.max(0, 15 - (gdm.gcs?.length || 0)) }).map((_, i) => (
+                <tr key={`empty-${i}`} className="border-b border-slate-200 last:border-b-0 h-[32px]">
+                  <td className="border-r border-slate-200"></td><td className="border-r border-slate-200"></td><td className="border-r border-slate-200"></td>
+                  <td className="border-r border-slate-200"></td><td className="border-r border-slate-200"></td><td className="border-r border-slate-200"></td>
                   <td></td>
                 </tr>
               ))}
+              
+              {/* Total Row */}
+              <tr className="border-t-2 border-slate-800 bg-slate-100 text-[11px]">
+                <td colSpan="3" className="px-3 py-3 border-r border-slate-800 text-right tracking-widest uppercase font-black text-slate-800">TOTAL</td>
+                <td className="px-1 py-3 border-r border-slate-800 text-center font-black text-[12px]">{globalCases > 0 ? globalCases : '-'}</td>
+                <td className="px-1 py-3 border-r border-slate-800 text-center font-black text-[12px]">{globalCartons > 0 ? globalCartons : '-'}</td>
+                <td className="px-1 py-3 border-r border-slate-800 text-center font-black text-[12px]">{globalBundles > 0 ? globalBundles : '-'}</td>
+                <td className="px-3 py-3 text-right font-black text-[12px]">{gdm.gcs?.reduce((sum, gc) => sum + (parseFloat(gc.freightTotal) || 0), 0) || '-'}</td>
+              </tr>
             </tbody>
           </table>
         </div>
-
-        {/* Table Footer / Total Row */}
-        <div className="grid grid-cols-[85%_10%_5%] border-2 border-black border-t-0 font-bold text-[11px]">
-          <div className="border-r border-black px-2 py-1.5 text-right font-black tracking-widest uppercase">
-            TOTAL
-          </div>
-          <div className="border-r border-black px-2 py-1.5 text-center font-black">
-            {totalArticles}
-          </div>
-          <div className="px-2 py-1.5 text-right">
-            {gdm.gcs?.reduce((sum, gc) => sum + (parseFloat(gc.freightTotal) || 0), 0) || ''}
-          </div>
-        </div>
         
         {/* Signatures */}
-        <div className="flex justify-between items-end mt-8 text-[11px] font-bold px-4">
+        <div className="flex justify-between items-end mt-4 text-[10px] font-bold px-8 text-slate-600 uppercase tracking-widest">
           <div className="text-center">
-            <div className="mb-8"></div>
+            <div className="w-32 border-b border-slate-400 mb-2"></div>
             <span>Driver Signature</span>
           </div>
           <div className="text-center">
-            <div className="mb-8"></div>
+            <div className="w-32 border-b border-slate-400 mb-2"></div>
             <span>For BELL LOGISTICS</span>
           </div>
         </div>

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
-import { Edit2, Trash2, MapPin, Save, FileText, Search } from 'lucide-react';
+import { Edit2, Trash2, MapPin, Save, Search } from 'lucide-react';
 
 // Premium Dense Primitives
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -46,10 +46,16 @@ const GlassCard = ({ children, className = "" }) => (
   </div>
 );
 
+import { useLocation } from 'react-router-dom';
+
 export default function ConsigneeMaster() {
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const branch = query.get('branch') || 'MAIN';
+
   const [consignees, setConsignees] = useState([]);
   const [formData, setFormData] = useState({
-    id: null, name: '', legalName: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: []
+    id: null, name: '', legalName: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [], parentId: ''
   });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,18 +65,19 @@ export default function ConsigneeMaster() {
     onSave: (e) => handleSave(e || { preventDefault: () => {} })
   });
 
-  useEffect(() => {
-    fetchConsignees();
-  }, []);
-
   const fetchConsignees = async () => {
     try {
-      const data = await api.get('/consignees');
+      const data = await api.get(`/consignees?branch=${branch}`);
       setConsignees(data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to fetch data.');
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+    fetchConsignees();
+  }, []);
 
   const updateConsigneeName = async (id, newName) => {
     try {
@@ -105,7 +112,7 @@ export default function ConsigneeMaster() {
             const regex = new RegExp('^' + regexPattern + '\\s*[^a-zA-Z0-9]*\\s*', 'i');
             joined = joined.replace(regex, '');
           }
-        } catch (e) {
+        } catch {
           // Fallback if regex fails
         }
         
@@ -147,8 +154,9 @@ export default function ConsigneeMaster() {
     if (!formData.name.trim()) return toast.error('Consignee Name is required');
     setLoading(true);
     try {
-      const { id, ...dataToCreate } = formData;
-      const payload = { ...dataToCreate, migrationType: 'MANUAL' };
+      const dataToCreate = { ...formData };
+      delete dataToCreate.id;
+      const payload = { ...dataToCreate, migrationType: 'MANUAL', branch, parentId: formData.parentId || null };
       if (formData.id) {
         await api.put(`/consignees/${formData.id}`, { ...payload, id: formData.id });
         toast.success('Updated successfully');
@@ -156,7 +164,7 @@ export default function ConsigneeMaster() {
         await api.post('/consignees', payload);
         toast.success('Added successfully');
       }
-      setFormData({ id: null, name: '', legalName: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] });
+      setFormData({ id: null, name: '', legalName: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [], parentId: '' });
       fetchConsignees();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Operation failed');
@@ -179,7 +187,8 @@ export default function ConsigneeMaster() {
       phone: consignee.phone || '',
       email: consignee.email || '',
       group: consignee.group || '',
-      addresses: consignee.addresses || []
+      addresses: consignee.addresses || [],
+      parentId: consignee.parentId || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -190,12 +199,12 @@ export default function ConsigneeMaster() {
       await api.delete(`/consignees/${id}`);
       fetchConsignees();
       toast.success('Record deleted');
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete record');
     }
   };
 
-  const apiOnlyCount = consignees.filter(c => c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL').length;
+  const apiOnlyCount = consignees.filter(c => !c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL').length;
   const oldDataCount = consignees.filter(c => c.migrationType === 'OLD_DATA_ONLY').length;
   const retailPhoneCount = consignees.filter(c => c.migrationType === 'RETAIL_WITH_PHONE').length;
   const retailNoPhoneCount = consignees.filter(c => c.migrationType === 'RETAIL_NO_PHONE').length;
@@ -205,7 +214,7 @@ export default function ConsigneeMaster() {
       (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()));
       
-    if (activeTab === 'API_ONLY') return matchesSearch && (c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL');
+    if (activeTab === 'API_ONLY') return matchesSearch && (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL');
     if (activeTab === 'OLD_DATA_ONLY') return matchesSearch && c.migrationType === 'OLD_DATA_ONLY';
     if (activeTab === 'RETAIL_WITH_PHONE') return matchesSearch && c.migrationType === 'RETAIL_WITH_PHONE';
     if (activeTab === 'RETAIL_NO_PHONE') return matchesSearch && c.migrationType === 'RETAIL_NO_PHONE';
@@ -245,12 +254,22 @@ export default function ConsigneeMaster() {
           <DenseInput label="State" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} />
           
           <DenseInput label="Pincode" value={formData.pincode} onChange={e => setFormData({...formData, pincode: e.target.value})} />
+          <DenseSelect 
+            label="Parent Group (Master Consignee)" 
+            options={[
+              { label: '-- No Parent Group --', value: '' },
+              ...consignees.filter(c => c.id !== formData.id).map(c => ({ label: `${c.name} ${c.city ? `(${c.city})` : ''}`, value: c.id }))
+            ]}
+            value={formData.parentId || ''} 
+            onChange={e => setFormData({...formData, parentId: e.target.value ? parseInt(e.target.value) : ''})} 
+            className="lg:col-span-2"
+          />
           <DenseInput label="Phone Number" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
           <DenseInput label="Email Address" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-          <button onClick={() => setFormData({ id: null, name: '', legalName: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] })} className="h-12 md:h-9 px-6 md:px-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-lg font-bold text-sm md:text-xs hover:bg-slate-50 transition-colors">
+          <button onClick={() => setFormData({ id: null, name: '', legalName: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [], parentId: '' })} className="h-12 md:h-9 px-6 md:px-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-lg font-bold text-sm md:text-xs hover:bg-slate-50 transition-colors">
             Clear
           </button>
           <button onClick={handleSave} disabled={loading} className="h-12 md:h-9 px-8 md:px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors flex items-center gap-2 disabled:opacity-70">
@@ -318,6 +337,9 @@ export default function ConsigneeMaster() {
                   {c.legalName && c.legalName !== c.name && (
                     <p className="text-[11px] font-semibold text-slate-500 mt-1">Legal: {c.legalName}</p>
                   )}
+                  {c.parentId && (
+                    <p className="text-[11px] font-bold text-indigo-600 mt-1 bg-indigo-50 px-1.5 py-0.5 rounded inline-block">Parent: {consignees.find(p => p.id === c.parentId)?.name}</p>
+                  )}
                   {Array.isArray(c.tradeNames) && c.tradeNames.length > 0 && c.tradeNames[0] !== c.name && (
                     <p className="text-[11px] font-semibold text-slate-500 mt-0.5">Trade: {c.tradeNames.join(', ')}</p>
                   )}
@@ -365,6 +387,9 @@ export default function ConsigneeMaster() {
                       
                       {c.legalName && (
                         <span className="text-[11px] text-slate-500 font-medium mt-1">Legal: {c.legalName}</span>
+                      )}
+                      {c.parentId && (
+                        <span className="text-[11px] font-bold text-indigo-600 mt-1">Parent: {consignees.find(p => p.id === c.parentId)?.name}</span>
                       )}
                       
                       {(() => {

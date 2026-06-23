@@ -6,6 +6,7 @@ import { api } from '../api';
 export default function PrintHub() {
   const [gcNumber, setGcNumber] = useState('');
   const [gdmNumber, setGdmNumber] = useState('');
+  const [gdmPrintType, setGdmPrintType] = useState('gdm');
   
   const [activeTab, setActiveTab] = useState('GC'); // 'GC' or 'GDM'
   
@@ -170,21 +171,32 @@ export default function PrintHub() {
           <h2 className="text-xl font-black text-slate-800 mb-2">Delivery Memo (GDM)</h2>
           <p className="text-sm font-medium text-slate-500 mb-6">Print an A4 size Goods Despatch Memo.</p>
           
-          <div className="w-full flex gap-2">
+          <div className="w-full flex flex-col gap-2">
             <input 
               type="text" 
               placeholder="e.g. 1001" 
               value={gdmNumber}
               onChange={(e) => setGdmNumber(e.target.value)}
-              className="flex-1 h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all uppercase"
+              className="w-full h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all uppercase"
             />
-            <Link 
-              to={gdmNumber ? `/print/gdm/${gdmNumber}` : '#'}
-              target={gdmNumber ? "_blank" : undefined}
-              className={`h-12 px-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-sm hover:shadow-md ${!gdmNumber ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <Printer size={18} /> Print
-            </Link>
+            <div className="flex gap-2">
+              <select
+                value={gdmPrintType}
+                onChange={(e) => setGdmPrintType(e.target.value)}
+                className="flex-1 h-12 px-3 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              >
+                <option value="gdm">Standard GDM</option>
+                <option value="cewb">CEWB Format</option>
+                <option value="gdm-combined">Combined (Both)</option>
+              </select>
+              <Link 
+                to={gdmNumber ? `/print/${gdmPrintType}/${gdmNumber}` : '#'}
+                target={gdmNumber ? "_blank" : undefined}
+                className={`h-12 px-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-sm hover:shadow-md ${!gdmNumber ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Printer size={18} /> Print
+              </Link>
+            </div>
           </div>
         </div>
 

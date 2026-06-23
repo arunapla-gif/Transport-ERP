@@ -1,8 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
-import { Save, Trash2, Truck, PackageCheck, FileText, Search } from 'lucide-react';
+import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
+import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const DenseInput = ({ label, className = "", ...props }) => (
   <div className={`flex flex-col group ${className}`}>
@@ -23,6 +26,10 @@ const GlassCard = ({ children, className = "" }) => (
 );
 
 export default function GdmEntry() {
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const branch = query.get('branch') || 'MAIN';
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -30,41 +37,109 @@ export default function GdmEntry() {
   const [vehicles, setVehicles] = useState([]);
   const [gdmNumberDisplay, setGdmNumberDisplay] = useState('');
 
+  // DRAFT PERSISTENCE LOGIC
+  const loadDraft = (key, defaultVal) => {
+    try {
+      const draftStr = localStorage.getItem('gdmDraft');
+      if (draftStr) {
+        const draft = JSON.parse(draftStr);
+        if (draft[key] !== undefined) return draft[key];
+      }
+    } catch(e) {}
+    return defaultVal;
+  };
+
   // Header Details
-  const [gdmDetails, setGdmDetails] = useState({
+  const [gdmDetails, setGdmDetails] = useState(() => loadDraft('gdmDetails', {
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().split(' ')[0].substring(0, 5),
     fromLocation: 'Sivakasi',
     toName: 'AS PER BILLS',
-    deliveryAt: ''
-  });
+    deliveryAt: '',
+    cewbNumber: ''
+  }));
 
   // Lorry Details
-  const [lorryDetails, setLorryDetails] = useState({
+  const [lorryDetails, setLorryDetails] = useState(() => loadDraft('lorryDetails', {
     vehicleId: '',
     lorryNo: '',
     driverName: '',
     driverPhone: '',
     startKm: ''
-  });
+  }));
 
   const [activeGdmId, setActiveGdmId] = useState(null);
   const [recentGdms, setRecentGdms] = useState([]);
 
+  // DL Verification
+  const [dlData, setDlData] = useState(null);
+  const [fetchingDl, setFetchingDl] = useState(false);
+  const [dlDetails, setDlDetails] = useState({ license: '', dob: '' });
+
   // Despatch List (GCs)
   const [searchGcText, setSearchGcText] = useState('');
-  const [gdmCompanyMode, setGdmCompanyMode] = useState('A'); // 'A' for AP, 'B' for BELL
-  const [gcs, setGcs] = useState([]);
+  const [gdmCompanyMode, setGdmCompanyMode] = useState(() => loadDraft('gdmCompanyMode', 'A')); 
+  const [gcs, setGcs] = useState(() => loadDraft('gcs', []));
+  const [allUnitOptions, setAllUnitOptions] = useState([]);
 
   // Legacy Comparison Toggles
-  const [consigneeMode, setConsigneeMode] = useState('Multiple Consignee');
-  const [singleConsigneeSearch, setSingleConsigneeSearch] = useState('');
-  const [consignees, setConsignees] = useState([]);
+  const [consigneeMode, setConsigneeMode] = useState(() => loadDraft('consigneeMode', 'Multiple Consignee'));
+  const [selectedConsigneeData, setSelectedConsigneeData] = useState(null);
   
-  const [freightMode, setFreightMode] = useState('Use Individual GC Freight');
-  const [overallRate, setOverallRate] = useState('');
+  const [freightMode, setFreightMode] = useState(() => loadDraft('freightMode', 'Use Individual GC Freight'));
+  const [overallRate, setOverallRate] = useState(() => loadDraft('overallRate', ''));
   
   const [isLorryExpanded, setIsLorryExpanded] = useState(false);
+
+  // Auto-Save Draft
+  useEffect(() => {
+    if (!activeGdmId) {
+      const draft = {
+        gdmDetails,
+        lorryDetails,
+        gdmCompanyMode,
+        gcs,
+        consigneeMode,
+        freightMode,
+        overallRate
+      };
+      localStorage.setItem('gdmDraft', JSON.stringify(draft));
+    }
+  }, [gdmDetails, lorryDetails, gdmCompanyMode, gcs, consigneeMode, freightMode, overallRate, activeGdmId]);
+
+  const vehicleOptions = useMemo(() => vehicles.map(v => ({ value: v.id.toString(), label: v.vehicleNumber })), [vehicles]);
+  const fetchConsigneesAsync = useCallback(async (q) => {
+    try {
+      const res = await api.get(`/consignees/search?branch=${branch}&q=${encodeURIComponent(q)}`);
+      return res.map(c => ({ value: c.id.toString(), label: c.name, raw: c }));
+    } catch (err) {
+      return [];
+    }
+  }, [branch]);
+
+  const handleConsigneeChange = useCallback((id, opt) => {
+    if (opt && opt.raw) {
+      setSelectedConsigneeData(opt.raw);
+      setGdmDetails(prev => ({...prev, toName: opt.raw.name || '', deliveryAt: opt.raw.city || ''}));
+    } else {
+      setSelectedConsigneeData(null);
+    }
+  }, []);
+
+  const handleVehicleChange = useCallback((id) => {
+    const selected = vehicles.find(v => v.id.toString() === id);
+    if (selected) {
+      setLorryDetails(prev => ({
+        ...prev,
+        vehicleId: selected.id,
+        lorryNo: selected.vehicleNumber,
+        driverName: selected.driverName || '',
+        driverPhone: selected.phone || ''
+      }));
+    } else {
+      setLorryDetails(prev => ({ ...prev, vehicleId: '', lorryNo: '', driverName: '', driverPhone: '' }));
+    }
+  }, [vehicles]);
 
   useKeyboardFlow({ onSave: () => handleSaveGDM() });
 
@@ -73,10 +148,17 @@ export default function GdmEntry() {
       const v = await api.get('/vehicles');
       setVehicles(v || []);
 
-      const c = await api.get('/consignees');
-      setConsignees(c || []);
 
-      const gdms = await api.get('/gdms?_t=' + Date.now());
+
+      const unitsRes = await api.get('/units').catch(() => []);
+      if (unitsRes && unitsRes.length > 0) {
+        setAllUnitOptions(unitsRes.map(u => ({
+          label: u.description,
+          code: u.code
+        })));
+      }
+
+      const gdms = await api.get(`/gdms?branch=${branch}&_t=${Date.now()}`);
       setRecentGdms(gdms || []);
       
       let nextGdmNumber = 1001;
@@ -95,28 +177,77 @@ export default function GdmEntry() {
     fetchInitialData();
   }, []);
 
-  const handleVehicleChange = (id) => {
-    const vehicle = vehicles.find(v => v.id.toString() === id);
-    setLorryDetails({
-      vehicleId: id,
-      lorryNo: vehicle?.vehicleNumber || '',
-      driverName: vehicle?.driverName || '',
-      driverPhone: vehicle?.phone || '',
-      startKm: ''
-    });
+  const handleFetchDL = async (e) => {
+    e.preventDefault();
+    if (!dlDetails.license || !dlDetails.dob) {
+      toast.error('License Number and DOB are required for verification');
+      return;
+    }
+    
+    setFetchingDl(true);
+    try {
+      const sanitizedDL = dlDetails.license.replace(/[\s-]/g, '');
+      const response = await api.post('/fastag/dl', { dlNumber: sanitizedDL, dob: dlDetails.dob });
+      const data = response.data;
+      setDlData(data);
+      
+      // Auto-fill Driver Name ONLY if it is not masked with asterisks
+      if (!lorryDetails.driverName && data.owner_name && !data.owner_name.includes('*')) {
+        setLorryDetails(prev => ({ ...prev, driverName: data.owner_name }));
+      }
+      
+      const validClasses = ['TRANS', 'HTV', 'HMV', 'HGMV', 'MGV', 'MGMV'];
+      const hasValidClass = data.vehicle_classes?.some(c => validClasses.includes(c?.toUpperCase()));
+      
+      let isExpired = false;
+      if (data.validity_tr && data.validity_tr !== '-' && data.validity_tr !== 'NA') {
+        const parts = data.validity_tr.split('-');
+        if (parts.length === 3) {
+          const [day, month, year] = parts;
+          const expiryDate = new Date(`${year}-${month}-${day}`);
+          if (expiryDate < new Date()) isExpired = true;
+        } else {
+           isExpired = true;
+        }
+      } else {
+        isExpired = true;
+      }
+
+      if (!hasValidClass) {
+        toast.error('Warning: Driver does NOT have a Heavy/Transport License class!', { duration: 5000, icon: '⚠️' });
+      } else if (isExpired) {
+        toast.error('Warning: Driver Transport License Validity has expired!', { duration: 5000, icon: '⚠️' });
+      } else {
+        toast.success('DL verified successfully and is eligible for Transport.');
+      }
+    } catch (err) {
+      toast.error('Failed to verify Driving License: ' + (err.response?.data?.error || err.error || err.message || 'Unknown error'));
+    } finally {
+      setFetchingDl(false);
+    }
   };
+
 
   const handleSearchGc = async () => {
     if (!searchGcText.trim()) return;
     
+    let text = searchGcText.trim().toUpperCase();
     const prefix = gdmCompanyMode === 'A' ? 'AP-' : 'BELL-';
-    const fullGcNumber = `${prefix}${searchGcText.trim()}`;
+    
+    // Strip prefix if already present (e.g., from a barcode scan)
+    if (text.startsWith('AP-') || text.startsWith('BELL-')) {
+      text = text.replace(/^(AP-|BELL-)/, '');
+    }
+    
+    const fullGcNumber = `${prefix}${text}`;
+
+    // Clear input IMMEDIATELY for rapid barcode scanning (prevent appending next scan)
+    setSearchGcText('');
 
     // Prevent adding duplicates
     if (gcs.some(gc => gc.gcNumber === fullGcNumber)) {
       setError(`GC ${fullGcNumber} is already in the list.`);
       setTimeout(() => setError(''), 3000);
-      setSearchGcText('');
       return;
     }
 
@@ -132,20 +263,49 @@ export default function GdmEntry() {
         throw new Error(`GC ${gc.gcNumber} is cancelled and cannot be added.`);
       }
 
+      // Enforce Single Consignee mode
+      if (consigneeMode === 'Single Consignee') {
+        if (!selectedConsigneeData) {
+          throw new Error('Please select a Consignee first in Single Consignee mode.');
+        }
+        
+        const selectedId = selectedConsigneeData.id;
+        const gcId = gc.consigneeId;
+        
+        if (gcId !== selectedId) {
+          const selectedParentId = selectedConsigneeData.parentId;
+          const gcParentId = gc.consignee?.parentId;
+
+          let isMatch = false;
+          if (gcParentId && selectedParentId && gcParentId === selectedParentId) isMatch = true; // Sibling
+          if (gcId === selectedParentId) isMatch = true; // GC is Parent
+          if (selectedId === gcParentId) isMatch = true; // Selected is Parent
+          
+          if (!isMatch) {
+            throw new Error(`Consignee mismatch! This GC belongs to ${gc.consignee?.name || 'another consignee'} (Not in the same Parent Group).`);
+          }
+        }
+      }
+
       // Mock E-Way Bill Status Logic for UI demo
-      // Calculate days since GC date
-      const gcDate = new Date(gc.date || new Date());
-      const today = new Date();
-      const diffTime = Math.abs(today - gcDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
       let ewbStatus = 'Valid';
-      if (diffDays > 15) ewbStatus = 'Expired';
-      else if (diffDays > 12) ewbStatus = 'Expiring';
-      else if (gc.privateMark === 'NO_EWB') ewbStatus = 'Pending'; // Mock no EWB
+      let diffDays = 0;
+      
+      if (!gc.ewbNumber && gc.privateMark === 'NO_EWB') {
+        ewbStatus = 'Pending';
+      } else if (gc.ewbNumber || gc.privateMark) {
+        const gcDate = new Date(gc.date || new Date());
+        const today = new Date();
+        const diffTime = Math.abs(today - gcDate);
+        diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays > 15) ewbStatus = 'Expired';
+        else if (diffDays > 12) ewbStatus = 'Expiring';
+      } else {
+        ewbStatus = 'Pending';
+      }
 
       setGcs(prev => [...prev, { ...gc, ewbStatus, ewbAge: diffDays, includeInCewb: true }]);
-      setSearchGcText('');
       setSuccess(`GC ${gc.gcNumber} added!`);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
@@ -161,13 +321,21 @@ export default function GdmEntry() {
   };
 
   const totals = useMemo(() => {
-    let totalBundles = 0;
+    let cases = 0, cartons = 0, bundles = 0, total = 0;
     let totalFreightAmount = 0;
 
     gcs.forEach(gc => {
-      // Sum articles across goods in this GC
-      const gcBundles = gc.goods ? gc.goods.reduce((sum, item) => sum + (item.articleCount || 0), 0) : 0;
-      totalBundles += gcBundles;
+      if (gc.goods) {
+        gc.goods.forEach(item => {
+          const qty = parseInt(item.articleCount) || 0;
+          total += qty;
+          const match = allUnitOptions.find(o => o.label.toLowerCase() === (item.units || '').toLowerCase());
+          const code = match ? match.code : null;
+          if (code === 'C/S') cases += qty;
+          else if (code === 'C/N') cartons += qty;
+          else if (code === 'BD/S') bundles += qty;
+        });
+      }
       
       // Add freight total if in individual mode
       if (freightMode === 'Use Individual GC Freight') {
@@ -179,8 +347,8 @@ export default function GdmEntry() {
       totalFreightAmount = parseFloat(overallRate) || 0;
     }
 
-    return { totalBundles, totalFreightAmount };
-  }, [gcs, freightMode, overallRate]);
+    return { cases, cartons, bundles, total, totalFreightAmount };
+  }, [gcs, freightMode, overallRate, allUnitOptions]);
 
   const handleBulkGenerateEwayBills = async () => {
     if (!lorryDetails.vehicleId) {
@@ -191,19 +359,114 @@ export default function GdmEntry() {
     
     const gcsForCewb = gcs.filter(gc => gc.includeInCewb !== false);
     
-    // Extract E-Way bill numbers (assume stored in privateMark for now)
-    const ewbNos = gcsForCewb.map(gc => gc.privateMark).filter(Boolean);
-    if (ewbNos.length === 0) {
-      setError('None of the selected GCs have an attached E-Way Bill Number to consolidate.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
     setLoading(true);
-    setSuccess('Initiating Smart CEWB Split Generation...');
+    setSuccess('Initiating Smart E-Way Bill Auto-Healing & Generation...');
     
     try {
-      const gdmEwbs = gcsForCewb.map(gc => gc.privateMark).filter(Boolean);
+      // Helper function to calculate tax from HSN for Bucket 3
+      const calculateTaxFromHsn = async (gc) => {
+        let totalIgst = 0, totalCgst = 0, totalSgst = 0, totalTaxable = 0;
+        const totalInvoiceValue = parseFloat(gc.invoiceValue) || 0;
+        
+        for (const item of gc.goods) {
+          const hsnCode = item.hsn;
+          let taxRate = 18; // Default fallback
+          try {
+            const hsnRes = await api.get(`/hsn?q=${hsnCode}`);
+            if (hsnRes && hsnRes.gstRate) taxRate = hsnRes.gstRate;
+          } catch (e) { /* ignore */ }
+          
+          // Reverse Tax Calculation: Base Value = Total / (1 + Tax%)
+          // Assuming the entire invoice value belongs to this item for simplicity if 1 item.
+          // For multiple items, we'd distribute invoice value proportionally, but usually it's 1 item per GC.
+          const itemBaseValue = totalInvoiceValue / (1 + (taxRate / 100));
+          const itemTax = totalInvoiceValue - itemBaseValue;
+          
+          totalTaxable += itemBaseValue;
+          
+          // Interstate vs Intrastate
+          const isInterstate = gc.consignor?.state !== gc.consignee?.state;
+          if (isInterstate) {
+            totalIgst += itemTax;
+          } else {
+            totalCgst += itemTax / 2;
+            totalSgst += itemTax / 2;
+          }
+        }
+        return { totalTaxable, totalIgst, totalCgst, totalSgst };
+      };
+
+      // Phase 1: Self-Healing Bucket Sort & Fix (Sequential to avoid Government API Rate Limits)
+      const healedGcs = [];
+      for (let i = 0; i < gcsForCewb.length; i++) {
+        const gc = gcsForCewb[i];
+        let currentEwb = gc.privateMark;
+        const companyStr = gc.companyMode === 'B' ? 'BELL' : 'AP';
+        const vNo = lorryDetails.lorryNo.replace(/[^A-Z0-9]/gi, '');
+        
+        // BUCKET 3: Generate from scratch (No existing EWB)
+        if (!currentEwb) {
+           setSuccess(`[${i+1}/${gcsForCewb.length}] Bucket 3: Generating fresh EWB for GC ${gc.gcNumber}...`);
+           const taxInfo = await calculateTaxFromHsn(gc);
+           try {
+             const res = await api.post(`/ewaybill/generate?company=${companyStr}`, { gcData: gc, taxInfo, vehicleNo: vNo });
+             currentEwb = res.ewayBillNo;
+             await api.put(`/gcs/${gc.id}/ewb`, { privateMark: currentEwb });
+           } catch(e) { 
+             const errorMsg = e.response?.data?.error || e.message || 'Unknown error';
+             throw new Error(`Failed to Generate EWB for GC ${gc.gcNumber}: ${errorMsg}`);
+           }
+        } 
+        // BUCKET 2: Regenerate (Expired > 15 days)
+        else if (gc.ewbAge > 15) {
+           setSuccess(`[${i+1}/${gcsForCewb.length}] Bucket 2: Regenerating expired EWB ${currentEwb} for GC ${gc.gcNumber}...`);
+           try {
+             const res = await api.post(`/ewaybill/regenerate?company=${companyStr}`, { ewbRawData: gc.ewbRawData, vehicleNo: vNo });
+             currentEwb = res.ewayBillNo;
+             await api.put(`/gcs/${gc.id}/ewb`, { privateMark: currentEwb });
+           } catch(e) { 
+             const errorMsg = e.response?.data?.error || e.message || 'Unknown error';
+             throw new Error(`Failed to Regenerate EWB for GC ${gc.gcNumber}: ${errorMsg}`);
+           }
+        }
+        // BUCKET 1: Valid (<= 15 days) -> Update Part B
+        else {
+           setSuccess(`[${i+1}/${gcsForCewb.length}] Bucket 1: Updating Part B for EWB ${currentEwb}...`);
+           try {
+             await api.post(`/ewaybill/update-part-b?company=${companyStr}`, { ewbNo: currentEwb, vehicleNo: vNo });
+           } catch(e) { 
+             const errorMsg = (e.response?.data?.error || e.message || '').toLowerCase();
+             
+             // PRECISE ERROR HANDLING: Only fallback if the government says it's an expiration issue
+             // Government Error Code 343 or keywords like "expired", "validity", "lapsed"
+             if (errorMsg.includes('expired') || errorMsg.includes('validity') || errorMsg.includes('343')) {
+               console.warn(`Part B update rejected due to expiration. Falling back to Regeneration.`);
+               setSuccess(`[${i+1}/${gcsForCewb.length}] Safety Net Triggered: Regenerating EWB for GC ${gc.gcNumber}...`);
+               try {
+                 const res = await api.post(`/ewaybill/regenerate?company=${companyStr}`, { ewbRawData: gc.ewbRawData, vehicleNo: vNo });
+                 currentEwb = res.ewayBillNo;
+                 await api.put(`/gcs/${gc.id}/ewb`, { privateMark: currentEwb });
+               } catch (fallbackError) {
+                 const fallbackMsg = fallbackError.response?.data?.error || fallbackError.message;
+                 throw new Error(`Regeneration also failed for GC ${gc.gcNumber}: ${fallbackMsg}`);
+               }
+             } else {
+               // Hard Data Errors (e.g., Code 238: Invalid GSTIN, Code 227: Cancelled, Code 215: Invalid HSN)
+               // Do NOT fallback. Stop and tell the operator exactly what is broken.
+               throw new Error(`Government Portal Error for GC ${gc.gcNumber}: ${e.response?.data?.error || e.message}`);
+             }
+           }
+        }
+        
+        healedGcs.push({ ...gc, privateMark: currentEwb, ewbStatus: 'Valid', ewbAge: 0 });
+      }
+      
+      // Update UI with healed EWBs
+      setGcs(healedGcs);
+      
+      // Phase 2: Consolidate
+      setSuccess('Consolidating Healed EWBs into CEWB...');
+      const gdmEwbs = healedGcs.map(gc => gc.privateMark).filter(Boolean);
       
       const basePayload = {
         vehicleNo: lorryDetails.lorryNo.replace(/[^A-Z0-9]/gi, ''), 
@@ -221,12 +484,10 @@ export default function GdmEntry() {
         if (res && res.cEwbNo) generatedCewbs.push(`${companyString}: ${res.cEwbNo}`);
       }
       
-      // On success, update UI to show valid
-      setGcs(prev => prev.map(gc => ({
-        ...gc,
-        ewbStatus: 'Valid',
-        ewbAge: 0
-      })));
+      // Note: We don't need to manually map setGcs valid status here since we did it above
+      if (generatedCewbs.length > 0) {
+        setGdmDetails(prev => ({ ...prev, cewbNumber: generatedCewbs.join(' | ') }));
+      }
       
       setSuccess(`Successfully generated CEWBs -> ${generatedCewbs.join(' | ')}`);
       setTimeout(() => setSuccess(''), 8000);
@@ -266,7 +527,19 @@ export default function GdmEntry() {
       driverPhone: lorryDetails.driverPhone,
       startKm: lorryDetails.startKm,
       memoAmount: totals.totalFreightAmount,
-      gcIds: gcs.map(gc => gc.id)
+      cewbNumber: gdmDetails.cewbNumber,
+      gcIds: gcs.map(gc => gc.id),
+      dlData: dlData ? {
+        licenseNumber: dlDetails.license.replace(/[\s-]/g, '').toUpperCase(),
+        dob: dlDetails.dob,
+        name: dlData.owner_name,
+        phone: lorryDetails.driverPhone,
+        rto: dlData.rto,
+        status: dlData.status,
+        validityNt: dlData.validity_nt,
+        validityTr: dlData.validity_tr,
+        vehicleClasses: dlData.vehicle_classes,
+      } : null
     };
 
     try {
@@ -283,7 +556,10 @@ export default function GdmEntry() {
         setActiveGdmId(null);
         setGcs([]);
         setLorryDetails({ vehicleId: '', lorryNo: '', driverName: '', driverPhone: '', startKm: '' });
-        setGdmDetails(prev => ({ ...prev, toName: 'AS PER BILLS', deliveryAt: '' }));
+        setGdmDetails(prev => ({ ...prev, toName: 'AS PER BILLS', deliveryAt: '', cewbNumber: '' }));
+        setDlDetails({ license: '', dob: '' });
+        setDlData(null);
+        localStorage.removeItem('gdmDraft');
         fetchInitialData();
         setSuccess('');
       }, 2000);
@@ -312,7 +588,8 @@ export default function GdmEntry() {
         time: gdm.time || '',
         fromLocation: gdm.fromLocation || '',
         toName: gdm.toName || '',
-        deliveryAt: gdm.deliveryAt || ''
+        deliveryAt: gdm.deliveryAt || '',
+        cewbNumber: gdm.cewbNumber || ''
       });
 
       if (gdm.vehicle) {
@@ -338,12 +615,32 @@ export default function GdmEntry() {
         const isBell = gdm.gcs[0].gcNumber?.startsWith('BELL-');
         setGdmCompanyMode(isBell ? 'B' : 'A');
         
-        setGcs(gdm.gcs.map(gc => ({
-          ...gc,
-          ewbStatus: gc.status === 'Created' ? 'Pending' : 'Valid', 
-          ewbAge: 0,
-          includeInCewb: true
-        })));
+        setGcs(gdm.gcs.map(gc => {
+          // Calculate ewbStatus same as handleSearchGc
+          let computedStatus = 'Valid';
+          let diffDays = 0;
+          
+          if (!gc.ewbNumber && gc.privateMark === 'NO_EWB') {
+            computedStatus = 'Pending';
+          } else if (gc.ewbNumber || gc.privateMark) {
+            const gcDate = new Date(gc.date || new Date());
+            const today = new Date();
+            const diffTime = Math.abs(today - gcDate);
+            diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays > 15) computedStatus = 'Expired';
+            else if (diffDays > 12) computedStatus = 'Expiring';
+          } else {
+            computedStatus = 'Pending';
+          }
+
+          return {
+            ...gc,
+            ewbStatus: computedStatus,
+            ewbAge: diffDays,
+            includeInCewb: true
+          };
+        }));
       } else {
         setGcs([]);
       }
@@ -360,8 +657,7 @@ export default function GdmEntry() {
   return (
     <div className="space-y-4 max-w-[1300px] mx-auto pb-10" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       
-      {error && <div className="px-5 py-3 bg-rose-50/90 backdrop-blur-sm text-rose-700 rounded-xl border border-rose-200 text-sm font-bold shadow-sm flex items-center gap-2"><span className="text-xl leading-none">⚠️</span> {error}</div>}
-      {success && <div className="px-5 py-3 bg-emerald-50/90 backdrop-blur-sm text-emerald-700 rounded-xl border border-emerald-200 text-sm font-bold shadow-sm flex items-center gap-2"><span className="text-xl leading-none">✓</span> {success}</div>}
+      {/* Alerts moved to inline search bar to prevent layout shifts */}
 
       
       {/* TOP ROW: Lorry & Memo Details */}
@@ -377,9 +673,17 @@ export default function GdmEntry() {
                 <div className="bg-emerald-50 text-emerald-600 p-2 rounded-lg shadow-inner border border-emerald-100/50"><Truck size={18} /></div>
                 <h3 className="font-bold text-lg text-slate-800 tracking-tight">Lorry Details</h3>
               </div>
-              <button className="text-slate-400 group-hover:text-emerald-600 transition-colors p-1 bg-slate-50 rounded-md">
-                <span className="text-xs font-bold">{isLorryExpanded ? '▲' : '▼'}</span>
-              </button>
+              
+              <div className="flex items-center gap-2">
+                {gdmDetails.cewbNumber && (
+                  <div className="px-2.5 py-1 bg-amber-100 text-amber-800 text-[11px] font-black tracking-wider uppercase rounded-md border border-amber-300 shadow-sm">
+                    CEWB: {gdmDetails.cewbNumber}
+                  </div>
+                )}
+                <button className="text-slate-400 group-hover:text-emerald-600 transition-colors p-1 bg-slate-50 rounded-md">
+                  <span className="text-xs font-bold">{isLorryExpanded ? '▲' : '▼'}</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -387,7 +691,7 @@ export default function GdmEntry() {
                 id="vehicle-select"
                 nextFocusId="gdm-gc-search"
                 label="Search Lorry *"
-                options={vehicles.map(v => ({ value: v.id.toString(), label: v.vehicleNumber }))}
+                options={vehicleOptions}
                 value={lorryDetails.vehicleId?.toString()}
                 onChange={handleVehicleChange}
                 placeholder=""
@@ -395,9 +699,70 @@ export default function GdmEntry() {
               />
               
               {isLorryExpanded && (
-                <div className="flex gap-2 pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                   <DenseInput label="Driver Name" value={lorryDetails.driverName} onChange={e => setLorryDetails({...lorryDetails, driverName: e.target.value})} className="w-1/2" />
-                   <DenseInput label="Driver Phone" value={lorryDetails.driverPhone} onChange={e => setLorryDetails({...lorryDetails, driverPhone: e.target.value})} className="w-1/2" />
+                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                   <div className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-lg border border-slate-200 shadow-inner">
+                     <div className="flex items-center gap-2">
+                       <ShieldAlert size={14} className="text-blue-500" />
+                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">License Verification</span>
+                     </div>
+                     <div className="flex items-end gap-2">
+                       <DenseInput label="DL No." value={dlDetails.license} onChange={e => setDlDetails({...dlDetails, license: e.target.value})} className="flex-1 [&>input]:uppercase" />
+                       <DenseInput label="DOB" type="date" value={dlDetails.dob} onChange={e => setDlDetails({...dlDetails, dob: e.target.value})} className="w-[110px]" />
+                     </div>
+                     <button 
+                       type="button"
+                       onClick={handleFetchDL} 
+                       disabled={fetchingDl || !dlDetails.license || !dlDetails.dob}
+                       className="h-8 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-md font-bold text-xs shadow-sm hover:shadow transition-all w-full mt-1"
+                     >
+                       {fetchingDl ? 'Verifying...' : 'Verify & Check Eligibility'}
+                     </button>
+                     
+                     {/* DL Verified Badge */}
+                     {dlData && (
+                       <div className="mt-2 flex flex-col gap-1.5 p-2 bg-blue-50 border border-blue-100 rounded-md">
+                         <div className="flex items-center justify-between">
+                           <span className={`text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-sm ${dlData.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                             {dlData.status}
+                           </span>
+                           {/* Eligibility */}
+                           {(() => {
+                              const validClasses = ['TRANS', 'HTV', 'HMV', 'HGMV', 'MGV', 'MGMV'];
+                              const hasValidClass = dlData.vehicle_classes?.some(c => validClasses.includes(c?.toUpperCase()));
+                              let isExpired = false;
+                              if (dlData.validity_tr && dlData.validity_tr !== '-' && dlData.validity_tr !== 'NA') {
+                                const parts = dlData.validity_tr.split('-');
+                                if (parts.length === 3) {
+                                  const [day, month, year] = parts;
+                                  const expiryDate = new Date(`${year}-${month}-${day}`);
+                                  if (expiryDate < new Date()) isExpired = true;
+                                } else isExpired = true;
+                              } else isExpired = true;
+ 
+                              if (!hasValidClass) {
+                                return <span className="text-[10px] font-black tracking-wider text-rose-700 uppercase bg-rose-100 px-2 py-0.5 rounded-sm flex items-center gap-1 border border-rose-200">Missing Heavy Class</span>;
+                              } else if (isExpired) {
+                                return <span className="text-[10px] font-black tracking-wider text-rose-700 uppercase bg-rose-100 px-2 py-0.5 rounded-sm flex items-center gap-1 border border-rose-200">TR Expired</span>;
+                              } else {
+                                return <span className="text-[10px] font-black tracking-wider text-emerald-700 uppercase bg-emerald-100 px-2 py-0.5 rounded-sm flex items-center gap-1 border border-emerald-200">Transport Eligible</span>;
+                              }
+                           })()}
+                         </div>
+                         <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                           {dlData.owner_name} {dlData.owner_name?.includes('*') && <span className="text-[9px] font-black tracking-wider text-rose-500 bg-rose-50 px-1 py-0.5 rounded uppercase">Masked</span>}
+                         </div>
+                         <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                           <span>TR Val: {dlData.validity_tr}</span>
+                           <span>Class: {dlData.vehicle_classes?.join(', ')}</span>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+
+                   <div className="flex gap-2">
+                     <DenseInput label="Driver Name" value={lorryDetails.driverName} onChange={e => setLorryDetails({...lorryDetails, driverName: e.target.value})} className="w-1/2" />
+                     <DenseInput label="Driver Phone" value={lorryDetails.driverPhone} onChange={e => setLorryDetails({...lorryDetails, driverPhone: e.target.value})} className="w-1/2" />
+                   </div>
                 </div>
               )}
             </div>
@@ -405,8 +770,8 @@ export default function GdmEntry() {
         </div>
 
         {/* Delivery Memo (Right - 66%) */}
-        <div className="lg:col-span-2">
-          <GlassCard>
+        <div className="lg:col-span-2 relative z-20">
+          <GlassCard className="relative z-20">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="bg-indigo-50 text-indigo-600 p-2 rounded-lg shadow-inner border border-indigo-100/50"><PackageCheck size={18} /></div>
@@ -459,7 +824,7 @@ export default function GdmEntry() {
                 <DenseInput label="To (Name)" value={gdmDetails.toName} onChange={e => setGdmDetails({...gdmDetails, toName: e.target.value})} className="w-1/3" />
                 <DenseInput label="Delivery At" value={gdmDetails.deliveryAt} onChange={e => setGdmDetails({...gdmDetails, deliveryAt: e.target.value})} className="w-1/3 [&>input]:border-amber-300 [&>input]:bg-amber-50 focus-within:[&>input]:border-amber-500" />
               </div>
-              <div className="p-3 bg-slate-50/50 rounded-xl border border-slate-200 shadow-inner mt-2">
+              <div className="p-3 bg-slate-50/50 rounded-xl border border-slate-200 shadow-inner mt-2 relative z-20">
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-col">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Consignee Mode</label>
@@ -471,7 +836,7 @@ export default function GdmEntry() {
                         setConsigneeMode(newMode);
                         if (newMode === 'Multiple Consignee') {
                           setGdmDetails({...gdmDetails, toName: 'AS PER BILLS', deliveryAt: ''});
-                          setSingleConsigneeSearch('');
+                          setSelectedConsigneeData(null);
                         } else {
                           setGdmDetails({...gdmDetails, toName: '', deliveryAt: ''});
                         }
@@ -483,19 +848,13 @@ export default function GdmEntry() {
                   </div>
                   {consigneeMode === 'Single Consignee' && (
                     <div className="mt-1">
-                      <SearchableSelect 
+                      <AsyncSearchableSelect 
                         id="consignee-select"
                         nextFocusId="gdm-gc-search"
                         label="Select Consignee"
-                        options={consignees.map(c => ({ value: c.id.toString(), label: c.name }))}
-                        value={singleConsigneeSearch}
-                        onChange={id => {
-                          setSingleConsigneeSearch(id);
-                          const selected = consignees.find(c => c.id.toString() === id);
-                          if (selected) {
-                            setGdmDetails({...gdmDetails, toName: selected.name || '', deliveryAt: selected.city || ''});
-                          }
-                        }}
+                        fetchOptions={fetchConsigneesAsync}
+                        value={selectedConsigneeData?.id?.toString() || ''}
+                        onChange={handleConsigneeChange}
                         placeholder="Search consignee..."
                         className="[&>div>button]:h-9 [&>div>button]:bg-white [&>div>button]:border-slate-200"
                       />
@@ -548,6 +907,16 @@ export default function GdmEntry() {
               </div>
               
               <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200/60 shadow-inner shrink-0 w-full sm:w-auto overflow-x-auto">
+                {success && (
+                  <div className="h-9 px-3 bg-emerald-100 text-emerald-800 rounded-lg text-[11px] font-black tracking-wide flex items-center whitespace-nowrap border border-emerald-200 animate-in fade-in slide-in-from-right-2 duration-300">
+                    ✓ {success}
+                  </div>
+                )}
+                {error && (
+                  <div className="h-9 px-3 bg-rose-100 text-rose-800 rounded-lg text-[11px] font-black tracking-wide flex items-center whitespace-nowrap border border-rose-200 animate-in fade-in slide-in-from-right-2 duration-300">
+                    ⚠️ {error}
+                  </div>
+                )}
                 <div className="flex flex-col group w-48">
                   <div className="flex h-9 rounded-lg overflow-hidden border border-slate-200 bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
                     <span className="flex items-center justify-center px-2 bg-slate-50 text-slate-500 font-bold text-xs border-r border-slate-200">
@@ -602,7 +971,7 @@ export default function GdmEntry() {
                     <th className="p-3">EWB Status</th>
                     <th className="p-3">Consignor</th>
                     <th className="p-3">Consignee</th>
-                    <th className="p-3 text-center">Bundles</th>
+                    <th className="p-3 text-center">Packages</th>
                     <th className="p-3 text-right">Freight</th>
                     <th className="p-3 text-center rounded-tr-lg">Action</th>
                   </tr>
@@ -610,7 +979,7 @@ export default function GdmEntry() {
                 <tbody className="text-sm font-semibold text-slate-700 divide-y divide-slate-100">
                   {gcs.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="p-12 text-center text-slate-400 font-medium">
+                      <td colSpan="8" className="p-12 text-center text-slate-400 font-medium">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <PackageCheck size={32} className="opacity-20" />
                           <p>Scan or type a GC Number above to add it to the Despatch Memo</p>
@@ -619,7 +988,26 @@ export default function GdmEntry() {
                     </tr>
                   ) : (
                     gcs.map(gc => {
-                      const bundles = gc.goods ? gc.goods.reduce((s, i) => s + (i.articleCount || 0), 0) : 0;
+                      let c = 0, n = 0, b = 0, totalPkgs = 0;
+                      if (gc.goods) {
+                        gc.goods.forEach(item => {
+                          const qty = parseInt(item.articleCount) || 0;
+                          totalPkgs += qty;
+                          const match = allUnitOptions.find(o => o.label.toLowerCase() === (item.units || '').toLowerCase());
+                          const code = match ? match.code : null;
+                          if (code === 'C/S') c += qty;
+                          else if (code === 'C/N') n += qty;
+                          else if (code === 'BD/S') b += qty;
+                        });
+                      }
+                      
+                      const tallyParts = [];
+                      if (c > 0) tallyParts.push(`${c} C/S`);
+                      if (n > 0) tallyParts.push(`${n} C/N`);
+                      if (b > 0) tallyParts.push(`${b} BD/S`);
+                      const otherPkgs = totalPkgs - (c + n + b);
+                      if (otherPkgs > 0) tallyParts.push(`${otherPkgs} OTH`);
+                      const tallyStr = tallyParts.length > 0 ? tallyParts.join(' + ') : '0';
                       
                       // Status Badge Logic
                       let badgeClass = "bg-slate-100 text-slate-600";
@@ -643,13 +1031,25 @@ export default function GdmEntry() {
                           </td>
                           <td className="p-3 text-indigo-700 font-bold">{gc.gcNumber}</td>
                           <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
-                              {gc.ewbStatus || 'Unknown'} {gc.ewbAge > 0 ? `(${gc.ewbAge}d)` : ''}
-                            </span>
+                            <div className="flex flex-col items-start gap-1.5">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
+                                {gc.ewbStatus || 'Unknown'} {gc.ewbAge > 0 ? `(${gc.ewbAge}d)` : ''}
+                              </span>
+                              {gc.ewbNumber && (
+                                <span className="text-xs font-mono text-indigo-700 font-bold bg-indigo-50/50 px-1.5 py-0.5 rounded border border-indigo-100">
+                                  {gc.ewbNumber.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3')}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="p-3 truncate max-w-[150px]">{gc.consignor?.name || 'N/A'}</td>
                           <td className="p-3 truncate max-w-[150px]">{gc.consignee?.name || 'N/A'}</td>
-                          <td className="p-3 text-center text-slate-900 font-black">{bundles}</td>
+                          <td className="p-3 text-center">
+                            <div className="flex flex-col items-center">
+                              <span className="text-slate-900 font-black">{totalPkgs}</span>
+                              {tallyStr !== '0' && <span className="text-[10px] text-slate-500 font-bold">{tallyStr}</span>}
+                            </div>
+                          </td>
                           <td className="p-3 text-right tabular-nums">₹{gc.freightTotal?.toFixed(2) || '0.00'}</td>
                           <td className="p-3 text-center">
                             <div className="flex items-center justify-center gap-1">
@@ -679,8 +1079,20 @@ export default function GdmEntry() {
               
               <div className="flex gap-6">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Bundles</span>
-                  <span className="text-2xl font-black text-indigo-900">{totals.totalBundles}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cases</span>
+                  <span className="text-2xl font-black text-indigo-900">{totals.cases}</span>
+                </div>
+                <div className="flex flex-col border-l border-slate-200 pl-4">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cartons</span>
+                  <span className="text-2xl font-black text-indigo-900">{totals.cartons}</span>
+                </div>
+                <div className="flex flex-col border-l border-slate-200 pl-4">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Bundles</span>
+                  <span className="text-2xl font-black text-indigo-900">{totals.bundles}</span>
+                </div>
+                <div className="flex flex-col border-l border-slate-200 pl-4">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Packages</span>
+                  <span className="text-2xl font-black text-indigo-900">{totals.total}</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Freight</span>
@@ -693,7 +1105,12 @@ export default function GdmEntry() {
                 <button 
                   onClick={() => {
                     setSuccess("Simulating Consolidated E-Way Bill Generation...");
-                    setTimeout(() => setSuccess("Consolidated E-Way Bill Generated: CEWB-9988776655"), 2000);
+                    setTimeout(() => {
+                      const demoCewb = "CEWB-" + Math.floor(1000000000 + Math.random() * 9000000000);
+                      setSuccess(`Consolidated E-Way Bill Generated: ${demoCewb}`);
+                      setGdmDetails(prev => ({ ...prev, cewbNumber: demoCewb }));
+                      setGcs(prev => prev.map(gc => ({ ...gc, ewbStatus: 'Valid', ewbAge: 0 })));
+                    }, 2000);
                   }}
                   disabled={loading || gcs.length === 0} 
                   className="h-11 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:from-slate-300 disabled:to-slate-300 text-white rounded-xl font-bold text-sm shadow-sm transition-all flex items-center gap-2"

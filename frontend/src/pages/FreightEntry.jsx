@@ -28,7 +28,23 @@ export default function FreightEntry() {
   const [success, setSuccess] = useState('');
   
   const [searchGc, setSearchGc] = useState('');
+  const [companyMode, setCompanyMode] = useState('A'); // 'A' for AP, 'B' for BELL
   const [activeGc, setActiveGc] = useState(null);
+  const [recentActivities, setRecentActivities] = useState([]);
+
+  // Fetch initial recent activities
+  React.useEffect(() => {
+    const fetchRecent = async () => {
+      try {
+        const gcs = await api.get('/gcs');
+        const pricedGcs = gcs.filter(gc => gc.freightTotal > 0).slice(0, 5);
+        setRecentActivities(pricedGcs);
+      } catch (err) {
+        console.error('Failed to fetch recent freight activities', err);
+      }
+    };
+    fetchRecent();
+  }, []);
 
   // Editable Freight fields
   const [freightRate, setFreightRate] = useState('');
@@ -45,8 +61,10 @@ export default function FreightEntry() {
       setError('');
       setSuccess('');
       setActiveGc(null);
+      const prefix = companyMode === 'A' ? 'AP-' : 'BELL-';
+      const fullGcNumber = `${prefix}${searchGc.trim()}`;
       
-      const res = await api.get(`/gcs/${searchGc.trim()}`);
+      const res = await api.get(`/gcs/${fullGcNumber}`);
       setActiveGc(res);
       setFreightRate(res.freightRate?.toString() || '');
       setAdvancePaid(res.advancePaid?.toString() || '');
@@ -102,6 +120,13 @@ export default function FreightEntry() {
       await api.put(`/gcs/${activeGc.id}/freight`, payload);
       setSuccess('GC Freight successfully updated!');
       
+      // Update recent activities instantly
+      const updatedGc = { ...activeGc, ...payload, updatedAt: new Date().toISOString() };
+      setRecentActivities(prev => {
+        const filtered = prev.filter(g => g.id !== updatedGc.id);
+        return [updatedGc, ...filtered].slice(0, 5);
+      });
+      
       setTimeout(() => {
         setSuccess('');
         setActiveGc(null);
@@ -126,16 +151,46 @@ export default function FreightEntry() {
           <div className="bg-blue-50 text-blue-600 p-1.5 rounded-lg shadow-inner border border-blue-100/50"><Search size={16} /></div>
           <h3 className="font-bold text-sm text-slate-800 tracking-tight">Post-Booking Freight Entry</h3>
         </div>
-        <div className="flex gap-3 items-end">
-           <DenseInput 
-             label="GC Number *" 
-             placeholder="e.g. GC-2026-001" 
-             value={searchGc} 
-             onChange={e => setSearchGc(e.target.value)} 
-             onKeyDown={handleSearchKeyDown}
-             autoFocus
-             className="w-48 [&>input]:font-black [&>input]:text-indigo-900 [&>input]:uppercase" 
-           />
+        <div className="flex items-center gap-3 items-end">
+           
+           {/* Company Toggle */}
+           <div className="flex flex-col">
+             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Company</label>
+             <div className="flex bg-slate-100/80 p-0.5 rounded-lg border border-slate-200 h-9">
+               <button 
+                 type="button"
+                 onClick={() => setCompanyMode('A')}
+                 className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${companyMode === 'A' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+               >
+                 AP
+               </button>
+               <button 
+                 type="button"
+                 onClick={() => setCompanyMode('B')}
+                 className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${companyMode === 'B' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+               >
+                 BELL
+               </button>
+             </div>
+           </div>
+
+           <div className="flex flex-col group w-48">
+             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 transition-colors group-focus-within:text-indigo-600">GC Number *</label>
+             <div className="flex h-9 rounded-lg overflow-hidden border border-slate-200 bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
+               <span className="flex items-center justify-center px-2 bg-slate-50 text-slate-500 font-bold text-xs border-r border-slate-200">
+                 {companyMode === 'A' ? 'AP' : 'BELL'}-
+               </span>
+               <input 
+                 autoFocus
+                 placeholder="5000"
+                 className="w-full px-2 text-sm font-black text-indigo-900 bg-transparent outline-none" 
+                 value={searchGc} 
+                 onChange={e => setSearchGc(e.target.value)} 
+                 onKeyDown={handleSearchKeyDown}
+               />
+             </div>
+           </div>
+
            <button 
              type="button" 
              onClick={handleSearch} 
@@ -214,6 +269,45 @@ export default function FreightEntry() {
             </div>
           </GlassCard>
         </>
+      )}
+
+      {/* 4. RECENT ACTIVITY AUDIT FEED */}
+      {!activeGc && recentActivities.length > 0 && (
+        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <div className="bg-slate-100 text-slate-500 p-1.5 rounded-lg border border-slate-200"><FileText size={16} /></div>
+            <h3 className="font-bold text-sm text-slate-700 tracking-tight uppercase">Recent Freight Entries</h3>
+          </div>
+          <GlassCard className="!p-0 border-slate-200/60 shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/80 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    <th className="p-3 pl-5">GC Number</th>
+                    <th className="p-3">Consignee</th>
+                    <th className="p-3 text-center">Bundles</th>
+                    <th className="p-3 text-right">Freight Total</th>
+                    <th className="p-3 text-right pr-5">Advance</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm font-semibold text-slate-600 divide-y divide-slate-50">
+                  {recentActivities.map((gc, i) => {
+                    const bundles = gc.goods ? gc.goods.reduce((s, item) => s + (item.articleCount || 0), 0) : 0;
+                    return (
+                      <tr key={gc.id || i} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-3 pl-5 font-bold text-indigo-700">{gc.gcNumber}</td>
+                        <td className="p-3 truncate max-w-[200px]">{gc.consignee?.name || '-'}</td>
+                        <td className="p-3 text-center text-slate-800 font-bold">{bundles}</td>
+                        <td className="p-3 text-right font-black text-emerald-600">₹{gc.freightTotal?.toFixed(2)}</td>
+                        <td className="p-3 text-right pr-5 font-medium text-slate-500">₹{gc.advancePaid?.toFixed(2) || '0.00'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+        </div>
       )}
 
     </div>

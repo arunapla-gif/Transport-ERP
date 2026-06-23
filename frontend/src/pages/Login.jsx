@@ -30,6 +30,9 @@ export default function Login({ onLogin }) {
         setPin('');
       } else {
         localStorage.setItem('erp_token', data.token);
+        localStorage.setItem('assignedBranch', data.branch);
+        // If they are an admin, default them to MAIN initially, otherwise lock them to their assigned branch
+        localStorage.setItem('activeBranch', data.branch === 'ALL' ? 'MAIN' : data.branch); 
         onLogin(data.role);
       }
     } catch (err) {

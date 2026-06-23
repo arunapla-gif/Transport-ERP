@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { FileText, Calendar, Download, TrendingUp, Truck, Package, IndianRupee, Users, Building2 } from 'lucide-react';
+import { FileText, Calendar, Download, TrendingUp, Truck, Package, IndianRupee, Users, Building2, X, Clock, CheckCircle2, History } from 'lucide-react';
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('gc'); // gc, gdm, consignor, consignee, vehicle
+  const [selectedGc, setSelectedGc] = useState(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   
@@ -91,7 +92,8 @@ export default function Reports() {
           Freight: parseFloat(gc.freightTotal || 0).toFixed(2),
           GDM_No: gc.gdm?.gdmNumber || 'Unassigned',
           Vehicle: gc.gdm?.vehicle?.vehicleNumber || '-',
-          Status: gc.status
+          Status: gc.status,
+          _gcObj: gc
         };
       }).filter(r => matchesSearch(r.Number) || matchesSearch(r.Consignor) || matchesSearch(r.Consignee) || matchesSearch(r.Vehicle) || matchesSearch(r.GDM_No));
     }
@@ -105,6 +107,32 @@ export default function Reports() {
         Destination: gdm.destination || gdm.toName || '-',
         Status: gdm.status
       })).filter(r => matchesSearch(r.Number) || matchesSearch(r.Vehicle) || matchesSearch(r.Destination));
+    }
+
+    else if (activeTab === 'ewaybill') {
+      finalData = filteredGcs.map(gc => {
+        let validUptoStr = '-';
+        let ewbDateStr = '-';
+        if (gc.ewbRawData) {
+          if (gc.ewbRawData.validUpto) validUptoStr = gc.ewbRawData.validUpto;
+          if (gc.ewbRawData.ewayBillDate || gc.ewbRawData.ewbDate || gc.ewbRawData.docDate) {
+            ewbDateStr = gc.ewbRawData.ewayBillDate || gc.ewbRawData.ewbDate || gc.ewbRawData.docDate;
+          }
+        }
+        return {
+          'EWB No': gc.ewbNumber || 'PENDING',
+          'GC No': gc.gcNumber,
+          'EWB Date': ewbDateStr,
+          'Valid Upto': validUptoStr,
+          'Consignor': gc.consignor?.name || '-',
+          'Consignee': gc.consignee?.name || '-',
+          'Inv No': gc.invoiceNumber || '-',
+          'Inv Date': gc.invoiceDate ? new Date(gc.invoiceDate).toLocaleDateString('en-IN') : '-',
+          'Inv Value': parseFloat(gc.invoiceValue || 0).toFixed(2),
+          'Status': gc.gdm?.gdmNumber ? 'Assigned' : 'Unassigned',
+          _gcObj: gc
+        };
+      }).filter(r => matchesSearch(r['EWB No']) || matchesSearch(r['GC No']) || matchesSearch(r.Consignor) || matchesSearch(r.Consignee));
     }
 
     else if (activeTab === 'consignor') {
@@ -154,7 +182,7 @@ export default function Reports() {
 
   const handleExportCSV = () => {
     if (!reportData.length) return;
-    const headers = Object.keys(reportData[0]);
+    const headers = Object.keys(reportData[0]).filter(k => k !== '_gcObj');
     const csvContent = [
       headers.join(','),
       ...reportData.map(row => headers.map(h => `"${row[h] || ''}"`).join(','))
@@ -200,6 +228,7 @@ export default function Reports() {
         {[
           { id: 'gc', label: 'GC Report', icon: <Package size={16} /> },
           { id: 'gdm', label: 'GDM Report', icon: <FileText size={16} /> },
+          { id: 'ewaybill', label: 'E-Way Bill Report', icon: <CheckCircle2 size={16} /> },
           { id: 'consignor', label: 'Consignor Report', icon: <Building2 size={16} /> },
           { id: 'consignee', label: 'Consignee Report', icon: <Users size={16} /> },
           { id: 'vehicle', label: 'Vehicle Report', icon: <Truck size={16} /> },
@@ -228,6 +257,7 @@ export default function Reports() {
               activeTab === 'gc' ? "Search GC, Consignor, Consignee..." :
               activeTab === 'gdm' ? "Search GDM, Vehicle, Destination..." :
               activeTab === 'vehicle' ? "Search Vehicle Number..." :
+              activeTab === 'ewaybill' ? "Search EWB, GC, Consignor..." :
               "Search Name..."
             }
             value={searchQuery}
@@ -278,7 +308,7 @@ export default function Reports() {
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr className="bg-white text-[10px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                  {reportData.length > 0 && Object.keys(reportData[0]).map(header => (
+                  {reportData.length > 0 && Object.keys(reportData[0]).filter(k => k !== '_gcObj').map(header => (
                     <th key={header} className="p-4">{header}</th>
                   ))}
                 </tr>
@@ -290,8 +320,10 @@ export default function Reports() {
                   </tr>
                 ) : (
                   reportData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                      {Object.values(row).map((val, i) => (
+                    <tr key={idx} 
+                        onClick={() => { if (activeTab === 'gc' && row._gcObj) setSelectedGc(row._gcObj); }}
+                        className={`transition-colors ${activeTab === 'gc' ? 'cursor-pointer hover:bg-indigo-50/60' : 'hover:bg-slate-50'}`}>
+                      {Object.entries(row).filter(([k,v]) => k !== '_gcObj').map(([k, val], i) => (
                         <td key={i} className={`p-4 ${i === 0 ? 'font-bold text-indigo-900' : ''}`}>
                           {val}
                         </td>
@@ -304,6 +336,96 @@ export default function Reports() {
           )}
         </div>
       </div>
+
+      {/* GC TRACKING SLIDE PANEL */}
+      {selectedGc && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm transition-all">
+          <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            {/* Panel Header */}
+            <div className="p-5 border-b border-slate-100 bg-indigo-600 text-white flex justify-between items-center shrink-0">
+              <div>
+                <h2 className="text-xl font-black tracking-tight flex items-center gap-2"><History size={20} /> GC Tracking Log</h2>
+                <p className="text-indigo-200 text-sm font-medium mt-1">Timeline for {selectedGc.gcNumber}</p>
+              </div>
+              <button onClick={() => setSelectedGc(null)} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={20}/></button>
+            </div>
+            
+            <div className="p-6 bg-slate-50 border-b border-slate-200 shrink-0">
+              <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase">Consignor</p>
+                   <p className="font-bold text-sm text-slate-800">{selectedGc.consignor?.name}</p>
+                 </div>
+                 <div>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase">Consignee</p>
+                   <p className="font-bold text-sm text-slate-800">{selectedGc.consignee?.name}</p>
+                 </div>
+                 <div className="col-span-2">
+                   <p className="text-[10px] font-bold text-slate-500 uppercase">Current EWB Number</p>
+                   <p className="font-mono font-bold text-sm text-indigo-700 bg-indigo-100 px-2 py-1 rounded inline-block mt-1">{selectedGc.ewbNumber ? selectedGc.ewbNumber.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3') : 'None'}</p>
+                 </div>
+              </div>
+            </div>
+
+            {/* Timeline Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* Original EWB Generation Event */}
+              {selectedGc.ewbRawData && (
+                <div className="relative pl-6 border-l-2 border-indigo-200 pb-2">
+                  <div className="absolute -left-[9px] top-0 w-4 h-4 bg-amber-500 border-[3px] border-white rounded-full shadow-sm"></div>
+                  <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">{selectedGc.ewbRawData.ewayBillDate || selectedGc.ewbRawData.ewbDate || selectedGc.ewbRawData.docDate || 'Original Date'}</p>
+                  <p className="text-sm font-bold text-slate-800">EWB Generated By Consignor</p>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">Original E-Way Bill <span className="font-bold text-slate-700">{selectedGc.ewbNumber}</span> created on government portal.</p>
+                </div>
+              )}
+              
+              {/* Synthetic Creation Event */}
+              <div className="relative pl-6 border-l-2 border-indigo-200 pb-2">
+                <div className="absolute -left-[9px] top-0 w-4 h-4 bg-indigo-500 border-[3px] border-white rounded-full shadow-sm"></div>
+                <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">{new Date(selectedGc.createdAt || selectedGc.date).toLocaleString('en-IN')}</p>
+                <p className="text-sm font-bold text-slate-800">GC Drafted</p>
+                <p className="text-xs text-slate-500 mt-1">GC {selectedGc.gcNumber} was initiated in the system.</p>
+              </div>
+
+              {/* Database Tracking Logs */}
+              {selectedGc.trackingLogs && selectedGc.trackingLogs.length > 0 && selectedGc.trackingLogs.map((log, i) => (
+                <div key={i} className="relative pl-6 border-l-2 border-indigo-200 pb-2">
+                  <div className="absolute -left-[9px] top-0 w-4 h-4 bg-emerald-500 border-[3px] border-white rounded-full shadow-sm"></div>
+                  <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">{new Date(log.timestamp).toLocaleString('en-IN')}</p>
+                  <p className="text-sm font-bold text-slate-800">{log.actionType.replace(/_/g, ' ')}</p>
+                  <p className="text-xs text-slate-600 mt-1 font-medium">{log.description}</p>
+                  
+                  {log.metaData && log.metaData.fromGstin && (
+                    <div className="mt-2 p-2 bg-slate-100 rounded border border-slate-200 text-[10px] font-mono text-slate-600">
+                      <div><span className="font-bold">EWB Value:</span> ₹{log.metaData.totInvValue}</div>
+                      <div><span className="font-bold">EWB Date:</span> {log.metaData.docDate}</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* GDM Assignment */}
+              {selectedGc.gdm && (
+                <div className="relative pl-6 border-l-2 border-indigo-200 pb-2">
+                  <div className="absolute -left-[9px] top-0 w-4 h-4 bg-blue-500 border-[3px] border-white rounded-full shadow-sm"></div>
+                  <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">{new Date(selectedGc.gdm.date || selectedGc.gdm.createdAt).toLocaleString('en-IN')}</p>
+                  <p className="text-sm font-bold text-slate-800">Assigned to GDM: {selectedGc.gdm.gdmNumber}</p>
+                  <p className="text-xs text-slate-600 mt-1 font-medium">Vehicle <span className="font-bold uppercase bg-slate-100 px-1 rounded">{selectedGc.gdm.vehicle?.vehicleNumber}</span> assigned for dispatch.</p>
+                </div>
+              )}
+
+              {/* End Node */}
+              <div className="relative pl-6">
+                <div className="absolute -left-[9px] top-0 w-4 h-4 bg-slate-300 border-[3px] border-white rounded-full shadow-sm"></div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Current State</p>
+                <p className="text-sm font-bold text-slate-800">{selectedGc.status}</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

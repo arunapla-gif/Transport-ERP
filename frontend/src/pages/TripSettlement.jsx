@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
-import { Truck, CheckCircle, Calculator, Building2, User, Coins } from 'lucide-react';
+import { Truck, CheckCircle, Calculator, Building2, User, Coins, Navigation } from 'lucide-react';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { TrackingModal } from '../components/ui/TrackingModal';
 
 export default function TripSettlement() {
   const [activeTrips, setActiveTrips] = useState([]);
@@ -13,6 +14,10 @@ export default function TripSettlement() {
   // State to track allocation per Consignee: { consigneeId: { paidToDriver: 0, paidToTransport: 0 } }
   const [allocations, setAllocations] = useState({});
   const [expandedGroups, setExpandedGroups] = useState({});
+
+  // Tracking Modal State
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
+  const [trackingVehicleNumber, setTrackingVehicleNumber] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -210,7 +215,19 @@ export default function TripSettlement() {
                <div className="mt-5 p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                  <div className="flex justify-between items-center text-sm">
                    <span className="text-slate-500 font-bold">Vehicle:</span>
-                   <span className="text-slate-800 font-black">{selectedTrip.vehicle?.vehicleNumber}</span>
+                   <div className="flex items-center gap-2">
+                     <span className="text-slate-800 font-black">{selectedTrip.vehicle?.vehicleNumber}</span>
+                     <button
+                        onClick={() => {
+                          setTrackingVehicleNumber(selectedTrip.vehicle?.vehicleNumber);
+                          setIsTrackingModalOpen(true);
+                        }}
+                        className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
+                        title="Track Lorry Location"
+                     >
+                        <Navigation size={14} />
+                     </button>
+                   </div>
                  </div>
                  <div className="flex justify-between items-center text-sm">
                    <span className="text-slate-500 font-bold">Lorry Hire:</span>
@@ -414,6 +431,12 @@ export default function TripSettlement() {
            </div>
         </div>
       </div>
+
+      <TrackingModal 
+        isOpen={isTrackingModalOpen} 
+        onClose={() => setIsTrackingModalOpen(false)} 
+        vehicleNumber={trackingVehicleNumber}
+      />
     </div>
   );
 }

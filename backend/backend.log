@@ -1,1 +1,565 @@
-Server is running on http://localhost:5005
+◇ injected env (17) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+Server is running on http://0.0.0.0:5005
+PrismaClientKnownRequestError: 
+Invalid `prisma.warehouseInward.findMany()` invocation in
+/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:603:50
+
+  600   };
+  601 }
+  602 
+→ 603 const inwards = await prisma.warehouseInward.findMany(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 60, connection limit: 5)
+    at $n.handleRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async /Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:603:21 {
+  code: 'P2024',
+  clientVersion: '5.22.0',
+  meta: { modelName: 'WarehouseInward', connection_limit: 5, timeout: 60 }
+}
+PrismaClientKnownRequestError: 
+Invalid `prisma.warehouseInward.findMany()` invocation in
+/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:603:50
+
+  600   };
+  601 }
+  602 
+→ 603 const inwards = await prisma.warehouseInward.findMany(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 60, connection limit: 5)
+    at $n.handleRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async /Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:603:21 {
+  code: 'P2024',
+  clientVersion: '5.22.0',
+  meta: { modelName: 'WarehouseInward', connection_limit: 5, timeout: 60 }
+}
+PrismaClientKnownRequestError: 
+Invalid `prisma.warehouseInward.findMany()` invocation in
+/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:603:50
+
+  600   };
+  601 }
+  602 
+→ 603 const inwards = await prisma.warehouseInward.findMany(
+Can't reach database server at `ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async /Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:603:21 {
+  code: 'P1001',
+  clientVersion: '5.22.0',
+  meta: {
+    modelName: 'WarehouseInward',
+    database_host: 'ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech',
+    database_port: 5432
+  }
+}
+PrismaClientKnownRequestError: 
+Invalid `prisma.warehouseInward.findMany()` invocation in
+/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:603:50
+
+  600   };
+  601 }
+  602 
+→ 603 const inwards = await prisma.warehouseInward.findMany(
+Can't reach database server at `ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async /Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:603:21 {
+  code: 'P1001',
+  clientVersion: '5.22.0',
+  meta: {
+    modelName: 'WarehouseInward',
+    database_host: 'ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech',
+    database_port: 5432
+  }
+}
+Primary Fetch Failed (AP): EWB Fetch Failed for AP
+DEBUG_EWB_RAW: {"ewbNo":502022006821,"ewayBillDate":"16/06/2026 04:51:00 PM","genMode":"WEB","userGstin":"33AAIFJ7763P1ZN","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"C59","docDate":"16/06/2026","fromGstin":"33AAIFJ7763P1ZN","fromTrdName":"JAYA KAVI  FIRE WORKS","fromAddr1":"INNAM MEENACHIPURAM 7/182","fromAddr2":"VEMBAKOTTAISATTURSATTUR","fromPlace":"Virudhunagar","fromPincode":626131,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO.","toAddr1":"SHRI BASAVESHWAR TRADING CO 720/1","toAddr2":"Gokak Bailhongal Road","toPlace":"Mamadapur","toPincode":591233,"toStateCode":29,"totalValue":30000,"totInvValue":35400,"cgstValue":0,"sgstValue":0,"igstValue":5400,"cessValue":0,"transporterId":"33AGKPK2374D1ZN","transporterName":"SMT.P.KALISWARI    M/S.THE BELL LORRY AGENCIES","status":"ACT","actualDist":1088,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"R","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"FLOWER POT BIG","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":2,"productId":0,"productName":"FLOWER POT ASOKA","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":3,"productId":0,"productName":"FLOWER POT COLOR KOTI","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000}],"VehiclListDetails":[]}
+Failed to log API usage: PrismaClientKnownRequestError: 
+Invalid `prisma.apiUsageLog.create()` invocation in
+/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:189:30
+
+  186 // Helper to log API usage
+  187 const logApiUsage = async (provider, apiName, status, cost = 0) => {
+  188   try {
+→ 189     await prisma.apiUsageLog.create(
+Can't reach database server at `ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async logApiUsage (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:189:5) {
+  code: 'P1001',
+  clientVersion: '5.22.0',
+  meta: {
+    modelName: 'ApiUsageLog',
+    database_host: 'ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech',
+    database_port: 5432
+  }
+}
+Failed to log API usage: PrismaClientKnownRequestError: 
+Invalid `prisma.apiUsageLog.create()` invocation in
+/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:189:30
+
+  186 // Helper to log API usage
+  187 const logApiUsage = async (provider, apiName, status, cost = 0) => {
+  188   try {
+→ 189     await prisma.apiUsageLog.create(
+Can't reach database server at `ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async logApiUsage (/Users/arun_ap/Desktop/TRANSPORT ERP/backend/server.js:189:5) {
+  code: 'P1001',
+  clientVersion: '5.22.0',
+  meta: {
+    modelName: 'ApiUsageLog',
+    database_host: 'ep-withered-resonance-ao3somz9.c-2.ap-southeast-1.aws.neon.tech',
+    database_port: 5432
+  }
+}
+DEBUG_EWB_RAW: {"ewbNo":502022006821,"ewayBillDate":"16/06/2026 04:51:00 PM","genMode":"WEB","userGstin":"33AAIFJ7763P1ZN","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"C59","docDate":"16/06/2026","fromGstin":"33AAIFJ7763P1ZN","fromTrdName":"JAYA KAVI  FIRE WORKS","fromAddr1":"INNAM MEENACHIPURAM 7/182","fromAddr2":"VEMBAKOTTAISATTURSATTUR","fromPlace":"Virudhunagar","fromPincode":626131,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO.","toAddr1":"SHRI BASAVESHWAR TRADING CO 720/1","toAddr2":"Gokak Bailhongal Road","toPlace":"Mamadapur","toPincode":591233,"toStateCode":29,"totalValue":30000,"totInvValue":35400,"cgstValue":0,"sgstValue":0,"igstValue":5400,"cessValue":0,"transporterId":"33AGKPK2374D1ZN","transporterName":"SMT.P.KALISWARI    M/S.THE BELL LORRY AGENCIES","status":"ACT","actualDist":1088,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"R","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"FLOWER POT BIG","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":2,"productId":0,"productName":"FLOWER POT ASOKA","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":3,"productId":0,"productName":"FLOWER POT COLOR KOTI","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000}],"VehiclListDetails":[]}
+DEBUG_EWB_RAW: {"ewbNo":502022006821,"ewayBillDate":"16/06/2026 04:51:00 PM","genMode":"WEB","userGstin":"33AAIFJ7763P1ZN","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"C59","docDate":"16/06/2026","fromGstin":"33AAIFJ7763P1ZN","fromTrdName":"JAYA KAVI  FIRE WORKS","fromAddr1":"INNAM MEENACHIPURAM 7/182","fromAddr2":"VEMBAKOTTAISATTURSATTUR","fromPlace":"Virudhunagar","fromPincode":626131,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO.","toAddr1":"SHRI BASAVESHWAR TRADING CO 720/1","toAddr2":"Gokak Bailhongal Road","toPlace":"Mamadapur","toPincode":591233,"toStateCode":29,"totalValue":30000,"totInvValue":35400,"cgstValue":0,"sgstValue":0,"igstValue":5400,"cessValue":0,"transporterId":"33AGKPK2374D1ZN","transporterName":"SMT.P.KALISWARI    M/S.THE BELL LORRY AGENCIES","status":"ACT","actualDist":1088,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"R","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"FLOWER POT BIG","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":2,"productId":0,"productName":"FLOWER POT ASOKA","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":3,"productId":0,"productName":"FLOWER POT COLOR KOTI","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000}],"VehiclListDetails":[]}
+Primary Fetch Failed (AP): EWB Fetch Failed for AP
+DEBUG_EWB_RAW: {"ewbNo":502022006821,"ewayBillDate":"16/06/2026 04:51:00 PM","genMode":"WEB","userGstin":"33AAIFJ7763P1ZN","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"C59","docDate":"16/06/2026","fromGstin":"33AAIFJ7763P1ZN","fromTrdName":"JAYA KAVI  FIRE WORKS","fromAddr1":"INNAM MEENACHIPURAM 7/182","fromAddr2":"VEMBAKOTTAISATTURSATTUR","fromPlace":"Virudhunagar","fromPincode":626131,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO.","toAddr1":"SHRI BASAVESHWAR TRADING CO 720/1","toAddr2":"Gokak Bailhongal Road","toPlace":"Mamadapur","toPincode":591233,"toStateCode":29,"totalValue":30000,"totInvValue":35400,"cgstValue":0,"sgstValue":0,"igstValue":5400,"cessValue":0,"transporterId":"33AGKPK2374D1ZN","transporterName":"SMT.P.KALISWARI    M/S.THE BELL LORRY AGENCIES","status":"ACT","actualDist":1088,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"R","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"FLOWER POT BIG","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":2,"productId":0,"productName":"FLOWER POT ASOKA","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":3,"productId":0,"productName":"FLOWER POT COLOR KOTI","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000}],"VehiclListDetails":[]}
+Primary Fetch Failed (AP): EWB Fetch Failed for AP
+DEBUG_EWB_RAW: {"ewbNo":502022006821,"ewayBillDate":"16/06/2026 04:51:00 PM","genMode":"WEB","userGstin":"33AAIFJ7763P1ZN","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"C59","docDate":"16/06/2026","fromGstin":"33AAIFJ7763P1ZN","fromTrdName":"JAYA KAVI  FIRE WORKS","fromAddr1":"INNAM MEENACHIPURAM 7/182","fromAddr2":"VEMBAKOTTAISATTURSATTUR","fromPlace":"Virudhunagar","fromPincode":626131,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO.","toAddr1":"SHRI BASAVESHWAR TRADING CO 720/1","toAddr2":"Gokak Bailhongal Road","toPlace":"Mamadapur","toPincode":591233,"toStateCode":29,"totalValue":30000,"totInvValue":35400,"cgstValue":0,"sgstValue":0,"igstValue":5400,"cessValue":0,"transporterId":"33AGKPK2374D1ZN","transporterName":"SMT.P.KALISWARI    M/S.THE BELL LORRY AGENCIES","status":"ACT","actualDist":1088,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"R","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"FLOWER POT BIG","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":2,"productId":0,"productName":"FLOWER POT ASOKA","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000},{"itemNo":3,"productId":0,"productName":"FLOWER POT COLOR KOTI","productDesc":"","hsnCode":3604,"quantity":5,"qtyUnit":"CTN","cgstRate":-1,"sgstRate":-1,"igstRate":18,"cessRate":-1,"cessNonAdvol":0,"taxableAmount":10000}],"VehiclListDetails":[]}
+Primary Fetch Failed (BELL): EWB Fetch Failed for BELL
+DEBUG_EWB_RAW: {"ewbNo":522014329109,"ewayBillDate":"02/06/2026 12:11:00 PM","genMode":"API","userGstin":"33AFEFS2712Q1ZR","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"S034","docDate":"02/06/2026","fromGstin":"33AFEFS2712Q1ZR","fromTrdName":"SRIVATSAA INDUSTRIES","fromAddr1":"1/51B, North street, Vadamalapuram","fromAddr2":"Thiruthangal, Virudhunagar Dist., Tamil Nadu","fromPlace":"Vadamalapuram","fromPincode":626130,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO","toAddr1":"SHRI BASAVESHWAR TRADING CO","toAddr2":"720/1,GOKAK BAIHONGAL ROAD KARNATAKA-591233  GSTIN : 29AFJFS7132P1Z5","toPlace":"KARNATAKA","toPincode":591233,"toStateCode":29,"totalValue":21467.25,"totInvValue":25331,"cgstValue":0,"sgstValue":0,"igstValue":3864.1,"cessValue":0,"transporterId":"33AADHP9192F1Z0","transporterName":"A.P.Lorry Agencies.","status":"DIS","actualDist":1064,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"Fireworks","productDesc":"Fireworks","hsnCode":36041000,"quantity":10,"qtyUnit":"CTN","cgstRate":0,"sgstRate":0,"igstRate":18,"cessRate":0,"cessNonAdvol":0,"taxableAmount":21467.25}],"VehiclListDetails":[]}
+DEBUG_EWB_RAW: {"ewbNo":522014329109,"ewayBillDate":"02/06/2026 12:11:00 PM","genMode":"API","userGstin":"33AFEFS2712Q1ZR","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"S034","docDate":"02/06/2026","fromGstin":"33AFEFS2712Q1ZR","fromTrdName":"SRIVATSAA INDUSTRIES","fromAddr1":"1/51B, North street, Vadamalapuram","fromAddr2":"Thiruthangal, Virudhunagar Dist., Tamil Nadu","fromPlace":"Vadamalapuram","fromPincode":626130,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO","toAddr1":"SHRI BASAVESHWAR TRADING CO","toAddr2":"720/1,GOKAK BAIHONGAL ROAD KARNATAKA-591233  GSTIN : 29AFJFS7132P1Z5","toPlace":"KARNATAKA","toPincode":591233,"toStateCode":29,"totalValue":21467.25,"totInvValue":25331,"cgstValue":0,"sgstValue":0,"igstValue":3864.1,"cessValue":0,"transporterId":"33AADHP9192F1Z0","transporterName":"A.P.Lorry Agencies.","status":"DIS","actualDist":1064,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"Fireworks","productDesc":"Fireworks","hsnCode":36041000,"quantity":10,"qtyUnit":"CTN","cgstRate":0,"sgstRate":0,"igstRate":18,"cessRate":0,"cessNonAdvol":0,"taxableAmount":21467.25}],"VehiclListDetails":[]}
+DEBUG_EWB_RAW: {"ewbNo":522014329109,"ewayBillDate":"02/06/2026 12:11:00 PM","genMode":"API","userGstin":"33AFEFS2712Q1ZR","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"S034","docDate":"02/06/2026","fromGstin":"33AFEFS2712Q1ZR","fromTrdName":"SRIVATSAA INDUSTRIES","fromAddr1":"1/51B, North street, Vadamalapuram","fromAddr2":"Thiruthangal, Virudhunagar Dist., Tamil Nadu","fromPlace":"Vadamalapuram","fromPincode":626130,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO","toAddr1":"SHRI BASAVESHWAR TRADING CO","toAddr2":"720/1,GOKAK BAIHONGAL ROAD KARNATAKA-591233  GSTIN : 29AFJFS7132P1Z5","toPlace":"KARNATAKA","toPincode":591233,"toStateCode":29,"totalValue":21467.25,"totInvValue":25331,"cgstValue":0,"sgstValue":0,"igstValue":3864.1,"cessValue":0,"transporterId":"33AADHP9192F1Z0","transporterName":"A.P.Lorry Agencies.","status":"DIS","actualDist":1064,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"Fireworks","productDesc":"Fireworks","hsnCode":36041000,"quantity":10,"qtyUnit":"CTN","cgstRate":0,"sgstRate":0,"igstRate":18,"cessRate":0,"cessNonAdvol":0,"taxableAmount":21467.25}],"VehiclListDetails":[]}
+DEBUG_EWB_RAW: {"ewbNo":522014329109,"ewayBillDate":"02/06/2026 12:11:00 PM","genMode":"API","userGstin":"33AFEFS2712Q1ZR","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"S034","docDate":"02/06/2026","fromGstin":"33AFEFS2712Q1ZR","fromTrdName":"SRIVATSAA INDUSTRIES","fromAddr1":"1/51B, North street, Vadamalapuram","fromAddr2":"Thiruthangal, Virudhunagar Dist., Tamil Nadu","fromPlace":"Vadamalapuram","fromPincode":626130,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO","toAddr1":"SHRI BASAVESHWAR TRADING CO","toAddr2":"720/1,GOKAK BAIHONGAL ROAD KARNATAKA-591233  GSTIN : 29AFJFS7132P1Z5","toPlace":"KARNATAKA","toPincode":591233,"toStateCode":29,"totalValue":21467.25,"totInvValue":25331,"cgstValue":0,"sgstValue":0,"igstValue":3864.1,"cessValue":0,"transporterId":"33AADHP9192F1Z0","transporterName":"A.P.Lorry Agencies.","status":"DIS","actualDist":1064,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"Fireworks","productDesc":"Fireworks","hsnCode":36041000,"quantity":10,"qtyUnit":"CTN","cgstRate":0,"sgstRate":0,"igstRate":18,"cessRate":0,"cessNonAdvol":0,"taxableAmount":21467.25}],"VehiclListDetails":[]}
+DEBUG_EWB_RAW: {"ewbNo":522014329109,"ewayBillDate":"02/06/2026 12:11:00 PM","genMode":"API","userGstin":"33AFEFS2712Q1ZR","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"S034","docDate":"02/06/2026","fromGstin":"33AFEFS2712Q1ZR","fromTrdName":"SRIVATSAA INDUSTRIES","fromAddr1":"1/51B, North street, Vadamalapuram","fromAddr2":"Thiruthangal, Virudhunagar Dist., Tamil Nadu","fromPlace":"Vadamalapuram","fromPincode":626130,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO","toAddr1":"SHRI BASAVESHWAR TRADING CO","toAddr2":"720/1,GOKAK BAIHONGAL ROAD KARNATAKA-591233  GSTIN : 29AFJFS7132P1Z5","toPlace":"KARNATAKA","toPincode":591233,"toStateCode":29,"totalValue":21467.25,"totInvValue":25331,"cgstValue":0,"sgstValue":0,"igstValue":3864.1,"cessValue":0,"transporterId":"33AADHP9192F1Z0","transporterName":"A.P.Lorry Agencies.","status":"DIS","actualDist":1064,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"Fireworks","productDesc":"Fireworks","hsnCode":36041000,"quantity":10,"qtyUnit":"CTN","cgstRate":0,"sgstRate":0,"igstRate":18,"cessRate":0,"cessNonAdvol":0,"taxableAmount":21467.25}],"VehiclListDetails":[]}
+DEBUG_EWB_RAW: {"ewbNo":522014329109,"ewayBillDate":"02/06/2026 12:11:00 PM","genMode":"API","userGstin":"33AFEFS2712Q1ZR","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"S034","docDate":"02/06/2026","fromGstin":"33AFEFS2712Q1ZR","fromTrdName":"SRIVATSAA INDUSTRIES","fromAddr1":"1/51B, North street, Vadamalapuram","fromAddr2":"Thiruthangal, Virudhunagar Dist., Tamil Nadu","fromPlace":"Vadamalapuram","fromPincode":626130,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO","toAddr1":"SHRI BASAVESHWAR TRADING CO","toAddr2":"720/1,GOKAK BAIHONGAL ROAD KARNATAKA-591233  GSTIN : 29AFJFS7132P1Z5","toPlace":"KARNATAKA","toPincode":591233,"toStateCode":29,"totalValue":21467.25,"totInvValue":25331,"cgstValue":0,"sgstValue":0,"igstValue":3864.1,"cessValue":0,"transporterId":"33AADHP9192F1Z0","transporterName":"A.P.Lorry Agencies.","status":"DIS","actualDist":1064,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"Fireworks","productDesc":"Fireworks","hsnCode":36041000,"quantity":10,"qtyUnit":"CTN","cgstRate":0,"sgstRate":0,"igstRate":18,"cessRate":0,"cessNonAdvol":0,"taxableAmount":21467.25}],"VehiclListDetails":[]}
+DEBUG_EWB_RAW: {"ewbNo":522014329109,"ewayBillDate":"02/06/2026 12:11:00 PM","genMode":"API","userGstin":"33AFEFS2712Q1ZR","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"S034","docDate":"02/06/2026","fromGstin":"33AFEFS2712Q1ZR","fromTrdName":"SRIVATSAA INDUSTRIES","fromAddr1":"1/51B, North street, Vadamalapuram","fromAddr2":"Thiruthangal, Virudhunagar Dist., Tamil Nadu","fromPlace":"Vadamalapuram","fromPincode":626130,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO","toAddr1":"SHRI BASAVESHWAR TRADING CO","toAddr2":"720/1,GOKAK BAIHONGAL ROAD KARNATAKA-591233  GSTIN : 29AFJFS7132P1Z5","toPlace":"KARNATAKA","toPincode":591233,"toStateCode":29,"totalValue":21467.25,"totInvValue":25331,"cgstValue":0,"sgstValue":0,"igstValue":3864.1,"cessValue":0,"transporterId":"33AADHP9192F1Z0","transporterName":"A.P.Lorry Agencies.","status":"DIS","actualDist":1064,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"Fireworks","productDesc":"Fireworks","hsnCode":36041000,"quantity":10,"qtyUnit":"CTN","cgstRate":0,"sgstRate":0,"igstRate":18,"cessRate":0,"cessNonAdvol":0,"taxableAmount":21467.25}],"VehiclListDetails":[]}
+DEBUG_EWB_RAW: {"ewbNo":522014329109,"ewayBillDate":"02/06/2026 12:11:00 PM","genMode":"API","userGstin":"33AFEFS2712Q1ZR","supplyType":"O","subSupplyType":"1  ","docType":"INV","docNo":"S034","docDate":"02/06/2026","fromGstin":"33AFEFS2712Q1ZR","fromTrdName":"SRIVATSAA INDUSTRIES","fromAddr1":"1/51B, North street, Vadamalapuram","fromAddr2":"Thiruthangal, Virudhunagar Dist., Tamil Nadu","fromPlace":"Vadamalapuram","fromPincode":626130,"fromStateCode":33,"toGstin":"29AFJFS7132P1Z5","toTrdName":"SHRI BASAVESHWAR TRADING CO","toAddr1":"SHRI BASAVESHWAR TRADING CO","toAddr2":"720/1,GOKAK BAIHONGAL ROAD KARNATAKA-591233  GSTIN : 29AFJFS7132P1Z5","toPlace":"KARNATAKA","toPincode":591233,"toStateCode":29,"totalValue":21467.25,"totInvValue":25331,"cgstValue":0,"sgstValue":0,"igstValue":3864.1,"cessValue":0,"transporterId":"33AADHP9192F1Z0","transporterName":"A.P.Lorry Agencies.","status":"DIS","actualDist":1064,"noValidDays":6,"validUpto":"","extendedTimes":0,"rejectStatus":"N","vehicleType":"","actFromStateCode":33,"actToStateCode":29,"transactionType":1,"otherValue":0,"cessNonAdvolValue":0,"itemList":[{"itemNo":1,"productId":0,"productName":"Fireworks","productDesc":"Fireworks","hsnCode":36041000,"quantity":10,"qtyUnit":"CTN","cgstRate":0,"sgstRate":0,"igstRate":18,"cessRate":0,"cessNonAdvol":0,"taxableAmount":21467.25}],"VehiclListDetails":[]}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ suppress logs { quiet: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ override existing { override: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ suppress logs { quiet: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ override existing { override: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ enable debugging { debug: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ suppress logs { quiet: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ enable debugging { debug: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ suppress logs { quiet: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ suppress logs { quiet: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ enable debugging { debug: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...
+Restarting 'server.js'
+◇ injected env (17) from .env // tip: ⌘ suppress logs { quiet: true }
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5005
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5005
+}
+
+Node.js v24.15.0
+Failed running 'server.js'. Waiting for file changes before restarting...

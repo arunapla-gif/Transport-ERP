@@ -46,7 +46,13 @@ const GlassCard = ({ children, className = "" }) => (
   </div>
 );
 
+import { useLocation } from 'react-router-dom';
+
 export default function ConsignorMaster() {
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const branch = query.get('branch') || 'MAIN';
+
   const [consignors, setConsignors] = useState([]);
   const [formData, setFormData] = useState({
     id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: []
@@ -65,7 +71,7 @@ export default function ConsignorMaster() {
 
   const fetchConsignors = async () => {
     try {
-      const data = await api.get('/consignors');
+      const data = await api.get(`/consignors?branch=${branch}`);
       setConsignors(data);
     } catch (err) {
       toast.error('Failed to fetch data.');
@@ -138,12 +144,13 @@ export default function ConsignorMaster() {
     setLoading(true);
     
     try {
+      const payload = { ...formData, branch };
       if (formData.id) {
-        await api.put(`/consignors/${formData.id}`, formData);
+        await api.put(`/consignors/${formData.id}`, payload);
         toast.success('Consignor updated successfully');
       } else {
         const { id, ...dataToCreate } = formData;
-        await api.post('/consignors', dataToCreate);
+        await api.post('/consignors', { ...dataToCreate, branch });
         toast.success('Consignor created successfully');
       }
       setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] });
@@ -176,7 +183,7 @@ export default function ConsignorMaster() {
     }
   };
 
-  const apiOnlyCount = consignors.filter(c => c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL').length;
+  const apiOnlyCount = consignors.filter(c => !c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL').length;
   const oldDataCount = consignors.filter(c => c.migrationType === 'OLD_DATA_ONLY').length;
   const mergedCount = consignors.filter(c => c.migrationType === 'MERGED_NAME').length;
 
@@ -185,7 +192,7 @@ export default function ConsignorMaster() {
       (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()));
       
-    if (activeTab === 'API_ONLY') return matchesSearch && (c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL');
+    if (activeTab === 'API_ONLY') return matchesSearch && (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL');
     if (activeTab === 'OLD_DATA_ONLY') return matchesSearch && c.migrationType === 'OLD_DATA_ONLY';
     if (activeTab === 'MERGED_NAME') return matchesSearch && c.migrationType === 'MERGED_NAME';
     return false;
@@ -358,7 +365,7 @@ export default function ConsignorMaster() {
                   <td className="px-4 py-3 text-slate-600 font-mono text-xs uppercase">{c.gstin || '-'}</td>
                   <td className="px-4 py-3 text-slate-600">{c.phone || '-'}</td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-end gap-2 transition-opacity">
                       <button onClick={() => handleEdit(c)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit2 size={14} /></button>
                       <button onClick={() => handleDelete(c.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 size={14} /></button>
                     </div>

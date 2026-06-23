@@ -4,6 +4,7 @@ import { X, Printer, FileText, PackageCheck } from 'lucide-react';
 export default function PrintModal({ isOpen, onClose }) {
   const [gcNumber, setGcNumber] = useState('');
   const [gdmNumber, setGdmNumber] = useState('');
+  const [gdmPrintType, setGdmPrintType] = useState('gdm');
 
   if (!isOpen) return null;
 
@@ -73,23 +74,34 @@ export default function PrintModal({ isOpen, onClose }) {
             <h3 className="font-bold text-slate-800 mb-1">Delivery Memo</h3>
             <p className="text-xs text-slate-500 mb-4 font-medium">Print A4 GDM</p>
             
-            <div className="w-full flex gap-2">
+            <div className="w-full flex flex-col gap-2">
               <input 
                 type="text" 
                 placeholder="e.g. 1001" 
                 value={gdmNumber}
                 onChange={(e) => setGdmNumber(e.target.value)}
-                className="flex-1 h-10 px-3 bg-white border border-slate-200 text-slate-800 font-bold text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 uppercase"
+                className="w-full h-10 px-3 bg-white border border-slate-200 text-slate-800 font-bold text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 uppercase"
               />
-              <button 
-                onClick={() => {
-                  if (gdmNumber) window.open(`/print/gdm/${gdmNumber}`, '_blank');
-                }}
-                disabled={!gdmNumber}
-                className={`h-10 px-4 flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold text-sm rounded-lg transition-all ${!gdmNumber ? 'opacity-50 cursor-not-allowed' : 'hover:bg-emerald-500 shadow-sm hover:shadow'}`}
-              >
-                Print
-              </button>
+              <div className="flex gap-2">
+                <select
+                  value={gdmPrintType}
+                  onChange={(e) => setGdmPrintType(e.target.value)}
+                  className="flex-1 h-10 px-2 bg-white border border-slate-200 text-slate-800 font-semibold text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                >
+                  <option value="gdm">Standard GDM</option>
+                  <option value="cewb">CEWB Format</option>
+                  <option value="gdm-combined">Combined (Both)</option>
+                </select>
+                <button 
+                  onClick={() => {
+                    if (gdmNumber) window.open(`/print/${gdmPrintType}/${gdmNumber}`, '_blank');
+                  }}
+                  disabled={!gdmNumber}
+                  className={`h-10 px-4 flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold text-sm rounded-lg transition-all ${!gdmNumber ? 'opacity-50 cursor-not-allowed' : 'hover:bg-emerald-500 shadow-sm hover:shadow'}`}
+                >
+                  Print
+                </button>
+              </div>
             </div>
           </div>
 

@@ -300,7 +300,7 @@ export default function GcPrint() {
                       <div className="w-[70%] border-r border-black flex flex-col">
                          <div className="border-b border-black p-1 text-center font-bold text-[11px]">Description</div>
                          <div className="p-1.5 text-[11px] uppercase">
-                            {gc.goods?.map((g,i) => <div key={i}>{g.description}</div>)}
+                            {gc.goods?.map((g,i) => <div key={i}>{g.description} {g.weight ? `(${g.weight} kg)` : ''}</div>)}
                          </div>
                       </div>
                     </div>
@@ -309,7 +309,7 @@ export default function GcPrint() {
                     <div className="w-[10%] border-r border-black flex flex-col">
                        <div className="border-b border-black p-1 text-center font-bold text-[11px]">Rate</div>
                        <div className="p-1.5 text-center text-[11px]">
-                          0.00
+                          {gc.goods?.map((g,i) => <div key={i}>{g.rate || '0.00'}</div>)}
                        </div>
                     </div>
 
