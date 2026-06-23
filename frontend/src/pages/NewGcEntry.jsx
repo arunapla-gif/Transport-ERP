@@ -140,6 +140,10 @@ export default function NewGcEntry() {
 
   useKeyboardFlow({ onSave: () => handleSaveGC() });
 
+  useEffect(() => {
+    fetchMasters();
+  }, [fetchMasters]);
+
   const fetchMasters = useCallback(async () => {
     try {
       const gods = await api.get('/godowns').catch(() => []);
