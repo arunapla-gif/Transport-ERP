@@ -140,10 +140,6 @@ export default function NewGcEntry() {
 
   useKeyboardFlow({ onSave: () => handleSaveGC() });
 
-  useEffect(() => {
-    fetchMasters();
-  }, [fetchMasters]);
-
   const fetchMasters = useCallback(async () => {
     try {
       const gods = await api.get('/godowns').catch(() => []);
@@ -190,6 +186,10 @@ export default function NewGcEntry() {
       console.error('Failed to fetch initial data', err);
     }
   }, [branch, gcDetails.companyMode]);
+
+  useEffect(() => {
+    fetchMasters();
+  }, [fetchMasters]);
 
   const handleCompanyToggle = async (mode) => {
     try {
