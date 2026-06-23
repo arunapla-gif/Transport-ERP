@@ -7,12 +7,25 @@ export default function CombinedGdmPrint() {
   const navigate = useNavigate();
   const [gdms, setGdms] = useState([]);
   const [error, setError] = useState('');
+  const [allUnitOptions, setAllUnitOptions] = useState([]);
 
   useEffect(() => {
-    const fetchGdm = async () => {
+    const fetchData = async () => {
       try {
-        const data = await api.get(`/gdms/${id}`); 
-        const gdmArray = Array.isArray(data) ? data : [data];
+        const [gdmData, unitsRes] = await Promise.all([
+          api.get(`/gdms/${id}`),
+          api.get('/units').catch(() => [])
+        ]);
+        
+        if (unitsRes && unitsRes.length > 0) {
+          setAllUnitOptions(unitsRes.map(u => ({
+            label: u.description,
+            code: u.code,
+            category: u.category
+          })));
+        }
+
+        const gdmArray = Array.isArray(gdmData) ? gdmData : [gdmData];
         setGdms(gdmArray);
         setTimeout(() => {
           window.print();
@@ -21,7 +34,7 @@ export default function CombinedGdmPrint() {
         setError('Failed to load combined documents for printing.');
       }
     };
-    fetchGdm();
+    fetchData();
   }, [id]);
 
   if (error) return <div className="p-10 text-rose-500 font-bold">{error}</div>;
@@ -34,10 +47,18 @@ export default function CombinedGdmPrint() {
         let globalCases = 0, globalCartons = 0, globalBundles = 0;
         gdm.gcs?.forEach(gc => {
           gc.goods?.forEach(g => {
-             const c = g.articleCount || 0;
-             if (g.unitCategory === 'Cases') globalCases += c;
-             else if (g.unitCategory === 'Cartons') globalCartons += c;
-             else if (g.unitCategory === 'Bundles') globalBundles += c;
+             const c = parseInt(g.articleCount) || 0;
+             const unitStr = (g.units || '').toLowerCase().trim();
+             const match = allUnitOptions.find(o => 
+               (o.label || '').toLowerCase().trim() === unitStr || 
+               (o.code || '').toLowerCase().trim() === unitStr ||
+               (o.category || '').toLowerCase().trim() === unitStr
+             );
+             const cat = match ? (match.category || '').toLowerCase() : null;
+             
+             if (cat === 'cases') globalCases += c;
+             else if (cat === 'cartons') globalCartons += c;
+             else if (cat === 'bundles') globalBundles += c;
              else globalCases += c;
           });
         });
@@ -134,10 +155,18 @@ export default function CombinedGdmPrint() {
                       {gdm.gcs?.map((gc) => {
                         let rowCases = 0, rowCartons = 0, rowBundles = 0;
                         gc.goods?.forEach(g => {
-                           const c = g.articleCount || 0;
-                           if (g.unitCategory === 'Cases') rowCases += c;
-                           else if (g.unitCategory === 'Cartons') rowCartons += c;
-                           else if (g.unitCategory === 'Bundles') rowBundles += c;
+                           const c = parseInt(g.articleCount) || 0;
+                           const unitStr = (g.units || '').toLowerCase().trim();
+                           const match = allUnitOptions.find(o => 
+                             (o.label || '').toLowerCase().trim() === unitStr || 
+                             (o.code || '').toLowerCase().trim() === unitStr ||
+                             (o.category || '').toLowerCase().trim() === unitStr
+                           );
+                           const cat = match ? (match.category || '').toLowerCase() : null;
+                           
+                           if (cat === 'cases') rowCases += c;
+                           else if (cat === 'cartons') rowCartons += c;
+                           else if (cat === 'bundles') rowBundles += c;
                            else rowCases += c;
                         });
                         return (
