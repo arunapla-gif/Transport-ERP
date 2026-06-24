@@ -1498,7 +1498,7 @@ app.get('/api/ewaybill/:ewaybillno', paidApiLimiter, async (req, res) => {
     }
 
     const { ewb, detectedCompany } = result;
-    console.log("DEBUG_EWB_RAW:", JSON.stringify(ewb));
+    
 
     // 3. Map to existing frontend schema
     res.json({
