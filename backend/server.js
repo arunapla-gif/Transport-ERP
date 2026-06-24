@@ -62,6 +62,21 @@ const loginLimiter = rateLimit({
   message: { error: "Too many login attempts, please try again after 10 minutes." }
 });
 
+function parseNICError(data, defaultMsg) {
+  let errorMsg = data.error?.message || data.error?.error_desc || data.error?.error_code || defaultMsg;
+  if (typeof errorMsg === 'string' && errorMsg.includes('errorCodes')) {
+    try {
+       const codeStr = JSON.parse(errorMsg).errorCodes || "";
+       if (codeStr.includes('343')) return "343: E-Way Bill Expired";
+       if (codeStr.includes('238')) return "238: Invalid GSTIN / E-Way Bill Number";
+       if (codeStr.includes('102')) return "102: Invalid EWB Number";
+       if (codeStr.includes('301')) return "301: Invalid Transporter GSTIN";
+       return `NIC Error Code: ${codeStr}`;
+    } catch(e) {}
+  }
+  return errorMsg;
+}
+
 const paidApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
@@ -1660,8 +1675,7 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
 
     const data = await response.json();
     if (!response.ok || data.status_cd === "0") {
-       let errorMsg = data.error?.message || data.error?.error_desc || "Failed to generate EWB";
-       throw new Error(`NIC Rejected Generation: ${errorMsg}`);
+       throw new Error(parseNICError(data, "Failed to generate EWB"));
     }
 
     const newEwbNo = data.data?.ewayBillNo || data.ewayBillNo;
@@ -1758,8 +1772,7 @@ app.post('/api/ewaybill/regenerate', paidApiLimiter, async (req, res) => {
 
     const data = await response.json();
     if (!response.ok || data.status_cd === "0") {
-       let errorMsg = data.error?.message || data.error?.error_desc || "Failed to regenerate EWB";
-       throw new Error(`NIC Rejected Regeneration: ${errorMsg}`);
+       throw new Error(parseNICError(data, "Failed to regenerate EWB"));
     }
 
     const newEwbNo = data.data?.ewayBillNo || data.ewayBillNo;
@@ -1801,15 +1814,7 @@ app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
     
     const data = await response.json();
     if (!response.ok || data.status_cd === "0") {
-      let errorMsg = data.error?.message || data.error?.error_desc || data.error?.error_code || "Failed to update Part B";
-      if (typeof errorMsg === 'string' && errorMsg.includes('errorCodes')) {
-        try {
-           const codeStr = JSON.parse(errorMsg).errorCodes || "";
-           if (codeStr.includes('343')) errorMsg = "343: E-Way Bill Expired";
-           else if (codeStr.includes('238')) errorMsg = "238: Invalid GSTIN";
-        } catch(e) {}
-      }
-      throw new Error(errorMsg);
+      throw new Error(parseNICError(data, "Failed to update Part B"));
     }
 
     res.json({ success: true, ewayBillNo: ewbNo, data: data.data || data, status: 'Updated' });
@@ -1876,24 +1881,7 @@ app.post('/api/ewaybill/reassign', paidApiLimiter, async (req, res) => {
     
     const data = await response.json();
     if (!response.ok || data.status_cd === "0") {
-       console.log("WhiteBooks Update Error:", data);
-       
-       let errorMsg = data.error?.message || data.error?.error_desc || data.error?.error_code || `Failed to reassign transporter on NIC portal`;
-       
-       // Parse NIC internal errorCodes string if present (e.g. '{"errorCodes":"301,"}')
-       if (typeof data.error?.message === 'string' && data.error.message.includes('errorCodes')) {
-         try {
-           const parsedNIC = JSON.parse(data.error.message);
-           const codeStr = parsedNIC.errorCodes || "";
-           if (codeStr.includes('301')) errorMsg = "Invalid E-Way Bill Number";
-           else if (codeStr.includes('338')) errorMsg = "Cannot reassign: Vehicle/Part-B is already assigned.";
-           else if (codeStr.includes('312')) errorMsg = "Invalid Target Transporter GSTIN.";
-           else if (codeStr.includes('280')) errorMsg = "Not Authorized: Only the EWB Generator or currently assigned Transporter can reassign.";
-           else errorMsg = `NIC Portal Error Code: ${codeStr.replace(/,$/, '')}`;
-         } catch(e) {}
-       }
-       
-       throw new Error(errorMsg);
+       throw new Error(parseNICError(data, "Failed to reassign transporter"));
     }
 
     res.json({ success: true, message: `Successfully reassigned to ${targetCompany}` });
@@ -1977,7 +1965,7 @@ app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
     
     const cewbData = await response.json();
     if (!response.ok || cewbData.status_cd === "0") {
-      throw new Error(cewbData.error?.message || cewbData.message || "Failed to generate CEWB");
+       throw new Error(parseNICError(cewbData, "Failed to generate CEWB"));
     }
     
     res.json(cewbData.data || cewbData);
