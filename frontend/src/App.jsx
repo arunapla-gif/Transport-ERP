@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation } fr
 import { Printer, Wifi, Database, Loader2 } from 'lucide-react';
 import { Truck } from 'lucide-react';
 import { LogOut, AlertCircle } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 // Lazy load all pages to drastically reduce the initial bundle size
 const SystemBoot = React.lazy(() => import('./pages/SystemBoot'));
@@ -255,6 +255,35 @@ function App() {
     sessionStorage.removeItem('system_booted');
     setRole(null);
   };
+
+  // Auto-logout after 30 minutes of inactivity
+  useEffect(() => {
+    if (!role) return;
+
+    let timeoutId;
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        handleLogout();
+        // Use a slight delay to ensure it renders after redirect
+        setTimeout(() => toast.error('Logged out due to inactivity', { icon: '🔒' }), 100);
+      }, INACTIVITY_LIMIT);
+    };
+
+    // Initialize timer
+    resetTimer();
+
+    // Event listeners for activity
+    const events = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, [role]);
 
   if (!role) {
     return (
