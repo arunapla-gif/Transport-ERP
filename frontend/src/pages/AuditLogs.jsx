@@ -13,7 +13,7 @@ export default function AuditLogs() {
     try {
       setLoading(true);
       const res = await api.get('/api/audit-logs');
-      setLogs(res.data);
+      setLogs(res);
     } catch (err) {
       console.error(err);
       toast.error('Failed to fetch audit logs');
