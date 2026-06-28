@@ -135,36 +135,77 @@ app.get('/api/system-pulse', async (req, res) => {
   }
 });
 
-app.post('/api/login', loginLimiter, (req, res) => {
-  const { pin } = req.body;
-  const adminPin = process.env.OWNER_PIN || '1234';
-  const mainPin = process.env.WORKER_PIN || '0000';
-  const bngPin = process.env.WORKER_PIN_BNG || '1111';
+app.post('/api/login', loginLimiter, async (req, res) => {
+  try {
+    const { pin } = req.body;
+    
+    // Fallback/Bootstrap Admin PIN from .env (in case DB is locked out)
+    const adminPin = process.env.OWNER_PIN || '1234';
+    if (pin === adminPin) {
+      const token = jwt.sign({ role: 'admin', branch: 'ALL' }, JWT_SECRET, { expiresIn: '7d' });
+      return res.json({ token, role: 'admin', branch: 'ALL', username: 'Super Admin' });
+    }
 
-  if (pin === adminPin) {
-    const token = jwt.sign({ role: 'admin', branch: 'ALL' }, JWT_SECRET, { expiresIn: '7d' });
-    return res.json({ token, role: 'admin', branch: 'ALL' });
-  } else if (pin === mainPin) {
-    const token = jwt.sign({ role: 'worker', branch: 'MAIN' }, JWT_SECRET, { expiresIn: '7d' });
-    return res.json({ token, role: 'worker', branch: 'MAIN' });
-  } else if (pin === bngPin) {
-    const token = jwt.sign({ role: 'worker', branch: 'AP_BNG' }, JWT_SECRET, { expiresIn: '7d' });
-    return res.json({ token, role: 'worker', branch: 'AP_BNG' });
-  } else {
-    return res.status(401).json({ error: 'Invalid PIN code' });
+    const user = await prisma.user.findFirst({
+      where: { pin, status: 'Active' }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid PIN code' });
+    }
+
+    const token = jwt.sign({ userId: user.id, role: user.role, branch: user.branch }, JWT_SECRET, { expiresIn: '7d' });
+    
+    // Create Session
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        token: token
+      }
+    });
+
+    return res.json({ token, role: user.role, branch: user.branch, username: user.username });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: 'Internal server error during login' });
   }
 });
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   if (!authHeader) return res.status(401).json({ error: 'Unauthorized: Missing token' });
   const token = authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized: Malformed token' });
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) return res.status(403).json({ error: 'Forbidden: Invalid token' });
-    req.user = user;
-    next();
+    
+    // Super admin fallback token doesn't have a userId and isn't in DB
+    if (!decoded.userId && decoded.role === 'admin') {
+      req.user = decoded;
+      return next();
+    }
+
+    // Verify session exists in DB (not revoked)
+    try {
+      const session = await prisma.session.findUnique({
+        where: { token }
+      });
+      if (!session) {
+        return res.status(403).json({ error: 'Session revoked. Please log in again.' });
+      }
+      
+      // Update last active time async (don't await to save latency)
+      prisma.session.update({
+        where: { token },
+        data: { lastActive: new Date() }
+      }).catch(() => {});
+
+      req.user = decoded;
+      next();
+    } catch (dbErr) {
+      return res.status(500).json({ error: 'Session verification failed' });
+    }
   });
 };
 
@@ -2510,6 +2551,91 @@ app.delete('/api/daily-transactions/:id', async (req, res) => {
     res.json({ message: 'Transaction deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete transaction' });
+  }
+});
+
+// ==============================
+// ADMIN DASHBOARD ENDPOINTS
+// ==============================
+
+// Ensure only admins can access these routes
+const authorizeAdmin = (req, res, next) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden: Admins only' });
+  }
+  next();
+};
+
+app.get('/api/admin/users', authorizeAdmin, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { id: 'desc' }
+    });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/admin/users', authorizeAdmin, async (req, res) => {
+  try {
+    const { username, pin, role, branch } = req.body;
+    const user = await prisma.user.create({
+      data: { username, pin, role, branch }
+    });
+    res.json(user);
+  } catch (error) {
+    if (error.code === 'P2002') return res.status(400).json({ error: 'Username already exists' });
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+app.put('/api/admin/users/:id', authorizeAdmin, async (req, res) => {
+  try {
+    const { username, pin, role, branch, status } = req.body;
+    const user = await prisma.user.update({
+      where: { id: parseInt(req.params.id) },
+      data: { username, pin, role, branch, status }
+    });
+    res.json(user);
+  } catch (error) {
+    if (error.code === 'P2002') return res.status(400).json({ error: 'Username already exists' });
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+app.delete('/api/admin/users/:id', authorizeAdmin, async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+app.get('/api/admin/sessions', authorizeAdmin, async (req, res) => {
+  try {
+    // Only get sessions active in the last 24 hours to clean up view
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const sessions = await prisma.session.findMany({
+      where: { lastActive: { gte: yesterday } },
+      include: {
+        user: { select: { username: true, role: true, branch: true } }
+      },
+      orderBy: { lastActive: 'desc' }
+    });
+    res.json(sessions);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch active sessions' });
+  }
+});
+
+app.delete('/api/admin/sessions/:id', authorizeAdmin, async (req, res) => {
+  try {
+    await prisma.session.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to revoke session' });
   }
 });
 
