@@ -209,6 +209,65 @@ const logApiUsage = async (provider, apiName, status, cost = 0) => {
   }
 };
 
+// Helper to log user actions for Audit Trails
+const insertAuditLog = async (req, action, entity, entityId, details) => {
+  try {
+    const role = req.user?.role || 'System';
+    const branch = req.user?.branch || 'System';
+    await prisma.auditLog.create({
+      data: {
+        userRole: role,
+        userBranch: branch,
+        action,
+        entity,
+        entityId: String(entityId),
+        details
+      }
+    });
+  } catch (err) {
+    console.error('Failed to insert audit log:', err);
+  }
+};
+
+app.get('/api/audit-logs', async (req, res) => {
+  try {
+    const logs = await prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500
+    });
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
+  }
+});
+
+// Generic Audit Log Middleware for all mutations
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE'].includes(req.method) && req.path.startsWith('/api/') && !req.path.includes('login') && !req.path.includes('scanner')) {
+    const originalJson = res.json;
+    res.json = function (body) {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        const pathParts = req.path.split('/').filter(p => p);
+        const entityPart = pathParts[1] || 'System'; 
+        
+        let action = 'UPDATE';
+        if (req.method === 'POST') action = 'CREATE';
+        if (req.method === 'DELETE') action = 'DELETE';
+        
+        let entityId = body?.id || body?.gcNumber || body?.gdmNumber || body?.tripNumber || req.body?.id || 'N/A';
+        if (pathParts[2] && !isNaN(parseInt(pathParts[2]))) {
+           entityId = pathParts[2];
+        }
+
+        let details = `${action} operation on ${entityPart}`;
+        insertAuditLog(req, action, entityPart.toUpperCase(), entityId, details);
+      }
+      return originalJson.call(this, body);
+    };
+  }
+  next();
+});
+
 app.get('/api/usage/stats', async (req, res) => {
   try {
     const logs = await prisma.apiUsageLog.findMany({
@@ -1639,7 +1698,6 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
       
       transporterId: gstin.toUpperCase(),
       transporterName: companyStr === 'BELL' ? "BELL COMPANY" : "AP TRANSPORT",
-      transDocNo: gcData.gcNumber.toUpperCase(),
       transMode: "1",
       transDistance: "0", 
       vehicleNo: vehicleNo || "",
@@ -1659,6 +1717,8 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
     if (!payload.vehicleNo) delete payload.vehicleNo;
     if (!payload.fromAddr2) delete payload.fromAddr2;
     if (!payload.toAddr2) delete payload.toAddr2;
+    delete payload.transDocNo;
+    delete payload.transDocDate;
 
     const genUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`;
     const response = await fetch(genUrl, {
@@ -1737,7 +1797,6 @@ app.post('/api/ewaybill/regenerate', paidApiLimiter, async (req, res) => {
       
       transporterId: gstin, // Reassign to current GSTIN securely
       transporterName: companyStr === 'BELL' ? "BELL COMPANY" : "AP TRANSPORT",
-      transDocNo: oldEwb.transDocNo || "",
       transMode: "1",
       transDistance: "0", // Auto calc
       vehicleNo: vehicleNo || "",
@@ -1941,13 +2000,11 @@ app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
       fromPlace: fromPlace || "Sivakasi",
       fromState: 33, // Default Tamil Nadu
       transMode: "1", // Road
-      transDocNo: transDocNo,
-      transDocDate: transDocDate,
       tripSheetEwbBills: ewbNos.map(no => ({ ewbNo: Number(no) }))
     };
 
-    if (!cewbPayload.transDocNo) delete cewbPayload.transDocNo;
-    if (!cewbPayload.transDocDate) delete cewbPayload.transDocDate;
+    delete cewbPayload.transDocNo;
+    delete cewbPayload.transDocDate;
 
     // 3. Post to WhiteBooks CEWB URL
     const cewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/generatecewb?email=${encodeURIComponent(email)}`;

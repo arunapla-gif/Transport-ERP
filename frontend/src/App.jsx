@@ -36,6 +36,7 @@ const DailyAccounts = React.lazy(() => import('./pages/DailyAccounts'));
 const GodownPlanner = React.lazy(() => import('./pages/GodownPlanner'));
 const RemoteScanner = React.lazy(() => import('./pages/RemoteScanner'));
 const LegacyViewer = React.lazy(() => import('./pages/LegacyViewer'));
+const AuditLogs = React.lazy(() => import('./pages/AuditLogs'));
 
 const SystemStatus = () => {
   const [dbStatus, setDbStatus] = useState('idle'); // idle, waking, ready, error
@@ -213,6 +214,7 @@ function Layout({ children, role, onLogout }) {
             <button onClick={() => toggleMenu('settings')} className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] md:text-xs font-bold shadow-sm flex items-center gap-1">Settings <span className="text-[9px] md:text-[10px] opacity-70">▼</span></button>
             <div className={`absolute right-0 top-full pt-1.5 z-50 ${activeDropdown === 'settings' ? 'block' : 'hidden md:group-hover:block'}`}>
               <div className="w-40 md:w-48 bg-white shadow-xl shadow-slate-900/10 border border-slate-200 rounded-lg overflow-hidden backdrop-blur-xl">
+                <Link onClick={closeMenu} to="/settings/audit-logs" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Audit Trails</Link>
                 <Link onClick={closeMenu} to="/settings/usage" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Tech Usage</Link>
               </div>
             </div>
@@ -299,6 +301,7 @@ function App() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/legacy-viewer" element={<LegacyViewer />} />
             <Route path="/settings/usage" element={<TechnologyUsage />} />
+            <Route path="/settings/audit-logs" element={<AuditLogs />} />
             <Route path="/masters/company" element={<CompanyMaster />} />
             <Route path="/masters/vehicles" element={<VehicleMaster />} />
             <Route path="/masters/godowns" element={<GodownMaster />} />

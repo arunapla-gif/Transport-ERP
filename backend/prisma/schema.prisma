@@ -410,3 +410,14 @@ model UnitMaster {
   
   @@unique([category, description])
 }
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  userRole    String
+  userBranch  String
+  action      String
+  entity      String
+  entityId    String
+  details     String?
+}

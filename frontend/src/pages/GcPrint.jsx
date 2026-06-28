@@ -34,6 +34,16 @@ export default function GcPrint() {
 
   return (
     <div className="bg-slate-200 min-h-screen flex flex-col items-center justify-start print:bg-white print:min-h-0 print:block">
+      <style type="text/css">
+        {`
+          @media print {
+            @page {
+              size: A5 landscape;
+            }
+          }
+        `}
+      </style>
+
       {gcs.flatMap((gc, index) => {
         const isAp = gc.gcNumber?.startsWith('AP-');
         const companyName = isAp ? 'A.P. ROADLINES' : 'THE BELL LORRY AGENCIES';
@@ -49,158 +59,164 @@ export default function GcPrint() {
           const totalArticles = gc.goods?.reduce((sum, g) => sum + (parseInt(g.articles) || parseInt(g.articleCount) || 0), 0) || 0;
           const totalFreight = (parseFloat(gc.freightTotal || 0)).toFixed(2); 
 
+          const paddedGoods = [...(gc.goods || [])];
+          while (paddedGoods.length < 3) paddedGoods.push(null);
+          const displayGoods = paddedGoods.slice(0, 3);
+
           if (copyType === 'CONSIGNEE COPY') {
             return (
               <div 
                 key={`${gc.id}-${copyIndex}`} 
-                className={`w-full flex justify-center p-4 print:p-0 ${!isLastTotalItem ? 'print:break-after-page mb-8 print:mb-0' : ''}`}
+                className={`w-full flex justify-center print:p-0 ${!isLastTotalItem ? 'print:break-after-page mb-8 print:mb-0' : ''}`}
               >
-                <div className="w-[210mm] min-h-[148mm] bg-white text-slate-900 font-sans p-4 relative box-border mx-auto print:p-2 border border-slate-300 shadow-sm">
+                <div style={{ width: '210mm', height: '148.5mm' }} className="bg-white text-slate-900 font-sans p-2 relative box-border mx-auto print:border-none border border-slate-300 shadow-sm overflow-hidden flex flex-col">
                   
                   {/* --- SUPER HEADER --- */}
-                  <div className="flex justify-between items-end font-bold mb-2 px-1 border-b-[3px] border-slate-900 pb-2">
-                    <div className="flex items-center gap-3 w-[60%]">
-                       <div className="w-[70px] h-[70px] bg-white border-[3px] border-slate-900 text-slate-900 flex items-center justify-center font-bold text-[38px] rounded-xl shadow-sm">
+                  <div className="flex justify-between items-end font-bold mb-1.5 px-1 border-b-[2px] border-slate-900 pb-1.5 shrink-0">
+                    <div className="flex items-center gap-2 w-[60%]">
+                       <div className="w-[50px] h-[50px] bg-white border-[2px] border-slate-900 text-slate-900 flex items-center justify-center font-bold text-[28px] rounded-lg shadow-sm shrink-0">
                          {companyLogo}
                        </div>
-                       <div className="flex flex-col justify-center">
-                         <div className="text-[11px] font-bold text-slate-600 mb-0.5">{companyTamil}</div>
-                         <h1 className="text-[28px] font-black tracking-tight text-blue-800 uppercase leading-none mb-1">{companyName}</h1>
-                         <div className="text-[12px] text-slate-700 font-semibold tracking-wide">
+                       <div className="flex flex-col justify-center overflow-hidden">
+                         <div className="text-[10px] font-bold text-slate-600 mb-0">{companyTamil}</div>
+                         <h1 className="text-[22px] font-black tracking-tight text-blue-800 uppercase leading-none mb-0.5 truncate">{companyName}</h1>
+                         <div className="text-[11px] text-slate-700 font-semibold tracking-wide">
                            {address} | Ph: {phone}
                          </div>
                        </div>
                     </div>
-                    <div className="w-[40%] text-right flex flex-col justify-end items-end h-[70px]">
-                      <div className="text-[18px] font-black tracking-widest text-slate-900 mb-1">LORRY RECEIPT</div>
-                      <div className="border border-slate-400 text-slate-800 px-3 py-1 rounded text-[11px] font-black uppercase tracking-wider mb-2">{copyType}</div>
-                      <div className="flex gap-4 text-[14px]">
-                        <div><span className="text-slate-500 font-bold">GC No:</span> <span className="font-black ml-1">{gc.gcNumber}</span></div>
-                        <div><span className="text-slate-500 font-bold">Date:</span> <span className="font-black ml-1">{gc.date ? new Date(gc.date).toLocaleDateString('en-GB').replace(/\//g, '-') : '-'}</span></div>
+                    <div className="w-[40%] text-right flex flex-col justify-end items-end h-[50px]">
+                      <div className="text-[16px] font-black tracking-widest text-slate-900 mb-0.5">LORRY RECEIPT</div>
+                      <div className="border border-slate-400 text-slate-800 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider mb-1.5">{copyType}</div>
+                      <div className="flex gap-4 text-[14px] mt-1 bg-slate-100 p-1.5 rounded-lg border border-slate-200">
+                        <div><span className="text-slate-500 font-bold text-[11px] block leading-none">GC No</span> <span className="font-black text-[18px] tracking-tight">{gc.gcNumber}</span></div>
+                        <div className="border-l border-slate-300 pl-3"><span className="text-slate-500 font-bold text-[11px] block leading-none">Date</span> <span className="font-black text-[14px] leading-tight">{gc.date ? new Date(gc.date).toLocaleDateString('en-GB').replace(/\//g, '-') : '-'}</span></div>
                       </div>
                     </div>
                   </div>
 
                   {/* Route & GST Box */}
-                  <div className="flex bg-white rounded-lg p-2 mb-3 border border-slate-300 items-center">
-                    <div className="w-1/3 flex flex-col px-3">
-                       <span className="text-[10px] text-slate-500 font-bold uppercase mb-0.5">Origin</span>
-                       <span className="text-[16px] font-black uppercase">{companyAddressCity(isAp)}</span>
+                  <div className="flex bg-white rounded p-1 mb-1.5 border border-slate-300 items-center shrink-0">
+                    <div className="w-1/3 flex flex-col px-2">
+                       <span className="text-[9px] text-slate-500 font-bold uppercase mb-0">Origin</span>
+                       <span className="text-[14px] font-black uppercase leading-tight">{companyAddressCity(isAp)}</span>
                     </div>
                     <div className="w-1/3 flex justify-center text-slate-400">
-                       <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </div>
-                    <div className="w-1/3 flex flex-col px-3 text-right">
-                       <span className="text-[10px] text-slate-500 font-bold uppercase mb-0.5">Destination</span>
-                       <span className="text-[16px] font-black uppercase">{gc.consignee?.city || '-'}</span>
+                    <div className="w-1/3 flex flex-col px-2 text-right">
+                       <span className="text-[9px] text-slate-500 font-bold uppercase mb-0">Destination</span>
+                       <span className="text-[14px] font-black uppercase leading-tight">{gc.consignee?.city || '-'}</span>
                     </div>
                   </div>
 
                   {/* Parties: Consignor & Consignee */}
-                  <div className="flex gap-3 mb-4">
-                    <div className="flex-1 border-2 border-slate-300 rounded-xl p-3 bg-white relative overflow-hidden">
-                       <div className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">Consignor</div>
-                       <div className="font-black text-[15px] uppercase leading-tight mb-1">{gc.consignor?.name || '-'}</div>
-                       <div className="text-[12px] text-slate-700 font-semibold uppercase leading-snug min-h-[36px]">
+                  <div className="flex gap-2 mb-1.5 shrink-0">
+                    <div className="flex-1 border border-slate-300 rounded-lg p-1.5 bg-white relative overflow-hidden flex flex-col">
+                       <div className="text-[9px] font-black text-slate-500 uppercase tracking-wider mb-0.5">Consignor</div>
+                       <div className="font-black text-[13px] uppercase leading-tight mb-0.5">{gc.consignor?.name || '-'}</div>
+                       <div className="text-[10px] text-slate-700 font-semibold uppercase leading-snug flex-grow">
                          {gc.consignor?.address || ''}<br/>
                          {gc.consignor?.city || ''}
                        </div>
-                       <div className="mt-2 text-[12px] bg-white px-2 py-1 rounded font-mono font-bold text-slate-800 border border-slate-300 inline-block">GSTIN: {gc.consignor?.gstin || '-'}</div>
+                       <div className="mt-1 text-[10px] bg-white px-1.5 py-0.5 rounded font-mono font-bold text-slate-800 border border-slate-300 inline-block self-start">GSTIN: {gc.consignor?.gstin || '-'}</div>
                     </div>
                     
-                    <div className="flex-1 border-2 border-slate-300 rounded-xl p-3 bg-white relative overflow-hidden">
-                       <div className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">Consignee</div>
-                       <div className="font-black text-[15px] uppercase leading-tight mb-1">
+                    <div className="flex-1 border border-slate-300 rounded-lg p-1.5 bg-white relative overflow-hidden flex flex-col">
+                       <div className="text-[9px] font-black text-slate-500 uppercase tracking-wider mb-0.5">Consignee</div>
+                       <div className="font-black text-[13px] uppercase leading-tight mb-0.5">
                          {gc.consignee?.name || '-'}
                          {gc.consignee?.legalName && gc.consignee.legalName.trim().toLowerCase() !== (gc.consignee?.name || '').trim().toLowerCase() && (
-                           <div className="text-[11px] text-slate-500 font-bold mt-0.5 leading-none">({gc.consignee.legalName})</div>
+                           <div className="text-[9px] text-slate-500 font-bold mt-0.5 leading-none">({gc.consignee.legalName})</div>
                          )}
                        </div>
-                       <div className="text-[12px] text-slate-700 font-semibold uppercase leading-snug min-h-[36px]">
+                       <div className="text-[10px] text-slate-700 font-semibold uppercase leading-snug flex-grow">
                          {gc.consignee?.address || ''}<br/>
                          {gc.consignee?.city || ''}
                        </div>
-                       <div className="mt-2 text-[12px] bg-white px-2 py-1 rounded font-mono font-bold text-slate-800 border border-slate-300 inline-block">GSTIN: {gc.consignee?.gstin || '-'}</div>
+                       <div className="mt-1 text-[10px] bg-white px-1.5 py-0.5 rounded font-mono font-bold text-slate-800 border border-slate-300 inline-block self-start">GSTIN: {gc.consignee?.gstin || '-'}</div>
                     </div>
                   </div>
 
                   {/* Main Data Section (Goods & Freight Split) */}
-                  <div className="flex gap-3 min-h-[160px] mb-3">
+                  <div className="flex gap-2 mb-1.5 flex-grow overflow-hidden">
                     {/* Goods Table (Left 65%) */}
-                    <div className="w-[65%] border-2 border-slate-200 rounded-xl overflow-hidden flex flex-col bg-white">
-                      <table className="w-full text-left">
-                        <thead className="border-b-2 border-slate-300">
-                          <tr className="text-[12px] text-slate-800 font-black uppercase tracking-wide">
-                            <th className="p-2 w-[25%] border-r border-slate-300 text-center">Articles</th>
-                            <th className="p-2 pl-3">Description of Goods</th>
+                    <div className="w-[65%] border border-slate-300 rounded-lg overflow-hidden flex flex-col bg-white">
+                      <table className="w-full text-left flex-grow flex flex-col">
+                        <thead className="border-b border-slate-300 bg-slate-50 shrink-0">
+                          <tr className="text-[10px] text-slate-800 font-black uppercase tracking-wide flex w-full">
+                            <th className="p-1 w-[25%] border-r border-slate-300 text-center">Articles</th>
+                            <th className="p-1 pl-2 w-[75%]">Description of Goods</th>
                           </tr>
                         </thead>
-                        <tbody className="flex-grow">
-                          <tr className="align-top">
-                            <td className="p-2 border-r border-slate-300 text-center">
-                               {gc.goods?.map((g,i) => <div key={i} className="font-black text-[18px]">{g.articles || g.articleCount} <span className="text-[12px] text-slate-500 font-bold ml-1">{g.units}</span></div>)}
-                            </td>
-                            <td className="p-3 uppercase font-bold text-[14px] text-slate-800">
-                               <div className="text-[10px] italic font-semibold text-slate-400 mb-2">Said to Contain</div>
-                               {gc.goods?.map((g,i) => <div key={i} className="mb-1 leading-snug">{g.description}</div>)}
-                            </td>
-                          </tr>
+                        <tbody className="flex-grow flex flex-col">
+                          {displayGoods.map((g, i) => (
+                            <tr key={i} className="flex w-full flex-1">
+                              <td className="p-1.5 border-r border-slate-300 text-center w-[25%] font-black text-[18px] flex flex-col justify-center">
+                                {g ? (g.articles || g.articleCount) : ''}
+                              </td>
+                              <td className="p-2 uppercase font-bold text-[13px] text-slate-900 w-[75%] flex flex-col justify-center">
+                                {g ? g.units : ''}
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
 
                      {/* Freight Area (Right 35%) */}
-                     <div className="w-[35%] bg-white border-2 border-slate-300 rounded-xl overflow-hidden flex flex-col">
-                        <div className="bg-white border-b-2 border-slate-300 text-slate-900 text-center py-2 font-black tracking-widest uppercase text-[13px]">
+                     <div className="w-[35%] bg-white border border-slate-300 rounded-lg overflow-hidden flex flex-col">
+                        <div className="bg-slate-50 border-b border-slate-300 text-slate-900 text-center py-1 font-black tracking-widest uppercase text-[10px] shrink-0">
                           Freight Details
                         </div>
-                       <div className="p-3 flex flex-col gap-2 flex-grow justify-center font-bold text-[13px]">
-                         <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                           <span className="text-slate-600 uppercase">Fixed</span>
-                           <span className="text-[15px]">{gc.freightRate || '0.00'}</span>
+                       <div className="p-2 flex flex-col gap-1 flex-grow justify-center font-bold text-[11px]">
+                         <div className="flex justify-between items-center border-b border-slate-100 pb-1">
+                           <span className="text-slate-500 uppercase">Fixed</span>
+                           <span className="text-[13px]">{gc.freightRate || '0.00'}</span>
                          </div>
-                         <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                           <span className="text-slate-600 uppercase">Advance</span>
-                           <span className="text-[15px]">{gc.advancePaid || '0.00'}</span>
+                         <div className="flex justify-between items-center border-b border-slate-100 pb-1">
+                           <span className="text-slate-500 uppercase">Advance</span>
+                           <span className="text-[13px]">{gc.advancePaid || '0.00'}</span>
                          </div>
-                         <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                           <span className="text-slate-600 uppercase">Balance</span>
-                           <span className="text-[15px]">{gc.balanceFreight || '0.00'}</span>
+                         <div className="flex justify-between items-center border-b border-slate-100 pb-1">
+                           <span className="text-slate-500 uppercase">Balance</span>
+                           <span className="text-[13px]">{gc.balanceFreight || '0.00'}</span>
                          </div>
-                         <div className="flex justify-between items-center pt-2 mt-auto">
-                           <span className="text-slate-900 uppercase font-black text-[15px]">Total To Pay</span>
-                           <span className="text-[20px] font-black text-slate-900 border border-slate-300 bg-white px-2 py-0.5 rounded">{totalFreight}</span>
+                         <div className="flex justify-between items-center pt-1 mt-auto">
+                           <span className="text-slate-900 uppercase font-black text-[12px]">Total</span>
+                           <span className="text-[16px] font-black text-slate-900 border border-slate-300 bg-white px-1.5 py-0 rounded">{totalFreight}</span>
                          </div>
                        </div>
                     </div>
                   </div>
 
                   {/* Footer Data & Signature */}
-                  <div className="flex justify-between items-end border-2 border-slate-200 rounded-xl bg-white p-3">
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[12px] w-[60%]">
-                       <div className="flex justify-between border-b border-slate-100 pb-1">
+                  <div className="flex justify-between items-end border border-slate-300 rounded-lg bg-white p-1.5 shrink-0">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] w-[60%]">
+                       <div className="flex justify-between border-b border-slate-100 pb-0.5">
                          <span className="font-bold text-slate-500 uppercase">Inv No:</span> <span className="font-black text-slate-800">{gc.invoiceNumber || '-'}</span>
                        </div>
-                       <div className="flex justify-between border-b border-slate-100 pb-1">
+                       <div className="flex justify-between border-b border-slate-100 pb-0.5">
                          <span className="font-bold text-slate-500 uppercase">Inv Date:</span> <span className="font-black text-slate-800">{gc.invoiceDate ? new Date(gc.invoiceDate).toLocaleDateString('en-GB') : '-'}</span>
                        </div>
-                       <div className="flex justify-between">
+                       <div className="flex justify-between border-b border-slate-100 pb-0.5">
                          <span className="font-bold text-slate-500 uppercase">Value:</span> <span className="font-black text-slate-800">₹{gc.invoiceValue ? parseFloat(gc.invoiceValue).toFixed(2) : '-'}</span>
                        </div>
-                       <div className="flex justify-between">
+                       <div className="flex justify-between border-b border-slate-100 pb-0.5">
                          <span className="font-bold text-slate-500 uppercase">Lorry No:</span> <span className="font-black text-slate-800 uppercase">{gc.vehicle?.vehicleNumber || '-'}</span>
                        </div>
                     </div>
                     
-                    <div className="w-[40%] text-center flex flex-col justify-end h-[60px] pl-4">
-                       <div className="text-[12px] font-black uppercase text-slate-700">For {companyName}</div>
-                       <div className="text-[11px] font-bold text-slate-400 border-t-2 border-slate-300 pt-1 mt-8">Authorized Signatory</div>
+                    <div className="w-[40%] text-center flex flex-col justify-end h-[45px] pl-2">
+                       <div className="text-[10px] font-black uppercase text-slate-700 leading-tight">For {companyName}</div>
+                       <div className="text-[9px] font-bold text-slate-400 border-t border-slate-300 pt-0.5 mt-auto">Authorized Signatory</div>
                     </div>
                   </div>
 
                   {/* Bottom Note */}
-                  <div className="mt-3 text-[10px] text-center font-bold text-slate-500 uppercase tracking-wider">
-                    Note: We are not responsible for fire, theft, leakage, damage & breakage. | Subject to Sivakasi Jurisdiction.
+                  <div className="mt-1 flex justify-between items-center text-[8px] font-bold text-slate-500 uppercase tracking-wider shrink-0">
+                    <span className="w-[50%]">Note: We are not responsible for fire, theft, leakage, damage & breakage. | Subject to Sivakasi Jurisdiction.</span>
+                    <span className="font-black text-slate-900 border-[2px] border-slate-900 px-2 py-0.5 rounded-lg text-[13px] tracking-widest bg-slate-100 leading-none">RCM PAYABLE BY CONSIGNEE</span>
                   </div>
                 </div>
               </div>
@@ -211,9 +227,9 @@ export default function GcPrint() {
           return (
             <div 
               key={`${gc.id}-${copyIndex}`} 
-              className={`w-full flex justify-center p-4 print:p-0 ${!isLastTotalItem ? 'print:break-after-page mb-8 print:mb-0' : ''}`}
+              className={`w-full flex justify-center print:p-0 ${!isLastTotalItem ? 'print:break-after-page mb-8 print:mb-0' : ''}`}
             >
-              <div className="w-[210mm] bg-white text-black font-sans text-xs p-4 relative box-border mx-auto print:p-2">
+              <div style={{ width: '210mm', height: '148.5mm' }} className="bg-white text-black font-sans text-xs p-4 relative box-border mx-auto print:p-2 print:border-none border border-black overflow-hidden">
                 
                 {/* --- SUPER HEADER --- */}
                 <div className="flex justify-between items-end font-bold mb-1 px-1">
@@ -289,27 +305,35 @@ export default function GcPrint() {
                   {/* --- ROW 4: TABLE --- */}
                   <div className="flex min-h-[140px]">
                     
-                    {/* QTY & DESC COLUMNS */}
-                    <div className="w-[55%] flex">
-                      <div className="w-[30%] border-r border-black flex flex-col">
-                         <div className="border-b border-black p-1 text-center font-bold text-[11px]">No of Articles</div>
-                         <div className="p-1.5 text-[11px] uppercase">
-                            {gc.goods?.map((g,i) => <div key={i}>{g.articles || g.articleCount} {g.units}</div>)}
-                         </div>
+                        {/* QTY & DESC COLUMNS */}
+                    <div className="w-[55%] flex flex-col border-r border-black">
+                      <div className="flex border-b border-black">
+                        <div className="w-[30%] p-1 text-center font-bold text-[11px] border-r border-black">No of Articles</div>
+                        <div className="w-[70%] p-1 text-center font-bold text-[11px]">Description</div>
                       </div>
-                      <div className="w-[70%] border-r border-black flex flex-col">
-                         <div className="border-b border-black p-1 text-center font-bold text-[11px]">Description</div>
-                         <div className="p-1.5 text-[11px] uppercase">
-                            {gc.goods?.map((g,i) => <div key={i}>{g.description} {g.weight ? `(${g.weight} kg)` : ''}</div>)}
-                         </div>
+                      <div className="flex-grow flex flex-col">
+                        {displayGoods.map((g, i) => (
+                          <div key={i} className="flex flex-1 items-center">
+                            <div className="w-[30%] text-[14px] font-black uppercase text-center border-r border-black h-full flex flex-col justify-center">
+                              {g ? (g.articles || g.articleCount) : ''}
+                            </div>
+                            <div className="w-[70%] text-[12px] font-bold uppercase pl-2 h-full flex flex-col justify-center">
+                              {g ? g.units : ''} {g?.weight ? `(${g.weight} kg)` : ''}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
                     {/* RATE COLUMN */}
                     <div className="w-[10%] border-r border-black flex flex-col">
                        <div className="border-b border-black p-1 text-center font-bold text-[11px]">Rate</div>
-                       <div className="p-1.5 text-center text-[11px]">
-                          {gc.goods?.map((g,i) => <div key={i}>{g.rate || '0.00'}</div>)}
+                       <div className="flex-grow flex flex-col">
+                          {displayGoods.map((g, i) => (
+                            <div key={i} className="flex-1 text-center text-[11px] flex flex-col justify-center">
+                              {g ? (g.rate || '0.00') : ''}
+                            </div>
+                          ))}
                        </div>
                     </div>
 
@@ -339,8 +363,9 @@ export default function GcPrint() {
                   </div>
 
                   {/* --- ROW 5: NOTE --- */}
-                  <div className="border-b border-black p-1 text-center font-bold text-[10px]">
-                     Note : WE ARE NOT RESPONSIBLE FOR FIRE, THEFT, LEAKAGE, DAMAGE & BREAKAGE
+                  <div className="border-b border-black p-1 flex justify-between items-center font-bold text-[10px]">
+                     <span>Note : WE ARE NOT RESPONSIBLE FOR FIRE, THEFT, LEAKAGE, DAMAGE & BREAKAGE</span>
+                     <span className="font-black text-[13px] border-2 border-black px-2 py-0.5 leading-none">RCM PAYABLE BY CONSIGNEE</span>
                   </div>
 
                   {/* --- ROW 6: FOOTER DATA --- */}
