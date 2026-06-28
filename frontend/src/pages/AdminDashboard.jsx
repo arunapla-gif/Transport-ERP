@@ -18,10 +18,10 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       if (activeTab === 'users') {
-        const res = await api.get('/api/admin/users');
+        const res = await api.get('/admin/users');
         setUsers(res);
       } else {
-        const res = await api.get('/api/admin/sessions');
+        const res = await api.get('/admin/sessions');
         setSessions(res);
       }
     } catch (error) {
@@ -42,10 +42,10 @@ export default function AdminDashboard() {
     
     try {
       if (editingId) {
-        await api.put(`/api/admin/users/${editingId}`, formData);
+        await api.put(`/admin/users/${editingId}`, formData);
         toast.success('User updated successfully');
       } else {
-        await api.post('/api/admin/users', formData);
+        await api.post('/admin/users', formData);
         toast.success('User created successfully');
       }
       setShowModal(false);
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      await api.delete(`/api/admin/users/${id}`);
+      await api.delete(`/admin/users/${id}`);
       toast.success('User deleted');
       fetchData();
     } catch (error) {
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
   const handleForceLogout = async (id) => {
     if (!window.confirm('Are you sure you want to force logout this session? The user will be immediately kicked out.')) return;
     try {
-      await api.delete(`/api/admin/sessions/${id}`);
+      await api.delete(`/admin/sessions/${id}`);
       toast.success('Session revoked. User logged out.');
       fetchData();
     } catch (error) {
