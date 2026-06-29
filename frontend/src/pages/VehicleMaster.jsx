@@ -47,8 +47,39 @@ export default function VehicleMaster() {
   const [fetchingRc, setFetchingRc] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const handleSave = useCallback(async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!formData.vehicleNumber) return toast.error("Vehicle Number is required");
+    
+    setLoading(true);
+    try {
+      const payloadToSave = {
+        ...formData,
+        grossWeight: formData.grossWeight ? parseInt(formData.grossWeight) : null,
+      };
+
+      if (formData.id) {
+        await api.put(`/vehicles/${payloadToSave.id}`, payloadToSave);
+        toast.success('Vehicle updated successfully');
+      } else {
+        const { id, ...dataToCreate } = payloadToSave;
+        await api.post('/vehicles', dataToCreate);
+        toast.success('Vehicle created successfully');
+      }
+      setFormData({ 
+        id: null, vehicleNumber: '', type: '6 Wheel (Lorry/Truck)', ladenType: 'Open Body',
+        ownerName: '', ownerPhone: '', ownerPhone2: '', makeModel: '', fitnessExpiry: null, insuranceExpiry: null, npExpiry: null, grossWeight: '', rcStatus: '', rcVerified: false 
+      });
+      fetchVehicles();
+    } catch (err) {
+      toast.error('Failed to save record: ' + (err.error || err.message || 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  }, [formData]);
+
   useKeyboardFlow({
-    onSave: (e) => handleSave(e || { preventDefault: () => {} })
+    onSave: handleSave
   });
 
   useEffect(() => {
@@ -95,38 +126,6 @@ export default function VehicleMaster() {
       toast.error('Failed to fetch RC details from VAHAN');
     } finally {
       setFetchingRc(false);
-    }
-  };
-
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (!formData.vehicleNumber) return toast.error("Vehicle Number is required");
-    
-    setLoading(true);
-    try {
-      const payloadToSave = {
-        ...formData,
-        grossWeight: formData.grossWeight ? parseInt(formData.grossWeight) : null,
-      };
-
-      if (formData.id) {
-        await api.put(`/vehicles/${payloadToSave.id}`, payloadToSave);
-        toast.success('Vehicle updated successfully');
-      } else {
-        const { id, ...dataToCreate } = payloadToSave;
-        await api.post('/vehicles', dataToCreate);
-        toast.success('Vehicle created successfully');
-      }
-      setFormData({ 
-        id: null, vehicleNumber: '', type: '6 Wheel (Lorry/Truck)', ladenType: 'Open Body',
-        ownerName: '', ownerPhone: '', ownerPhone2: '', makeModel: '', fitnessExpiry: null, insuranceExpiry: null, npExpiry: null, grossWeight: '', rcStatus: '', rcVerified: false 
-      });
-      fetchVehicles();
-    } catch (err) {
-      toast.error('Failed to save record: ' + (err.error || err.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -333,13 +332,13 @@ export default function VehicleMaster() {
         {/* ACTION BUTTONS */}
         <GlassCard>
             <div className="flex items-center justify-end gap-3 py-2">
-              <button onClick={() => {
+              <button type="button" onClick={() => {
                 setFormData({ id: null, vehicleNumber: '', type: '6 Wheel (Lorry/Truck)', ladenType: 'Open Body', ownerName: '', ownerPhone: '', ownerPhone2: '', makeModel: '', fitnessExpiry: null, insuranceExpiry: null, npExpiry: null, grossWeight: '', rcStatus: '', rcVerified: false });
                 setVahanData(null);
               }} className="h-10 px-6 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50 shadow-sm transition-all">
                 Clear Form
               </button>
-              <button onClick={handleSave} disabled={loading} className="h-10 px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg font-bold text-sm shadow-md hover:shadow-lg hover:-translate-y-[1px] active:scale-[0.98] transition-all flex items-center gap-2">
+              <button type="button" onClick={handleSave} disabled={loading} className="h-10 px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg font-bold text-sm shadow-md hover:shadow-lg hover:-translate-y-[1px] active:scale-[0.98] transition-all flex items-center gap-2">
                 <Save size={16} className={loading ? 'animate-pulse' : ''} /> {formData.id ? 'Update Record' : 'Save Vehicle Record'}
               </button>
             </div>

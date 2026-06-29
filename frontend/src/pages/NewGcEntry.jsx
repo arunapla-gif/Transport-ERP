@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
+import { usePermissions } from '../hooks/usePermissions';
 import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
 import PrintCopiesModal from '../components/ui/PrintCopiesModal';
 import ScannerModal from '../components/ui/ScannerModal';
@@ -45,6 +46,7 @@ const GlassCard = ({ children, className = "" }) => (
 import { useLocation } from 'react-router-dom';
 
 export default function NewGcEntry() {
+  const { canEdit } = usePermissions();
   const location = useLocation();
   const query = new URLSearchParams(location.search);
   const branch = localStorage.getItem('activeBranch') || query.get('branch') || 'MAIN';
@@ -943,9 +945,9 @@ export default function NewGcEntry() {
                  </div>
                )}
              </div>
-             <div className="flex gap-3 w-[400px]">
+              <div className="flex gap-3 w-[400px]">
                <button type="button" onClick={handleReset} className="flex-1 h-12 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-sm transition-all border border-slate-300">Reset</button>
-               <button type="button" onClick={handleSaveGC} disabled={loading} className="flex-[2] h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2">
+               <button type="button" onClick={handleSaveGC} disabled={loading || (activeGcId && !canEdit)} className="flex-[2] h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
                  <Save size={18} /> {loading ? 'Saving...' : (activeGcId ? 'Update GC' : 'Save GC')}
                </button>
              </div>

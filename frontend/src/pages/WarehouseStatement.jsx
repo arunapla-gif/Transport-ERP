@@ -6,12 +6,21 @@ export default function WarehouseStatement() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [inwards, setInwards] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
-  const fetchInwards = async () => {
+  const fetchInwards = async (pageNum = 1, append = false) => {
     try {
-      setLoading(true);
-      const data = await api.get(`/warehouse-inward?date=${date}`);
-      setInwards(data || []);
+      if (!append) setLoading(true);
+      const res = await api.get(`/warehouse-inward?date=${date}&page=${pageNum}&limit=50`);
+      if (append) {
+        setInwards(prev => [...prev, ...(res.data || [])]);
+      } else {
+        setInwards(res.data || []);
+      }
+      setTotalPages(res.totalPages || 1);
+      setTotalRecords(res.total || 0);
     } catch (err) {
       console.error('Failed to fetch inwards', err);
     } finally {
@@ -20,8 +29,15 @@ export default function WarehouseStatement() {
   };
 
   useEffect(() => {
-    fetchInwards();
+    setPage(1);
+    fetchInwards(1, false);
   }, [date]);
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchInwards(page, true);
+    }
+  }, [page]);
 
   const totalArticles = inwards.reduce((sum, item) => sum + (item.articles || 0), 0);
 
@@ -77,10 +93,10 @@ export default function WarehouseStatement() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:hidden">
         <div className="bg-gradient-to-br from-indigo-50 to-white p-5 rounded-xl border border-indigo-100 shadow-sm">
           <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider">Total Entries</p>
-          <p className="text-3xl font-black text-indigo-900 mt-1">{inwards.length}</p>
+          <p className="text-3xl font-black text-indigo-900 mt-1">{totalRecords}</p>
         </div>
         <div className="bg-gradient-to-br from-emerald-50 to-white p-5 rounded-xl border border-emerald-100 shadow-sm">
-          <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Total Articles Inwarded</p>
+          <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Total Articles Inwarded (This Page)</p>
           <p className="text-3xl font-black text-emerald-900 mt-1">{totalArticles}</p>
         </div>
       </div>
@@ -167,6 +183,28 @@ export default function WarehouseStatement() {
           </div>
         )}
       </div>
+
+      {/* Infinite Scroll Observer */}
+      {page < totalPages && (
+        <div 
+          className="h-10 mt-4 flex items-center justify-center print:hidden"
+          ref={(el) => {
+            if (!el) return;
+            const observer = new IntersectionObserver(
+              (entries) => {
+                if (entries[0].isIntersecting && !loading) {
+                  setPage(p => p + 1);
+                }
+              },
+              { threshold: 1.0 }
+            );
+            observer.observe(el);
+            return () => observer.disconnect();
+          }}
+        >
+          {loading && <div className="animate-pulse text-sm font-bold text-slate-500">Loading more...</div>}
+        </div>
+      )}
 
       {/* Print Footer */}
       <div className="hidden print:flex justify-between mt-2 px-4">

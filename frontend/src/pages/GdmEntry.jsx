@@ -72,6 +72,9 @@ export default function GdmEntry() {
 
   const [activeGdmId, setActiveGdmId] = useState(null);
   const [recentGdms, setRecentGdms] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   // DL Verification
   const [dlData, setDlData] = useState(null);
@@ -147,38 +150,51 @@ export default function GdmEntry() {
 
   const fetchInitialData = async () => {
     try {
-      const v = await api.get('/vehicles');
+      const [v, unitsRes, nextNumRes] = await Promise.all([
+        api.get('/vehicles'),
+        api.get('/units').catch(() => []),
+        api.get(`/gdms/next-number?branch=${branch}`)
+      ]);
       setVehicles(v || []);
-
-
-
-      const unitsRes = await api.get('/units').catch(() => []);
       if (unitsRes && unitsRes.length > 0) {
-        setAllUnitOptions(unitsRes.map(u => ({
-          label: u.description,
-          code: u.code,
-          category: u.category
-        })));
+        setAllUnitOptions(unitsRes.map(u => ({ label: u.description, code: u.code, category: u.category })));
       }
-
-      const gdms = await api.get(`/gdms?branch=${branch}&_t=${Date.now()}`);
-      setRecentGdms(gdms || []);
-      
-      let nextGdmNumber = 1001;
-      if (gdms && gdms.length > 0) {
-        const maxGdm = Math.max(...gdms.map(g => parseInt(g.gdmNumber) || 0));
-        if (maxGdm >= 1001) nextGdmNumber = maxGdm + 1;
-      }
-      setGdmNumberDisplay(nextGdmNumber.toString());
+      setGdmNumberDisplay(nextNumRes.nextNumber?.toString() || '1001');
     } catch (err) {
       console.error('Failed to fetch initial data', err);
+    }
+  };
+
+  const fetchRecentGdms = async (pageNum = 1, append = false) => {
+    try {
+      const res = await api.get(`/gdms?branch=${branch}&page=${pageNum}&limit=10`);
+      if (append) {
+        setRecentGdms(prev => {
+          const existingIds = new Set(prev.map(r => r.id));
+          const uniqueNew = (res.data || []).filter(r => !existingIds.has(r.id));
+          return [...prev, ...uniqueNew];
+        });
+      } else {
+        setRecentGdms(res.data || []);
+      }
+      setTotalPages(res.totalPages || 1);
+      setTotalRecords(res.total || 0);
+    } catch (err) {
+      console.error('Failed to fetch recent GDMs', err);
     }
   };
 
   useEffect(() => {
     // eslint-disable-next-line
     fetchInitialData();
+    fetchRecentGdms(1, false);
   }, []);
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchRecentGdms(page, true);
+    }
+  }, [page, branch]);
 
   const handleFetchDL = async (e) => {
     e.preventDefault();
@@ -918,6 +934,27 @@ export default function GdmEntry() {
                    )}
                 </div>
               </div>
+                 {/* Infinite Scroll Observer */}
+                {page < totalPages && (
+                  <div 
+                    className="h-10 mt-4 flex items-center justify-center px-2"
+                    ref={(el) => {
+                      if (!el) return;
+                      const observer = new IntersectionObserver(
+                        (entries) => {
+                          if (entries[0].isIntersecting) {
+                            setPage(p => p + 1);
+                          }
+                        },
+                        { threshold: 1.0 }
+                      );
+                      observer.observe(el);
+                      return () => observer.disconnect();
+                    }}
+                  >
+                    <div className="animate-pulse text-xs font-bold text-slate-500">Loading more...</div>
+                  </div>
+                )}
               
               <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200/60 shadow-inner shrink-0 w-full sm:w-auto overflow-x-auto">
                 {success && (

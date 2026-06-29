@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
+import { usePermissions } from '../hooks/usePermissions';
 import { Edit2, Trash2, Building2, Save, FileText, Search, MapPin } from 'lucide-react';
 
 // Premium Dense Primitives
@@ -49,6 +50,7 @@ const GlassCard = ({ children, className = "" }) => (
 import { useLocation } from 'react-router-dom';
 
 export default function ConsignorMaster() {
+  const { canEdit, canDelete } = usePermissions();
   const location = useLocation();
   const query = new URLSearchParams(location.search);
   const branch = query.get('branch') || 'MAIN';
@@ -238,7 +240,7 @@ export default function ConsignorMaster() {
           <button onClick={() => setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] })} className="h-12 md:h-9 px-6 md:px-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-lg font-bold text-sm md:text-xs hover:bg-slate-50 transition-colors">
             Clear
           </button>
-          <button onClick={handleSave} disabled={loading} className="h-12 md:h-9 px-8 md:px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors flex items-center gap-2 disabled:opacity-70">
+          <button onClick={handleSave} disabled={loading || (formData.id && !canEdit)} className="h-12 md:h-9 px-8 md:px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors flex items-center gap-2 disabled:opacity-70">
             <Save size={16} className="md:w-3.5 md:h-3.5" /> {formData.id ? 'Update Consignor' : 'Save Consignor'}
           </button>
         </div>
@@ -311,8 +313,8 @@ export default function ConsignorMaster() {
                   )}
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => handleEdit(c)} className="p-2 text-blue-600 bg-blue-50 active:bg-blue-100 rounded-lg transition-colors"><Edit2 size={16} /></button>
-                  <button onClick={() => handleDelete(c.id)} className="p-2 text-rose-600 bg-rose-50 active:bg-rose-100 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                  {canEdit && <button onClick={() => handleEdit(c)} className="p-2 text-blue-600 bg-blue-50 active:bg-blue-100 rounded-lg transition-colors"><Edit2 size={16} /></button>}
+                  {canDelete && <button onClick={() => handleDelete(c.id)} className="p-2 text-rose-600 bg-rose-50 active:bg-rose-100 rounded-lg transition-colors"><Trash2 size={16} /></button>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm font-medium text-slate-600 mt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
@@ -366,8 +368,8 @@ export default function ConsignorMaster() {
                   <td className="px-4 py-3 text-slate-600">{c.phone || '-'}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2 transition-opacity">
-                      <button onClick={() => handleEdit(c)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(c.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 size={14} /></button>
+                      {canEdit && <button onClick={() => handleEdit(c)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit2 size={14} /></button>}
+                      {canDelete && <button onClick={() => handleDelete(c.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 size={14} /></button>}
                     </div>
                   </td>
                 </tr>

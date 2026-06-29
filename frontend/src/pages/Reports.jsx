@@ -1,188 +1,177 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { FileText, Calendar, Download, TrendingUp, Truck, Package, IndianRupee, Users, Building2, X, Clock, CheckCircle2, History } from 'lucide-react';
 
 export default function Reports() {
-  const [activeTab, setActiveTab] = useState('gc'); // gc, gdm, consignor, consignee, vehicle
+  const [activeTab, setActiveTab] = useState('gc'); // gc, gdm, ewaybill, consignor, consignee, vehicle
   const [selectedGc, setSelectedGc] = useState(null);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   
   // Generic Filters
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  
+  // Advanced Filters
+  const [branch, setBranch] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [freightTypeFilter, setFreightTypeFilter] = useState('');
+  const [godownFilter, setGodownFilter] = useState('');
 
-  const [loading, setLoading] = useState(false);
-  const [rawGcs, setRawGcs] = useState([]);
-  const [rawGdms, setRawGdms] = useState([]);
-
-  // Computed data for the current tab
+  // Pagination & Data State
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Fetch all core data once
+  // Debounce search query
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      try {
-        const [gcs, gdms] = await Promise.all([
-          api.get('/gcs'),
-          api.get('/gdms')
-        ]);
-        setRawGcs(gcs || []);
-        setRawGdms(gdms || []);
-      } catch (err) {
-        console.error("Failed to fetch report data", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAll();
-  }, []);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  // Process data based on active tab and filters
-  useEffect(() => {
-    processData();
-  }, [rawGcs, rawGdms, activeTab, dateFrom, dateTo, searchQuery]);
-
-  const processData = () => {
-    // 1. Date Filtering Helper
-    const isWithinDate = (dateStr) => {
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      d.setHours(0, 0, 0, 0);
-      let valid = true;
-      if (dateFrom) {
-        const f = new Date(dateFrom);
-        f.setHours(0,0,0,0);
-        valid = valid && d >= f;
-      }
-      if (dateTo) {
-        const t = new Date(dateTo);
-        t.setHours(23,59,59,999);
-        valid = valid && d <= t;
-      }
-      return valid;
-    };
-
-    // 2. Filter Raw Data
-    const filteredGcs = rawGcs.filter(gc => isWithinDate(gc.date));
-    const filteredGdms = rawGdms.filter(gdm => isWithinDate(gdm.date));
-
-    // 3. Search Helper
-    const matchesSearch = (str) => {
-      if (!searchQuery) return true;
-      return str && str.toLowerCase().includes(searchQuery.toLowerCase());
-    };
-
-    // 4. Generate Specific Reports
-    let finalData = [];
-
-    if (activeTab === 'gc') {
-      finalData = filteredGcs.map(gc => {
-        const totalArticles = gc.goods ? gc.goods.reduce((acc, curr) => acc + (parseInt(curr.articleCount) || 0), 0) : 0;
-        return {
-          Number: gc.gcNumber,
-          Date: new Date(gc.date).toLocaleDateString('en-IN'),
-          Consignor: gc.consignor?.name || '-',
-          Consignee: gc.consignee?.name || '-',
-          Godown: gc.godown || '-',
-          Articles: totalArticles,
-          Inv_No: gc.invoiceNumber || '-',
-          Inv_Value: parseFloat(gc.invoiceValue || 0).toFixed(2),
-          Frt_Type: gc.freightType || '-',
-          Freight: parseFloat(gc.freightTotal || 0).toFixed(2),
-          GDM_No: gc.gdm?.gdmNumber || 'Unassigned',
-          Vehicle: gc.gdm?.vehicle?.vehicleNumber || '-',
-          Status: gc.status,
-          _gcObj: gc
-        };
-      }).filter(r => matchesSearch(r.Number) || matchesSearch(r.Consignor) || matchesSearch(r.Consignee) || matchesSearch(r.Vehicle) || matchesSearch(r.GDM_No));
-    }
-
-    else if (activeTab === 'gdm') {
-      finalData = filteredGdms.map(gdm => ({
-        Number: gdm.gdmNumber,
-        Date: new Date(gdm.date).toLocaleDateString('en-IN'),
-        Vehicle: gdm.vehicle?.vehicleNumber || '-',
-        Driver: gdm.driverName || '-',
-        Destination: gdm.destination || gdm.toName || '-',
-        Status: gdm.status
-      })).filter(r => matchesSearch(r.Number) || matchesSearch(r.Vehicle) || matchesSearch(r.Destination));
-    }
-
-    else if (activeTab === 'ewaybill') {
-      finalData = filteredGcs.map(gc => {
-        let validUptoStr = '-';
-        let ewbDateStr = '-';
-        if (gc.ewbRawData) {
-          if (gc.ewbRawData.validUpto) validUptoStr = gc.ewbRawData.validUpto;
-          if (gc.ewbRawData.ewayBillDate || gc.ewbRawData.ewbDate || gc.ewbRawData.docDate) {
-            ewbDateStr = gc.ewbRawData.ewayBillDate || gc.ewbRawData.ewbDate || gc.ewbRawData.docDate;
-          }
-        }
-        return {
-          'EWB No': gc.ewbNumber || 'PENDING',
-          'GC No': gc.gcNumber,
-          'EWB Date': ewbDateStr,
-          'Valid Upto': validUptoStr,
-          'Consignor': gc.consignor?.name || '-',
-          'Consignee': gc.consignee?.name || '-',
-          'Inv No': gc.invoiceNumber || '-',
-          'Inv Date': gc.invoiceDate ? new Date(gc.invoiceDate).toLocaleDateString('en-IN') : '-',
-          'Inv Value': parseFloat(gc.invoiceValue || 0).toFixed(2),
-          'Status': gc.gdm?.gdmNumber ? 'Assigned' : 'Unassigned',
-          _gcObj: gc
-        };
-      }).filter(r => matchesSearch(r['EWB No']) || matchesSearch(r['GC No']) || matchesSearch(r.Consignor) || matchesSearch(r.Consignee));
-    }
-
-    else if (activeTab === 'consignor') {
-      const map = {};
-      filteredGcs.forEach(gc => {
-        const name = gc.consignor?.name || 'Unknown';
-        if (!map[name]) map[name] = { Name: name, TotalGCs: 0, TotalWeight: 0, TotalFreight: 0 };
-        map[name].TotalGCs += 1;
-        map[name].TotalFreight += parseFloat(gc.freightTotal || 0);
-        gc.goods?.forEach(g => { map[name].TotalWeight += parseFloat(g.weight || 0); });
-      });
-      finalData = Object.values(map)
-        .map(r => ({ ...r, TotalFreight: r.TotalFreight.toFixed(2), TotalWeight: r.TotalWeight.toFixed(2) }))
-        .filter(r => matchesSearch(r.Name));
-    }
-
-    else if (activeTab === 'consignee') {
-      const map = {};
-      filteredGcs.forEach(gc => {
-        const name = gc.consignee?.name || 'Unknown';
-        if (!map[name]) map[name] = { Name: name, TotalGCs: 0, TotalWeight: 0, TotalFreight: 0 };
-        map[name].TotalGCs += 1;
-        map[name].TotalFreight += parseFloat(gc.freightTotal || 0);
-        gc.goods?.forEach(g => { map[name].TotalWeight += parseFloat(g.weight || 0); });
-      });
-      finalData = Object.values(map)
-        .map(r => ({ ...r, TotalFreight: r.TotalFreight.toFixed(2), TotalWeight: r.TotalWeight.toFixed(2) }))
-        .filter(r => matchesSearch(r.Name));
-    }
-
-    else if (activeTab === 'vehicle') {
-      const map = {};
-      filteredGdms.forEach(gdm => {
-        const veh = gdm.vehicle?.vehicleNumber || 'Unknown';
-        if (!map[veh]) map[veh] = { Vehicle: veh, TotalTrips: 0, TotalAdvance: 0, TotalBalance: 0 };
-        map[veh].TotalTrips += 1;
-        map[veh].TotalAdvance += parseFloat(gdm.advanceAmount || 0);
-        map[veh].TotalBalance += parseFloat(gdm.balanceAmount || 0);
-      });
-      finalData = Object.values(map)
-        .map(r => ({ ...r, TotalAdvance: r.TotalAdvance.toFixed(2), TotalBalance: r.TotalBalance.toFixed(2) }))
-        .filter(r => matchesSearch(r.Vehicle));
-    }
-
-    setReportData(finalData);
+  const resetFiltersAndData = () => {
+    setPage(1);
+    setReportData([]);
   };
+
+  useEffect(() => {
+    resetFiltersAndData();
+  }, [activeTab, dateFrom, dateTo, branch, statusFilter, freightTypeFilter, godownFilter, debouncedSearch]);
+
+  const fetchReportData = async (pageNum = 1, append = false) => {
+    try {
+      if (!append) setLoading(true);
+
+      const queryParams = new URLSearchParams();
+      if (branch !== 'ALL') queryParams.append('branch', branch);
+      if (dateFrom) queryParams.append('fromDate', new Date(dateFrom).toISOString());
+      if (dateTo) {
+        const d = new Date(dateTo);
+        d.setHours(23, 59, 59, 999);
+        queryParams.append('toDate', d.toISOString());
+      }
+      if (statusFilter) queryParams.append('status', statusFilter);
+      if (freightTypeFilter && (activeTab === 'gc' || activeTab === 'ewaybill')) queryParams.append('freightType', freightTypeFilter);
+      if (godownFilter && (activeTab === 'gc' || activeTab === 'ewaybill')) queryParams.append('godown', godownFilter);
+      if (debouncedSearch) queryParams.append('searchQuery', debouncedSearch);
+
+      let finalData = [];
+      let nextTotalPages = 1;
+      let nextTotalRecords = 0;
+
+      // 1. Aggregation Tabs (Fetch all at once, no pagination needed for UI since it's just grouped stats)
+      if (['consignor', 'consignee', 'vehicle'].includes(activeTab)) {
+        if (pageNum > 1) return; // Master tabs don't paginate
+        const res = await api.get(`/reports/aggregations?${queryParams.toString()}`);
+        if (activeTab === 'consignor') finalData = res.consignors || [];
+        if (activeTab === 'consignee') finalData = res.consignees || [];
+        if (activeTab === 'vehicle') finalData = res.vehicles || [];
+        nextTotalRecords = finalData.length;
+      }
+      
+      // 2. Transactional Tabs (Paginated)
+      else {
+        queryParams.append('page', pageNum);
+        queryParams.append('limit', 50);
+
+        if (activeTab === 'gc' || activeTab === 'ewaybill') {
+          const res = await api.get(`/gcs?${queryParams.toString()}`);
+          nextTotalPages = res.totalPages || 1;
+          nextTotalRecords = res.total || 0;
+          
+          if (activeTab === 'gc') {
+            finalData = (res.data || []).map(gc => {
+              const totalArticles = gc.goods ? gc.goods.reduce((acc, curr) => acc + (parseInt(curr.articleCount) || 0), 0) : 0;
+              return {
+                id: gc.id,
+                Number: gc.gcNumber,
+                Date: new Date(gc.date).toLocaleDateString('en-IN'),
+                Consignor: gc.consignor?.name || '-',
+                Consignee: gc.consignee?.name || '-',
+                Godown: gc.godown || '-',
+                Articles: totalArticles,
+                Inv_No: gc.invoiceNumber || '-',
+                Inv_Value: parseFloat(gc.invoiceValue || 0).toFixed(2),
+                Frt_Type: gc.freightType || '-',
+                Freight: parseFloat(gc.freightTotal || 0).toFixed(2),
+                GDM_No: gc.gdm?.gdmNumber || 'Unassigned',
+                Vehicle: gc.gdm?.vehicle?.vehicleNumber || '-',
+                Status: gc.status,
+                _gcObj: gc
+              };
+            });
+          } else { // ewaybill
+            finalData = (res.data || []).map(gc => {
+              let validUptoStr = '-';
+              let ewbDateStr = '-';
+              if (gc.ewbRawData) {
+                if (gc.ewbRawData.validUpto) validUptoStr = gc.ewbRawData.validUpto;
+                if (gc.ewbRawData.ewayBillDate || gc.ewbRawData.ewbDate || gc.ewbRawData.docDate) {
+                  ewbDateStr = gc.ewbRawData.ewayBillDate || gc.ewbRawData.ewbDate || gc.ewbRawData.docDate;
+                }
+              }
+              return {
+                id: gc.id,
+                'EWB No': gc.ewbNumber || 'PENDING',
+                'GC No': gc.gcNumber,
+                'EWB Date': ewbDateStr,
+                'Valid Upto': validUptoStr,
+                'Consignor': gc.consignor?.name || '-',
+                'Consignee': gc.consignee?.name || '-',
+                'Inv No': gc.invoiceNumber || '-',
+                'Inv Date': gc.invoiceDate ? new Date(gc.invoiceDate).toLocaleDateString('en-IN') : '-',
+                'Inv Value': parseFloat(gc.invoiceValue || 0).toFixed(2),
+                'Status': gc.gdm?.gdmNumber ? 'Assigned' : 'Unassigned',
+                _gcObj: gc
+              };
+            });
+          }
+        } 
+        else if (activeTab === 'gdm') {
+          const res = await api.get(`/gdms?${queryParams.toString()}`);
+          nextTotalPages = res.totalPages || 1;
+          nextTotalRecords = res.total || 0;
+          
+          finalData = (res.data || []).map(gdm => ({
+            id: gdm.id,
+            Number: gdm.gdmNumber,
+            Date: new Date(gdm.date).toLocaleDateString('en-IN'),
+            Vehicle: gdm.vehicle?.vehicleNumber || '-',
+            Driver: gdm.driverName || '-',
+            Destination: gdm.destination || gdm.toName || '-',
+            Status: gdm.status
+          }));
+        }
+      }
+
+      if (append) {
+        setReportData(prev => {
+          const existingIds = new Set(prev.map(r => r.id || r.Name || r.Vehicle));
+          const uniqueNew = finalData.filter(r => !existingIds.has(r.id || r.Name || r.Vehicle));
+          return [...prev, ...uniqueNew];
+        });
+      } else {
+        setReportData(finalData);
+      }
+      setTotalPages(nextTotalPages);
+      setTotalRecords(nextTotalRecords);
+
+    } catch (err) {
+      console.error("Failed to fetch report data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReportData(page, page > 1);
+  }, [page, activeTab, dateFrom, dateTo, branch, statusFilter, freightTypeFilter, godownFilter, debouncedSearch]);
 
   const handleExportCSV = () => {
     if (!reportData.length) return;
-    const headers = Object.keys(reportData[0]).filter(k => k !== '_gcObj');
+    const headers = Object.keys(reportData[0]).filter(k => k !== '_gcObj' && k !== 'id');
     const csvContent = [
       headers.join(','),
       ...reportData.map(row => headers.map(h => `"${row[h] || ''}"`).join(','))
@@ -248,58 +237,133 @@ export default function Reports() {
       </div>
 
       {/* FILTER PANEL */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-wrap gap-6 items-end">
-        <div className="flex flex-col flex-1 min-w-[250px]">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Search Report</label>
-          <input 
-            type="text" 
-            placeholder={
-              activeTab === 'gc' ? "Search GC, Consignor, Consignee..." :
-              activeTab === 'gdm' ? "Search GDM, Vehicle, Destination..." :
-              activeTab === 'vehicle' ? "Search Vehicle Number..." :
-              activeTab === 'ewaybill' ? "Search EWB, GC, Consignor..." :
-              "Search Name..."
-            }
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 placeholder-slate-400"
-          />
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col gap-4">
+        
+        {/* Row 1: Global Filters */}
+        <div className="flex flex-wrap gap-4 items-end">
+          <div className="flex flex-col flex-1 min-w-[200px]">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Search</label>
+            <input 
+              type="text" 
+              placeholder="Search data..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 placeholder-slate-400"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Branch</label>
+            <select 
+              value={branch}
+              onChange={(e) => setBranch(e.target.value)}
+              className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
+            >
+              <option value="ALL">All Branches</option>
+              <option value="MAIN">MAIN</option>
+              <option value="MADURAI">MADURAI</option>
+              <option value="SIVAKASI">SIVAKASI</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">From Date</label>
+            <input 
+              type="date" 
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">To Date</label>
+            <input 
+              type="date" 
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">From Date</label>
-          <input 
-            type="date" 
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
-          />
-        </div>
+        {/* Row 2: Advanced Contextual Filters */}
+        {(activeTab === 'gc' || activeTab === 'gdm' || activeTab === 'ewaybill') && (
+          <div className="flex flex-wrap gap-4 pt-4 border-t border-slate-100">
+            <div className="flex flex-col">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Status</label>
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">All Statuses</option>
+                {activeTab === 'gdm' ? (
+                  <>
+                    <option value="Created">Created</option>
+                    <option value="In Transit">In Transit</option>
+                    <option value="Delivered">Delivered</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="Created">Created</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="In Transit">In Transit</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </>
+                )}
+              </select>
+            </div>
 
-        <div className="flex flex-col">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">To Date</label>
-          <input 
-            type="date" 
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
-          />
-        </div>
+            {(activeTab === 'gc' || activeTab === 'ewaybill') && (
+              <>
+                <div className="flex flex-col">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Freight Type</label>
+                  <select 
+                    value={freightTypeFilter}
+                    onChange={(e) => setFreightTypeFilter(e.target.value)}
+                    className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">All Freight Types</option>
+                    <option value="To Pay">To Pay</option>
+                    <option value="Paid">Paid</option>
+                    <option value="T.B.B.">T.B.B.</option>
+                  </select>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Godown</label>
+                  <input 
+                    type="text"
+                    placeholder="E.g. Godown 1"
+                    value={godownFilter}
+                    onChange={(e) => setGodownFilter(e.target.value)}
+                    className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 placeholder-slate-400"
+                  />
+                </div>
+              </>
+            )}
 
-        <button onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); }} className="h-10 px-4 text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
-          Clear
-        </button>
+            <button onClick={() => { 
+                setDateFrom(''); setDateTo(''); setSearchQuery(''); setBranch('ALL'); setStatusFilter(''); setFreightTypeFilter(''); setGodownFilter('');
+              }} 
+              className="mt-6 h-10 px-4 text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
       </div>
 
       {/* DATA TABLE */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
           <h3 className="font-bold text-slate-800 uppercase tracking-wider text-sm">
-            {activeTab.replace('_', ' ')} Data ({reportData.length} records)
+            {activeTab.replace('_', ' ')} Data ({totalRecords} records matched)
           </h3>
         </div>
-        <div className="overflow-x-auto">
-          {loading ? (
+        <div className="overflow-x-auto min-h-[300px]">
+          {loading && page === 1 ? (
             <div className="p-10 text-center text-slate-500 font-medium flex items-center justify-center gap-3">
               <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
               Loading Report Data...
@@ -308,7 +372,7 @@ export default function Reports() {
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr className="bg-white text-[10px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                  {reportData.length > 0 && Object.keys(reportData[0]).filter(k => k !== '_gcObj').map(header => (
+                  {reportData.length > 0 && Object.keys(reportData[0]).filter(k => k !== '_gcObj' && k !== 'id').map(header => (
                     <th key={header} className="p-4">{header}</th>
                   ))}
                 </tr>
@@ -323,7 +387,7 @@ export default function Reports() {
                     <tr key={idx} 
                         onClick={() => { if (activeTab === 'gc' && row._gcObj) setSelectedGc(row._gcObj); }}
                         className={`transition-colors ${activeTab === 'gc' ? 'cursor-pointer hover:bg-indigo-50/60' : 'hover:bg-slate-50'}`}>
-                      {Object.entries(row).filter(([k,v]) => k !== '_gcObj').map(([k, val], i) => (
+                      {Object.entries(row).filter(([k,v]) => k !== '_gcObj' && k !== 'id').map(([k, val], i) => (
                         <td key={i} className={`p-4 ${i === 0 ? 'font-bold text-indigo-900' : ''}`}>
                           {val}
                         </td>
@@ -333,6 +397,28 @@ export default function Reports() {
                 )}
               </tbody>
             </table>
+          )}
+          
+          {/* Infinite Scroll Observer */}
+          {page < totalPages && (
+            <div 
+              className="h-16 mt-4 flex items-center justify-center"
+              ref={(el) => {
+                if (!el) return;
+                const observer = new IntersectionObserver(
+                  (entries) => {
+                    if (entries[0].isIntersecting && !loading) {
+                      setPage(p => p + 1);
+                    }
+                  },
+                  { threshold: 1.0 }
+                );
+                observer.observe(el);
+                return () => observer.disconnect();
+              }}
+            >
+              <div className="animate-pulse text-sm font-bold text-slate-500">Loading more rows...</div>
+            </div>
           )}
         </div>
       </div>

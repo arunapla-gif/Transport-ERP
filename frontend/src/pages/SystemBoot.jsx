@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { CheckCircle2, Server, Database, KeyRound, ArrowRight, Loader2, AlertCircle, Wifi } from 'lucide-react';
+import AnalyticsDashboard from '../components/AnalyticsDashboard';
+import { usePermissions } from '../hooks/usePermissions';
 
 export default function SystemBoot() {
   const navigate = useNavigate();
+  const { isAdmin } = usePermissions();
   const [bootState, setBootState] = useState({
     network: 'pending',
     server: 'pending',   // pending | loading | success | error
@@ -164,8 +167,15 @@ export default function SystemBoot() {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className={`min-h-[85vh] flex flex-col p-4 ${isAdmin && allReady ? 'max-w-[1400px] mx-auto pt-8' : 'items-center justify-center'}`}>
+      
+      {isAdmin && allReady && (
+        <div className="w-full mb-8 animate-in slide-in-from-top-4 fade-in duration-500">
+          <AnalyticsDashboard />
+        </div>
+      )}
+
+      <div className={`w-full max-w-md ${isAdmin && allReady ? 'mx-auto' : ''}`}>
         
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-200 mb-4">

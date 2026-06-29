@@ -35,6 +35,10 @@ export default function LegacyRapidEntry() {
   const [savedRecords, setSavedRecords] = useState([]);
   const [editingId, setEditingId] = useState(null);
   
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  
   const initialRowState = {
     date: new Date().toISOString().split('T')[0],
     companyMode: 'A', // A or B
@@ -60,8 +64,14 @@ export default function LegacyRapidEntry() {
   
   useEffect(() => {
     fetchMasters();
-    fetchRecentRecords();
+    fetchRecentRecords(1, false);
   }, []);
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchRecentRecords(page, true);
+    }
+  }, [page]);
 
   const fetchConsignorsAsync = useCallback(async (q) => {
     try {
@@ -77,11 +87,11 @@ export default function LegacyRapidEntry() {
     } catch (err) { console.error(err); return []; }
   }, []);
 
-  const fetchRecentRecords = async () => {
+  const fetchRecentRecords = async (pageNum = 1, append = false) => {
     try {
-      const gcs = await api.get('/gcs?limit=10');
+      const res = await api.get(`/gcs?limit=10&page=${pageNum}`);
       // Format them exactly how the local payload maps them to the table
-      const formatted = gcs.map(gc => ({
+      const formatted = res.data.map(gc => ({
         id: gc.id,
         gcNumber: gc.gcNumber,
         date: gc.date ? new Date(gc.date).toISOString().split('T')[0] : '',
@@ -95,7 +105,20 @@ export default function LegacyRapidEntry() {
         // Preserve raw db object for editing
         raw: gc 
       }));
-      setSavedRecords(formatted);
+      
+      if (append) {
+        setSavedRecords(prev => {
+          // Prevent duplicates by checking id
+          const existingIds = new Set(prev.map(r => r.id));
+          const uniqueNew = formatted.filter(r => !existingIds.has(r.id));
+          return [...prev, ...uniqueNew];
+        });
+      } else {
+        setSavedRecords(formatted);
+      }
+      
+      setTotalPages(res.totalPages || 1);
+      setTotalRecords(res.total || 0);
     } catch (e) {
       console.error("Failed to load recent GCs", e);
     }
@@ -748,6 +771,28 @@ export default function LegacyRapidEntry() {
               </tbody>
             </table>
           </div>
+          
+          {/* Infinite Scroll Observer */}
+          {page < totalPages && (
+            <div 
+              className="h-10 mt-4 flex items-center justify-center"
+              ref={(el) => {
+                if (!el) return;
+                const observer = new IntersectionObserver(
+                  (entries) => {
+                    if (entries[0].isIntersecting) {
+                      setPage(p => p + 1);
+                    }
+                  },
+                  { threshold: 1.0 }
+                );
+                observer.observe(el);
+                return () => observer.disconnect();
+              }}
+            >
+              <div className="animate-pulse text-sm font-bold text-slate-500">Loading more...</div>
+            </div>
+          )}
         </div>
       )}
 

@@ -1,4 +1,16 @@
 require('dotenv').config();
+const { execSync } = require('child_process');
+
+// FORCE PRISMA GENERATE ON BOOT: Guarantees schema is updated on Render
+// even if Render ignores the package.json start script or postinstall hooks.
+try {
+  console.log('Forcing Prisma Client Generation on Startup...');
+  execSync('npx prisma generate', { stdio: 'inherit' });
+  console.log('Prisma Client Generation successful.');
+} catch (err) {
+  console.error('Prisma Client Generation failed:', err);
+}
+
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -7,6 +19,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const xlsx = require('xlsx');
 
 const app = express();
 const server = http.createServer(app);
@@ -164,7 +177,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
       }
     });
 
-    return res.json({ token, role: user.role, branch: user.branch, username: user.username });
+    return res.json({ token, role: user.role, branch: user.branch, username: user.username, permissions: user.permissions });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: 'Internal server error during login' });
@@ -172,10 +185,12 @@ app.post('/api/login', loginLimiter, async (req, res) => {
 });
 
 const authenticate = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader) return res.status(401).json({ error: 'Unauthorized: Missing token' });
-  const token = authHeader.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized: Malformed token' });
+  let token = req.headers['authorization']?.split(' ')[1];
+  if (!token && req.query.token) {
+    token = req.query.token;
+  }
+  
+  if (!token) return res.status(401).json({ error: 'Unauthorized: Missing token' });
 
   jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) return res.status(403).json({ error: 'Forbidden: Invalid token' });
@@ -189,7 +204,8 @@ const authenticate = async (req, res, next) => {
     // Verify session exists in DB (not revoked)
     try {
       const session = await prisma.session.findUnique({
-        where: { token }
+        where: { token },
+        include: { user: { select: { permissions: true } } }
       });
       if (!session) {
         return res.status(403).json({ error: 'Session revoked. Please log in again.' });
@@ -201,12 +217,28 @@ const authenticate = async (req, res, next) => {
         data: { lastActive: new Date() }
       }).catch(() => {});
 
-      req.user = decoded;
+      req.user = { ...decoded, permissions: session.user.permissions };
       next();
     } catch (dbErr) {
       return res.status(500).json({ error: 'Session verification failed' });
     }
   });
+};
+
+const requirePermission = (action) => {
+  return (req, res, next) => {
+    if (req.user?.role === 'admin') return next(); // Admins bypass permission checks
+    
+    // Default safe permissions if none are set
+    const perms = req.user?.permissions || { create: true, edit: true, delete: false, reports: false };
+    
+    if (action === 'DELETE' && !perms.delete) return res.status(403).json({ error: 'Permission denied: Cannot delete records' });
+    if (action === 'EDIT' && !perms.edit) return res.status(403).json({ error: 'Permission denied: Cannot edit records' });
+    if (action === 'CREATE' && !perms.create) return res.status(403).json({ error: 'Permission denied: Cannot create records' });
+    if (action === 'REPORTS' && !perms.reports) return res.status(403).json({ error: 'Permission denied: Cannot view reports' });
+    
+    next();
+  };
 };
 
 // Protect all /api routes EXCEPT the ones specified below (which include health and scanner polling)
@@ -217,6 +249,26 @@ app.use('/api', (req, res, next) => {
     return next();
   }
   return authenticate(req, res, next);
+});
+
+// GLOBAL RBAC ENFORCEMENT for Data Entry
+// Automatically checks permissions based on HTTP method for standard routes
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/admin') || req.path === '/login' || req.user?.role === 'admin') {
+    return next();
+  }
+  
+  if (req.method === 'DELETE') {
+    return requirePermission('DELETE')(req, res, next);
+  }
+  if (req.method === 'POST') {
+    return requirePermission('CREATE')(req, res, next);
+  }
+  if (req.method === 'PUT') {
+    return requirePermission('EDIT')(req, res, next);
+  }
+  
+  next();
 });
 
 
@@ -550,7 +602,17 @@ app.get('/api/vehicles', async (req, res) => {
 
 app.post('/api/vehicles', async (req, res) => {
   try {
-    const vehicle = await prisma.vehicle.create({ data: req.body });
+    const data = { ...req.body };
+    if (data.fitnessExpiry) data.fitnessExpiry = new Date(data.fitnessExpiry);
+    else data.fitnessExpiry = null;
+    
+    if (data.insuranceExpiry) data.insuranceExpiry = new Date(data.insuranceExpiry);
+    else data.insuranceExpiry = null;
+    
+    if (data.npExpiry) data.npExpiry = new Date(data.npExpiry);
+    else data.npExpiry = null;
+    
+    const vehicle = await prisma.vehicle.create({ data });
     res.json(vehicle);
   } catch (error) {
     if (error.code === 'P2002') {
@@ -562,9 +624,19 @@ app.post('/api/vehicles', async (req, res) => {
 
 app.put('/api/vehicles/:id', async (req, res) => {
   try {
+    const data = { ...req.body };
+    if (data.fitnessExpiry) data.fitnessExpiry = new Date(data.fitnessExpiry);
+    else data.fitnessExpiry = null;
+    
+    if (data.insuranceExpiry) data.insuranceExpiry = new Date(data.insuranceExpiry);
+    else data.insuranceExpiry = null;
+    
+    if (data.npExpiry) data.npExpiry = new Date(data.npExpiry);
+    else data.npExpiry = null;
+
     const vehicle = await prisma.vehicle.update({
       where: { id: parseInt(req.params.id) },
-      data: req.body,
+      data,
     });
     res.json(vehicle);
   } catch (error) {
@@ -802,6 +874,23 @@ app.get('/api/warehouse-inward', async (req, res) => {
       whereClause.createdAt = {
         gte: today
       };
+    }
+
+    const page = req.query.page ? parseInt(req.query.page) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
+
+    if (page) {
+      const skip = (page - 1) * limit;
+      const [inwards, total] = await Promise.all([
+        prisma.warehouseInward.findMany({
+          where: whereClause,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit
+        }),
+        prisma.warehouseInward.count({ where: whereClause })
+      ]);
+      return res.json({ data: inwards, total, page, totalPages: Math.ceil(total / limit) });
     }
 
     const inwards = await prisma.warehouseInward.findMany({
@@ -1098,8 +1187,55 @@ app.get('/api/gcs', async (req, res) => {
   try {
     const branch = req.query.branch || 'MAIN';
     const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+    const page = req.query.page ? parseInt(req.query.page) : undefined;
+    
+    // Build where clause
+    const whereClause = {};
+    if (branch !== 'ALL') {
+      whereClause.branch = branch;
+    }
+    if (req.query.status) {
+      whereClause.status = req.query.status;
+    }
+    if (req.query.freightType) {
+      whereClause.freightType = req.query.freightType;
+    }
+    if (req.query.godown) {
+      whereClause.godown = req.query.godown;
+    }
+    if (req.query.fromDate || req.query.toDate) {
+      whereClause.date = {};
+      if (req.query.fromDate) whereClause.date.gte = req.query.fromDate;
+      if (req.query.toDate) whereClause.date.lte = req.query.toDate;
+    }
+    if (req.query.searchQuery) {
+      const sq = req.query.searchQuery;
+      whereClause.OR = [
+        { gcNumber: { contains: sq, mode: 'insensitive' } },
+        { ewbNumber: { contains: sq, mode: 'insensitive' } },
+        { consignor: { name: { contains: sq, mode: 'insensitive' } } },
+        { consignee: { name: { contains: sq, mode: 'insensitive' } } }
+      ];
+    }
+    
+    if (page) {
+      const skip = (page - 1) * limit;
+      const [gcs, total] = await Promise.all([
+        prisma.gC.findMany({ 
+          where: whereClause,
+          orderBy: { id: 'desc' },
+          skip,
+          take: limit,
+          include: { consignor: true, consignee: true, goods: true, gdm: { include: { vehicle: true } }, trackingLogs: { orderBy: { timestamp: 'desc' } } }
+        }),
+        prisma.gC.count({ where: whereClause })
+      ]);
+      return res.json({ data: gcs, total, page, totalPages: Math.ceil(total / limit) });
+    }
+    
+    // Legacy behavior
     const gcs = await prisma.gC.findMany({ 
-      where: { branch },
+      where: whereClause,
       orderBy: { id: 'desc' },
       take: limit,
       include: {
@@ -1311,14 +1447,150 @@ app.put('/api/gcs/:id', async (req, res) => {
   }
 });
 
+// --- REPORTS ENDPOINTS ---
+app.get('/api/reports/aggregations', async (req, res) => {
+  try {
+    const { branch, fromDate, toDate } = req.query;
+    const whereClause = {};
+    if (branch && branch !== 'ALL') whereClause.branch = branch;
+    if (fromDate || toDate) {
+      whereClause.date = {};
+      if (fromDate) whereClause.date.gte = fromDate;
+      if (toDate) whereClause.date.lte = toDate;
+    }
+
+    // Since SQLite/Prisma doesn't natively support full complex cross-table aggregations easily without raw queries,
+    // and we want this to be fast, we will fetch the minimal necessary fields and group in JS.
+    // NOTE: If data is massive (1M+ rows), you would use prisma.$queryRaw for pure DB aggregation.
+    // For typical 10-50k rows ERP usage, doing minimal select and JS group by is practically instant.
+    
+    const [allGcs, allGdms] = await Promise.all([
+      prisma.gC.findMany({
+        where: whereClause,
+        select: {
+          freightTotal: true,
+          consignor: { select: { name: true } },
+          consignee: { select: { name: true } },
+          goods: { select: { weight: true } }
+        }
+      }),
+      prisma.gDM.findMany({
+        where: whereClause,
+        select: {
+          advanceAmount: true,
+          balanceAmount: true,
+          vehicle: { select: { vehicleNumber: true } }
+        }
+      })
+    ]);
+
+    const consignorMap = {};
+    const consigneeMap = {};
+    allGcs.forEach(gc => {
+      const cnor = gc.consignor?.name || 'Unknown';
+      if (!consignorMap[cnor]) consignorMap[cnor] = { Name: cnor, TotalGCs: 0, TotalWeight: 0, TotalFreight: 0 };
+      consignorMap[cnor].TotalGCs += 1;
+      consignorMap[cnor].TotalFreight += parseFloat(gc.freightTotal || 0);
+      gc.goods.forEach(g => { consignorMap[cnor].TotalWeight += parseFloat(g.weight || 0); });
+
+      const cnee = gc.consignee?.name || 'Unknown';
+      if (!consigneeMap[cnee]) consigneeMap[cnee] = { Name: cnee, TotalGCs: 0, TotalWeight: 0, TotalFreight: 0 };
+      consigneeMap[cnee].TotalGCs += 1;
+      consigneeMap[cnee].TotalFreight += parseFloat(gc.freightTotal || 0);
+      gc.goods.forEach(g => { consigneeMap[cnee].TotalWeight += parseFloat(g.weight || 0); });
+    });
+
+    const vehicleMap = {};
+    allGdms.forEach(gdm => {
+      const veh = gdm.vehicle?.vehicleNumber || 'Unknown';
+      if (!vehicleMap[veh]) vehicleMap[veh] = { Vehicle: veh, TotalTrips: 0, TotalAdvance: 0, TotalBalance: 0 };
+      vehicleMap[veh].TotalTrips += 1;
+      vehicleMap[veh].TotalAdvance += parseFloat(gdm.advanceAmount || 0);
+      vehicleMap[veh].TotalBalance += parseFloat(gdm.balanceAmount || 0);
+    });
+
+    res.json({
+      consignors: Object.values(consignorMap),
+      consignees: Object.values(consigneeMap),
+      vehicles: Object.values(vehicleMap)
+    });
+  } catch (error) {
+    console.error("Aggregation Error:", error);
+    res.status(500).json({ error: 'Failed to generate aggregations' });
+  }
+});
+
 // --- GDM ENDPOINTS ---
+app.get('/api/gdms/next-number', async (req, res) => {
+  try {
+    const branch = req.query.branch || 'MAIN';
+    const lastGdm = await prisma.gDM.findFirst({
+      where: { branch },
+      orderBy: { id: 'desc' }
+    });
+    let nextNum = 1001;
+    if (lastGdm && lastGdm.gdmNumber) {
+      nextNum = parseInt(lastGdm.gdmNumber) + 1;
+    }
+    res.json({ nextNumber: nextNum });
+  } catch (error) {
+    console.error("Error calculating next GDM number:", error);
+    res.status(500).json({ error: 'Failed to calculate next GDM number' });
+  }
+});
+
 app.get('/api/gdms', async (req, res) => {
   try {
     const branch = req.query.branch || 'MAIN';
+    const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+    const page = req.query.page ? parseInt(req.query.page) : undefined;
+
+    const whereClause = {};
+    if (branch !== 'ALL') {
+      whereClause.branch = branch;
+    }
+    if (req.query.status) {
+      whereClause.status = req.query.status;
+    }
+    if (req.query.fromDate || req.query.toDate) {
+      whereClause.date = {};
+      if (req.query.fromDate) whereClause.date.gte = req.query.fromDate;
+      if (req.query.toDate) whereClause.date.lte = req.query.toDate;
+    }
+    if (req.query.searchQuery) {
+      const sq = req.query.searchQuery;
+      whereClause.OR = [
+        { gdmNumber: { contains: sq, mode: 'insensitive' } },
+        { vehicle: { vehicleNumber: { contains: sq, mode: 'insensitive' } } },
+        { driverName: { contains: sq, mode: 'insensitive' } },
+        { destination: { contains: sq, mode: 'insensitive' } },
+        { toName: { contains: sq, mode: 'insensitive' } }
+      ];
+    }
+
+    if (page) {
+      const skip = (page - 1) * limit;
+      const [gdms, total] = await Promise.all([
+        prisma.gDM.findMany({ 
+          where: whereClause,
+          orderBy: { id: 'desc' },
+          skip,
+          take: limit,
+          include: {
+            vehicle: true,
+            gcs: { include: { consignor: true, consignee: true, goods: true } }
+          }
+        }),
+        prisma.gDM.count({ where: whereClause })
+      ]);
+      return res.json({ data: gdms, total, page, totalPages: Math.ceil(total / limit) });
+    }
+
+    // Legacy behavior
     const gdms = await prisma.gDM.findMany({
-      where: { branch },
+      where: whereClause,
       orderBy: { id: 'desc' },
-      take: 50,
+      take: limit || 50,
       include: {
         vehicle: true,
         gcs: {
@@ -2579,9 +2851,9 @@ app.get('/api/admin/users', authorizeAdmin, async (req, res) => {
 
 app.post('/api/admin/users', authorizeAdmin, async (req, res) => {
   try {
-    const { username, pin, role, branch } = req.body;
+    const { username, pin, role, branch, permissions } = req.body;
     const user = await prisma.user.create({
-      data: { username, pin, role, branch }
+      data: { username, pin, role, branch, permissions }
     });
     res.json(user);
   } catch (error) {
@@ -2592,10 +2864,10 @@ app.post('/api/admin/users', authorizeAdmin, async (req, res) => {
 
 app.put('/api/admin/users/:id', authorizeAdmin, async (req, res) => {
   try {
-    const { username, pin, role, branch, status } = req.body;
+    const { username, pin, role, branch, status, permissions } = req.body;
     const user = await prisma.user.update({
       where: { id: parseInt(req.params.id) },
-      data: { username, pin, role, branch, status }
+      data: { username, pin, role, branch, status, permissions }
     });
     res.json(user);
   } catch (error) {
@@ -2630,12 +2902,118 @@ app.get('/api/admin/sessions', authorizeAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/analytics/dashboard', authorizeAdmin, async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const [
+      dailyGcs,
+      monthlyGcs,
+      activeTrucks,
+      branchStats
+    ] = await Promise.all([
+      prisma.gC.aggregate({
+        where: { createdAt: { gte: today } },
+        _sum: { freightTotal: true },
+        _count: { id: true }
+      }),
+      prisma.gC.aggregate({
+        where: { createdAt: { gte: firstDayOfMonth } },
+        _sum: { freightTotal: true },
+        _count: { id: true }
+      }),
+      prisma.gDM.count({
+        where: { status: { not: 'Delivered' } }
+      }),
+      prisma.gC.groupBy({
+        by: ['branch'],
+        where: { createdAt: { gte: today } },
+        _count: { id: true }
+      })
+    ]);
+
+    res.json({
+      dailyRevenue: dailyGcs._sum.freightTotal || 0,
+      dailyCount: dailyGcs._count.id || 0,
+      monthlyRevenue: monthlyGcs._sum.freightTotal || 0,
+      monthlyCount: monthlyGcs._count.id || 0,
+      activeTrucks,
+      branchStats: branchStats.reduce((acc, curr) => {
+        acc[curr.branch] = curr._count.id;
+        return acc;
+      }, { MAIN: 0, AP_BNG: 0, ALL: 0 })
+    });
+  } catch (error) {
+    console.error('Analytics Error:', error);
+    res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
 app.delete('/api/admin/sessions/:id', authorizeAdmin, async (req, res) => {
   try {
     await prisma.session.delete({ where: { id: parseInt(req.params.id) } });
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to revoke session' });
+    res.status(500).json({ error: 'Failed to delete session' });
+  }
+});
+
+app.get('/api/admin/backup', authorizeAdmin, async (req, res) => {
+  try {
+    const workbook = xlsx.utils.book_new();
+
+    // 1. Fetch GCs
+    const gcs = await prisma.gC.findMany({ include: { goods: true } });
+    const gcData = gcs.map(gc => ({
+      ID: gc.id,
+      GC_Number: gc.gcNumber,
+      Branch: gc.branch,
+      Date: gc.date,
+      Type: gc.type,
+      Consignor_ID: gc.consignorId,
+      Consignee_ID: gc.consigneeId,
+      Invoice_No: gc.invoiceNumber,
+      Invoice_Value: gc.invoiceValue,
+      Freight_Total: gc.freightTotal,
+      EWB_Number: gc.ewbNumber,
+      Created_At: gc.createdAt
+    }));
+    const gcSheet = xlsx.utils.json_to_sheet(gcData);
+    xlsx.utils.book_append_sheet(workbook, gcSheet, 'Goods_Consignments');
+
+    // 2. Fetch GDMs
+    const gdms = await prisma.gDM.findMany();
+    const gdmData = gdms.map(gdm => ({
+      ID: gdm.id,
+      GDM_Number: gdm.gdmNumber,
+      Branch: gdm.branch,
+      Date: gdm.date,
+      Status: gdm.status,
+      Vehicle_ID: gdm.vehicleId,
+      Driver_Name: gdm.driverName,
+      Memo_Amount: gdm.memoAmount,
+      Created_At: gdm.createdAt
+    }));
+    const gdmSheet = xlsx.utils.json_to_sheet(gdmData);
+    xlsx.utils.book_append_sheet(workbook, gdmSheet, 'GDMs');
+
+    // 3. Fetch Masters (Consignor/Consignee)
+    const consignors = await prisma.consignor.findMany();
+    const consignees = await prisma.consignee.findMany();
+    xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(consignors), 'Consignors');
+    xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(consignees), 'Consignees');
+
+    const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    
+    const dateStr = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Disposition', `attachment; filename="ERP_Backup_${dateStr}.xlsx"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Backup Error:', error);
+    res.status(500).json({ error: 'Failed to generate backup' });
   }
 });
 

@@ -421,3 +421,23 @@ model AuditLog {
   entityId    String
   details     String?
 }
+
+model User {
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  pin       String
+  role      String    // 'admin' or 'worker'
+  permissions Json?   // Checkbox-based specific capabilities
+  branch    String    // 'MAIN', 'AP_BNG', or 'ALL'
+  status    String    @default("Active")
+  sessions  Session[]
+}
+
+model Session {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  loginTime  DateTime @default(now())
+  lastActive DateTime @default(now())
+}

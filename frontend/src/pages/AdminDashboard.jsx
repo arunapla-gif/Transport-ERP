@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../api';
-import { Users, Activity, ShieldAlert, Key, UserPlus, LogOut, RefreshCw, Trash2, Edit } from 'lucide-react';
+import { api, API_BASE } from '../api';
+import { Users, Activity, ShieldAlert, Key, UserPlus, LogOut, RefreshCw, Trash2, Edit, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
@@ -12,7 +12,7 @@ export default function AdminDashboard() {
   // Form state
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ username: '', pin: '', role: 'worker', branch: 'MAIN', status: 'Active' });
+  const [formData, setFormData] = useState({ username: '', pin: '', role: 'worker', branch: 'MAIN', status: 'Active', permissions: { create: true, edit: false, delete: false, reports: false } });
 
   const fetchData = async () => {
     setLoading(true);
@@ -56,7 +56,10 @@ export default function AdminDashboard() {
   };
 
   const handleEdit = (user) => {
-    setFormData({ username: user.username, pin: user.pin, role: user.role, branch: user.branch, status: user.status });
+    setFormData({ 
+      username: user.username, pin: user.pin, role: user.role, branch: user.branch, status: user.status,
+      permissions: user.permissions || { create: true, edit: false, delete: false, reports: false }
+    });
     setEditingId(user.id);
     setShowModal(true);
   };
@@ -121,16 +124,27 @@ export default function AdminDashboard() {
           <div>
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h2 className="font-black text-slate-700 flex items-center gap-2"><Users size={18} className="text-indigo-500"/> Staff Directory</h2>
-              <button 
-                onClick={() => {
-                  setFormData({ username: '', pin: '', role: 'worker', branch: 'MAIN', status: 'Active' });
-                  setEditingId(null);
-                  setShowModal(true);
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm"
-              >
-                <UserPlus size={16} /> Add Employee
-              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    const token = localStorage.getItem('erp_token');
+                    window.open(`${API_BASE}/admin/backup?token=${token}`, '_blank');
+                  }}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition-colors"
+                >
+                  <Download size={16} /> Complete Backup (.xlsx)
+                </button>
+                <button 
+                  onClick={() => {
+                    setFormData({ username: '', pin: '', role: 'worker', branch: 'MAIN', status: 'Active', permissions: { create: true, edit: false, delete: false, reports: false } });
+                    setEditingId(null);
+                    setShowModal(true);
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition-colors"
+                >
+                  <UserPlus size={16} /> Add Employee
+                </button>
+              </div>
             </div>
             
             <div className="overflow-x-auto">
@@ -304,6 +318,30 @@ export default function AdminDashboard() {
                   </select>
                 </div>
               </div>
+
+              {formData.role === 'worker' && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-wide mb-3">Worker Permissions</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input type="checkbox" checked={formData.permissions.create} onChange={e => setFormData({...formData, permissions: {...formData.permissions, create: e.target.checked}})} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer" />
+                      <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">Create Records</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input type="checkbox" checked={formData.permissions.edit} onChange={e => setFormData({...formData, permissions: {...formData.permissions, edit: e.target.checked}})} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer" />
+                      <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">Edit Records</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input type="checkbox" checked={formData.permissions.delete} onChange={e => setFormData({...formData, permissions: {...formData.permissions, delete: e.target.checked}})} className="w-4 h-4 text-rose-500 rounded border-slate-300 focus:ring-rose-500 cursor-pointer" />
+                      <span className="text-sm font-bold text-rose-600 group-hover:text-rose-700 transition-colors">Delete Records</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input type="checkbox" checked={formData.permissions.reports} onChange={e => setFormData({...formData, permissions: {...formData.permissions, reports: e.target.checked}})} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer" />
+                      <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">View Reports</span>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {editingId && (
                 <div>
