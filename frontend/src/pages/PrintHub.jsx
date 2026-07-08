@@ -5,6 +5,7 @@ import { api } from '../api';
 
 export default function PrintHub() {
   const [gcNumber, setGcNumber] = useState('');
+  const [gcSearchMode, setGcSearchMode] = useState('gc'); // 'gc' or 'gdm'
   const [gdmNumber, setGdmNumber] = useState('');
   const [gdmPrintType, setGdmPrintType] = useState('gdm');
   
@@ -142,23 +143,40 @@ export default function PrintHub() {
           <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4">
             <FileText size={32} />
           </div>
-          <h2 className="text-xl font-black text-slate-800 mb-2">Single Lorry Receipt (GC)</h2>
-          <p className="text-sm font-medium text-slate-500 mb-6">Print a specific A5 size Lorry Receipt.</p>
+          <h2 className="text-xl font-black text-slate-800 mb-2">Lorry Receipt (GC)</h2>
+          <p className="text-sm font-medium text-slate-500 mb-4">Print A5 Lorry Receipts.</p>
+          
+          <div className="flex gap-6 mb-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="gcSearchMode" checked={gcSearchMode === 'gc'} onChange={() => setGcSearchMode('gc')} className="text-amber-500 focus:ring-amber-500" />
+              <span className="text-sm font-bold text-slate-700">By GC Number</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="gcSearchMode" checked={gcSearchMode === 'gdm'} onChange={() => setGcSearchMode('gdm')} className="text-amber-500 focus:ring-amber-500" />
+              <span className="text-sm font-bold text-slate-700">Bulk by GDM</span>
+            </label>
+          </div>
           
           <div className="w-full flex gap-2">
             <input 
               type="text" 
-              placeholder="e.g. BELL-1001" 
+              placeholder={gcSearchMode === 'gc' ? "e.g. BELL-1001" : "e.g. 1001 (GDM No.)"} 
               value={gcNumber}
               onChange={(e) => setGcNumber(e.target.value.toUpperCase())}
               className="flex-1 h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all uppercase"
             />
             <button 
-              onClick={(e) => handleOpenCopiesModal(e, gcNumber)}
+              onClick={(e) => {
+                if (gcSearchMode === 'gdm') {
+                  window.open(`/print/gc/${gcNumber}?mode=gdm&copies=LORRY COPY`, '_blank');
+                } else {
+                  handleOpenCopiesModal(e, gcNumber);
+                }
+              }}
               disabled={!gcNumber}
               className={`h-12 px-6 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-black rounded-xl transition-all shadow-sm hover:shadow-md ${!gcNumber ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <Printer size={18} /> Print
+              <Printer size={18} /> {gcSearchMode === 'gdm' ? 'Bulk Print' : 'Print'}
             </button>
           </div>
         </div>
@@ -201,6 +219,7 @@ export default function PrintHub() {
         </div>
 
       </div>
+
 
       {/* BATCH PRINTING SECTION */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">

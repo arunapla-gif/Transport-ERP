@@ -116,6 +116,7 @@ export default function HSNMaster() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                  <th className="p-4 w-12 text-center font-bold">S.No</th>
                   <th className="p-4 font-bold">HSN Code</th>
                   <th className="p-4 font-bold">Description</th>
                   <th className="p-4 font-bold">GST Rate (%)</th>
@@ -124,10 +125,11 @@ export default function HSNMaster() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredList.length === 0 ? (
-                  <tr><td colSpan="4" className="p-8 text-center text-slate-500">No HSN records found.</td></tr>
+                  <tr><td colSpan="5" className="p-8 text-center text-slate-500">No HSN records found.</td></tr>
                 ) : (
-                  filteredList.map(item => (
+                  filteredList.map((item, index) => (
                     <tr key={item.id} className="hover:bg-slate-50/50">
+                      <td className="p-4 font-bold text-slate-400 text-center">{index + 1}</td>
                       <td className="p-4 font-bold text-indigo-700 font-mono">{item.hsnCode}</td>
                       <td className="p-4 text-slate-800">{item.description || '-'}</td>
                       <td className="p-4">

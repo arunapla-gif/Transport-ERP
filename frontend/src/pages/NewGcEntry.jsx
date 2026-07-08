@@ -5,7 +5,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
 import PrintCopiesModal from '../components/ui/PrintCopiesModal';
 import ScannerModal from '../components/ui/ScannerModal';
-import { Save, Plus, Trash2, MapPin, Building2, Receipt, Package, Wallet, FileText, Camera, AlertCircle } from 'lucide-react';
+import { Save, Plus, Trash2, MapPin, Building2, Receipt, Package, Wallet, FileText, Camera, AlertCircle, Clock, X, Edit2, Printer } from 'lucide-react';
 
 // Specialized compact input primitives for the Premium layout
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -69,6 +69,7 @@ export default function NewGcEntry() {
   const [activeGcId, setActiveGcId] = useState(null);
   const [searchEditGc, setSearchEditGc] = useState('');
   const [recentGcs, setRecentGcs] = useState([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
   // DRAFT PERSISTENCE LOGIC
@@ -112,6 +113,7 @@ export default function NewGcEntry() {
     invoiceNumber: '',
     privateMark: '',
     invoiceValue: '',
+    actualWeight: 'FIXED',
     consignorData: null,
     consigneeData: null
   }));
@@ -184,6 +186,11 @@ export default function NewGcEntry() {
         ...prev, 
         gcNumber: nextNumRes.nextNumber || '5001'
       }));
+
+      const recentRes = await api.get(`/gcs?branch=${branch}&limit=10`).catch(() => null);
+      if (recentRes) {
+        setRecentGcs(recentRes.gcs || recentRes.data || (Array.isArray(recentRes) ? recentRes : []));
+      }
     } catch (err) {
       console.error('Failed to fetch initial data', err);
     }
@@ -241,7 +248,8 @@ export default function NewGcEntry() {
             address: [ewbData.fromAddr1, ewbData.fromAddr2].filter(Boolean).join(', '),
             city: ewbData.fromPlace || ewbData.fromAddr2 || '',
             state: ewbData.fromStateCode ? ewbData.fromStateCode.toString() : '',
-            pincode: ewbData.fromPincode ? ewbData.fromPincode.toString() : ''
+            pincode: ewbData.fromPincode ? ewbData.fromPincode.toString() : '',
+            migrationType: 'EWB_LITE'
           });
           matchedConsignor = newCnor;
           cnorId = newCnor.id.toString();
@@ -273,7 +281,8 @@ export default function NewGcEntry() {
             address: [ewbData.toAddr1, ewbData.toAddr2].filter(Boolean).join(', '),
             city: ewbData.toPlace || ewbData.toAddr2 || '',
             state: ewbData.toStateCode ? ewbData.toStateCode.toString() : '',
-            pincode: ewbData.toPincode ? ewbData.toPincode.toString() : ''
+            pincode: ewbData.toPincode ? ewbData.toPincode.toString() : '',
+            migrationType: 'EWB_LITE'
           });
           matchedConsignee = newCnee;
           cneeId = newCnee.id.toString();
@@ -361,19 +370,41 @@ export default function NewGcEntry() {
     }
   };
 
-  const loadGcForEdit = async () => {
-    let searchTerm = searchEditGc.trim();
+  const loadGcForEdit = async (e = null, overrideNum = null) => {
+    // If e is a synthetic event, prevent default
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    
+    let searchTerm = '';
+    if (typeof overrideNum === 'string') searchTerm = overrideNum.trim();
+    else if (typeof e === 'string') searchTerm = e.trim(); // Just in case
+    else searchTerm = searchEditGc.trim();
+
     if (!searchTerm) return;
+
+    let originalSearchTerm = searchTerm;
+    let tryAlternatives = false;
 
     // Auto-prepend company prefix if user just typed the number
     if (/^\d+$/.test(searchTerm)) {
       searchTerm = `${gcDetails.companyMode === 'A' ? 'AP' : 'BELL'}-${searchTerm}`;
+      tryAlternatives = true;
     }
 
     try {
       setLoading(true);
       
-      const gc = await api.get(`/gcs/${searchTerm}`);
+      let gc;
+      try {
+        gc = await api.get(`/gcs/${searchTerm}`);
+      } catch (err) {
+        if (tryAlternatives) {
+          // If the default prefix failed, try the other one
+          const altPrefix = gcDetails.companyMode === 'A' ? 'BELL' : 'AP';
+          gc = await api.get(`/gcs/${altPrefix}-${originalSearchTerm}`);
+        } else {
+          throw err;
+        }
+      }
       
       setActiveGcId(gc.id);
       
@@ -394,6 +425,7 @@ export default function NewGcEntry() {
         type: gc.type || 'Regular',
         date: gc.date ? new Date(gc.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         time: gc.time || '',
+        godown: gc.godown || '',
       });
 
       setPartyDetails({
@@ -407,6 +439,9 @@ export default function NewGcEntry() {
         invoiceNumber: gc.invoiceNumber || '',
         privateMark: gc.privateMark || '',
         invoiceValue: gc.invoiceValue?.toString() || '',
+        actualWeight: gc.actualWeight || 'FIXED',
+        consignorData: gc.consignor || null,
+        consigneeData: gc.consignee || null,
       });
 
       if (gc.goods && gc.goods.length > 0) {
@@ -566,6 +601,7 @@ export default function NewGcEntry() {
         consignorId: parseInt(partyDetails.consignorId),
         consigneeId: parseInt(partyDetails.consigneeId),
         invoiceValue: parseFloat(partyDetails.invoiceValue) || 0,
+        actualWeight: partyDetails.actualWeight,
         freightType: freight.type,
         freightRate: 0,
         freightTotal: branch === 'BNG' ? totalAmount : 0,
@@ -620,7 +656,7 @@ export default function NewGcEntry() {
       consignorId: '', consignorGstin: '', consignorAddressPreview: '',
       consigneeId: '', consigneeGstin: '', consigneeAddressPreview: '',
       invoiceDate: new Date().toISOString().split('T')[0],
-      invoiceNumber: '', privateMark: '', invoiceValue: '',
+      invoiceNumber: '', privateMark: '', invoiceValue: '', actualWeight: 'FIXED',
     });
     const defaultItem = unitHierarchy['Cases'] ? unitHierarchy['Cases'][0] : null;
     setGoods([{ 
@@ -700,6 +736,10 @@ export default function NewGcEntry() {
           <div className="bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 text-indigo-700 font-bold text-sm flex items-center gap-2 ml-2">
             {gcDetails.companyMode === 'A' ? 'AP' : 'BELL'} - {gcDetails.gcNumber}
           </div>
+          
+          <button onClick={() => setIsHistoryOpen(true)} className="ml-2 flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-xs transition-colors border border-slate-200 shadow-sm">
+            <Clock size={14} /> Recent GCs
+          </button>
         </div>
       </div>
 
@@ -791,7 +831,8 @@ export default function NewGcEntry() {
                  <div className="flex gap-4 items-center">
                     <DenseInput label="Inv No" value={partyDetails.invoiceNumber} onChange={e => setPartyDetails({...partyDetails, invoiceNumber: e.target.value})} className="w-24 [&>input]:h-7" />
                     <DenseInput label="Inv Date" type="date" value={partyDetails.invoiceDate} onChange={e => setPartyDetails({...partyDetails, invoiceDate: e.target.value})} className="w-32 [&>input]:h-7" />
-                    <DenseInput label="Value ₹" type="number" value={partyDetails.invoiceValue} onChange={e => setPartyDetails({...partyDetails, invoiceValue: e.target.value})} className="w-28 [&>input]:h-7 [&>input]:bg-amber-50" />
+                    <DenseInput label="Value ₹" type="number" value={partyDetails.invoiceValue} onChange={e => setPartyDetails({...partyDetails, invoiceValue: e.target.value})} className="w-24 [&>input]:h-7 [&>input]:bg-amber-50" />
+                    <DenseInput label="Weight" type="text" value={partyDetails.actualWeight} onChange={e => setPartyDetails({...partyDetails, actualWeight: e.target.value})} className="w-24 [&>input]:h-7" />
                  </div>
                </div>
                
@@ -958,6 +999,35 @@ export default function NewGcEntry() {
 
       <PrintCopiesModal isOpen={showPrintModal} onClose={() => setShowPrintModal(false)} onConfirm={(copies) => { setShowPrintModal(false); window.open(`/print/gc/${searchEditGc}?copies=${copies.join(',')}`, '_blank'); }} />
       <ScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={(txt) => { setEwayBillNo(txt); setIsScannerOpen(false); }} />
+
+      {/* HISTORY DRAWER */}
+      <div className={`fixed inset-y-0 right-0 w-80 bg-white/95 backdrop-blur-xl shadow-2xl border-l border-slate-200 transform transition-transform duration-300 z-50 flex flex-col ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+           <h2 className="font-bold flex items-center gap-2 text-slate-800"><Clock size={18} className="text-indigo-500" /> Recent History</h2>
+           <button onClick={() => setIsHistoryOpen(false)} className="p-1 hover:bg-slate-200 rounded-md text-slate-500"><X size={16} /></button>
+        </div>
+        <div className="p-4 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
+           {recentGcs.map(gc => (
+             <div key={gc.id} className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-300 transition-colors">
+               <div className="flex justify-between items-start mb-2">
+                 <span className="font-black text-indigo-700 text-sm">{gc.gcNumber}</span>
+                 <span className="text-[10px] font-bold text-slate-400">{new Date(gc.date).toLocaleDateString('en-GB')}</span>
+               </div>
+               <div className="text-xs font-semibold text-slate-600 mb-2 truncate" title={`${gc.consignor?.name || 'Unknown'} → ${gc.consignee?.name || 'Unknown'}`}>
+                 {gc.consignor?.name || 'Unknown'} &rarr; {gc.consignee?.name || 'Unknown'}
+               </div>
+               <div className="flex justify-end gap-2 mt-2">
+                 <button onClick={() => { setIsHistoryOpen(false); setSearchEditGc(gc.gcNumber); setShowPrintModal(true); }} className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1 shadow-sm"><Printer size={12}/> Print</button>
+                 <button onClick={() => { setIsHistoryOpen(false); setSearchEditGc(gc.gcNumber); loadGcForEdit(null, gc.gcNumber); }} className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1 shadow-sm border border-indigo-100"><Edit2 size={12}/> Edit</button>
+               </div>
+             </div>
+           ))}
+           {recentGcs.length === 0 && <p className="text-sm text-slate-400 text-center mt-10 font-medium">No recent GCs found.</p>}
+        </div>
+      </div>
+
+      {/* OVERLAY */}
+      {isHistoryOpen && <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsHistoryOpen(false)} />}
     </div>
   );
 }

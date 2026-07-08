@@ -165,7 +165,7 @@ export default function GodownMaster() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                <th className="p-4 w-16">ID</th>
+                <th className="p-4 w-16 text-center">S.No</th>
                 <th className="p-4">Godown Name</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
@@ -178,9 +178,9 @@ export default function GodownMaster() {
                   </td>
                 </tr>
               ) : (
-                filteredGodowns.map((godown) => (
+                filteredGodowns.map((godown, index) => (
                   <tr key={godown.id} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="p-4 text-slate-400">#{godown.id}</td>
+                    <td className="p-4 text-slate-400 font-bold text-center">{index + 1}</td>
                     <td className="p-4 text-indigo-900 font-bold">{godown.name}</td>
                     <td className="p-4">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

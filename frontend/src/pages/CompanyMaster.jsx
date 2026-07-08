@@ -233,6 +233,7 @@ export default function CompanyMaster() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <th className="p-4 w-12 text-center">S.No</th>
                     <th className="p-4">Trade Name</th>
                     <th className="p-4">GSTIN</th>
                     <th className="p-4">City</th>
@@ -242,11 +243,12 @@ export default function CompanyMaster() {
                 <tbody className="text-sm font-semibold text-slate-700 divide-y divide-slate-100">
                   {companies.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="p-8 text-center text-slate-400">No companies saved yet.</td>
+                      <td colSpan="5" className="p-8 text-center text-slate-400">No companies saved yet.</td>
                     </tr>
                   ) : (
-                    companies.map(comp => (
+                    companies.map((comp, index) => (
                       <tr key={comp.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-4 font-bold text-slate-400 text-center">{index + 1}</td>
                         <td className="p-4 font-bold text-slate-900">{comp.tradeName}</td>
                         <td className="p-4 font-mono text-xs">{comp.gstin}</td>
                         <td className="p-4">{comp.city}</td>

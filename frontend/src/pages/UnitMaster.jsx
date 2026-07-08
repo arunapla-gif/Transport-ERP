@@ -145,6 +145,7 @@ export default function UnitMaster() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                  <th className="p-4 w-12 text-center font-bold">S.No</th>
                   <th className="p-4 font-bold">Category</th>
                   <th className="p-4 font-bold">Description</th>
                   <th className="p-4 font-bold">Short Code</th>
@@ -155,10 +156,11 @@ export default function UnitMaster() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredUnits.length === 0 ? (
-                  <tr><td colSpan="4" className="p-8 text-center text-slate-500">No units found.</td></tr>
+                  <tr><td colSpan="7" className="p-8 text-center text-slate-500">No units found.</td></tr>
                 ) : (
-                  filteredUnits.map(unit => (
+                  filteredUnits.map((unit, index) => (
                     <tr key={unit.id} className="hover:bg-slate-50/50">
+                      <td className="p-4 font-bold text-slate-400 text-center">{index + 1}</td>
                       <td className="p-4 font-medium text-slate-700">{unit.category}</td>
                       <td className="p-4 text-slate-800">{unit.description}</td>
                       <td className="p-4">

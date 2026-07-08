@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { CheckCircle2, Server, Database, KeyRound, ArrowRight, Loader2, AlertCircle, Wifi } from 'lucide-react';
-import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import { usePermissions } from '../hooks/usePermissions';
 
 export default function SystemBoot() {
@@ -19,26 +18,6 @@ export default function SystemBoot() {
   useEffect(() => {
     let isMounted = true;
     
-    // A robust function to check REAL internet, not just router connection
-    const checkTrueInternet = () => new Promise((resolve) => {
-      if (!navigator.onLine) return resolve(false);
-      
-      const img = new Image();
-      // If it loads successfully, we definitely have internet
-      img.onload = () => resolve(true);
-      // If it fails (e.g. captive portal serving HTML, or dead network), we don't
-      img.onerror = () => resolve(false);
-      
-      // Strict 3-second timeout
-      const timer = setTimeout(() => {
-        img.src = ''; // Cancel image load
-        resolve(false);
-      }, 3000);
-
-      // Ping a highly available tiny image
-      img.src = 'https://www.google.com/favicon.ico?_=' + Date.now();
-    });
-    
     const runBootSequence = async () => {
       // Check if already booted in this session to prevent annoying re-animations
       if (sessionStorage.getItem('system_booted') === 'true') {
@@ -46,8 +25,7 @@ export default function SystemBoot() {
         setBootState({ network: 'loading', server: 'loading', database: 'loading', auth: 'loading' });
         
         try {
-          const hasInternet = await checkTrueInternet();
-          if (!hasInternet) throw new Error('offline');
+          if (!navigator.onLine) throw new Error('offline');
           await api.get('/health?_=' + Date.now());
           if (!isMounted) return;
           setBootState({ network: 'success', server: 'success', database: 'success', auth: 'success' });
@@ -62,8 +40,7 @@ export default function SystemBoot() {
 
       // 1. Check Physical Internet Connection
       setBootState(prev => ({ ...prev, network: 'loading' }));
-      const hasInternet = await checkTrueInternet();
-      if (!hasInternet) {
+      if (!navigator.onLine) {
         if (!isMounted) return;
         setBootState(prev => ({ ...prev, network: 'error' }));
         setErrorMsg('No Internet Connection. Please check your Wi-Fi or router.');
@@ -169,11 +146,7 @@ export default function SystemBoot() {
   return (
     <div className={`min-h-[85vh] flex flex-col p-4 ${isAdmin && allReady ? 'max-w-[1400px] mx-auto pt-8' : 'items-center justify-center'}`}>
       
-      {isAdmin && allReady && (
-        <div className="w-full mb-8 animate-in slide-in-from-top-4 fade-in duration-500">
-          <AnalyticsDashboard />
-        </div>
-      )}
+
 
       <div className={`w-full max-w-md ${isAdmin && allReady ? 'mx-auto' : ''}`}>
         
@@ -207,20 +180,53 @@ export default function SystemBoot() {
           </div>
         )}
 
-        <div className="mt-8">
-          <button
-            onClick={() => navigate('/warehouse-entry')}
-            disabled={!allReady}
-            className={`w-full py-4 px-6 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all duration-300 ${
-              allReady 
-                ? 'bg-slate-900 text-white shadow-xl shadow-slate-200 hover:bg-indigo-600 hover:shadow-indigo-200 hover:-translate-y-0.5' 
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-            }`}
-          >
-            {allReady ? 'Proceed to Operations' : 'Awaiting System Readiness'}
-            {allReady && <ArrowRight size={20} className="animate-pulse" />}
-          </button>
-        </div>
+        {allReady && (
+          <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {localStorage.getItem('assignedBranch') === 'ALL' ? (
+              <div className="space-y-4">
+                <h2 className="text-center font-bold text-slate-500 mb-2 uppercase tracking-widest text-xs">Select Operating Branch</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('activeBranch', 'MAIN');
+                      navigate('/new-gc');
+                    }}
+                    className="p-6 rounded-2xl bg-indigo-50 border-2 border-indigo-100 hover:border-indigo-500 hover:bg-indigo-600 hover:text-white group transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-indigo-200/50 flex flex-col items-center justify-center gap-2"
+                  >
+                    <Database size={28} className="text-indigo-500 group-hover:text-indigo-200 transition-colors" />
+                    <span className="font-black text-lg text-indigo-900 group-hover:text-white transition-colors">MAIN BRANCH</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('activeBranch', 'AP_BNG');
+                      navigate('/new-gc');
+                    }}
+                    className="p-6 rounded-2xl bg-amber-50 border-2 border-amber-100 hover:border-amber-500 hover:bg-amber-500 hover:text-white group transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-amber-200/50 flex flex-col items-center justify-center gap-2"
+                  >
+                    <Server size={28} className="text-amber-600 group-hover:text-amber-100 transition-colors" />
+                    <span className="font-black text-lg text-amber-900 group-hover:text-white transition-colors">AP BNG</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => navigate('/new-gc')}
+                className="w-full py-4 px-6 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all duration-300 bg-slate-900 text-white shadow-xl shadow-slate-200 hover:bg-indigo-600 hover:shadow-indigo-200 hover:-translate-y-0.5"
+              >
+                Proceed to Operations
+                <ArrowRight size={20} className="animate-pulse" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {!allReady && (
+          <div className="mt-8">
+            <button disabled className="w-full py-4 px-6 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all duration-300 bg-slate-100 text-slate-400 cursor-not-allowed">
+              Awaiting System Readiness
+            </button>
+          </div>
+        )}
 
       </div>
     </div>

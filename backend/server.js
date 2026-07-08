@@ -20,6 +20,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const xlsx = require('xlsx');
+const { resolveStateCode } = require('./utils/stateCodeHelper');
 
 const app = express();
 const server = http.createServer(app);
@@ -286,21 +287,8 @@ app.use('/api/fastag', paidApiLimiter, fastagRoutes);
 
 
 
-// Basic health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Transport ERP Backend is running' });
-});
 
-// Helper to log API usage
-const logApiUsage = async (provider, apiName, status, cost = 0) => {
-  try {
-    await prisma.apiUsageLog.create({
-      data: { provider, apiName, status, cost }
-    });
-  } catch (err) {
-    console.error('Failed to log API usage:', err);
-  }
-};
+const { logApiUsage } = require('./utils/logger');
 
 // Helper to log user actions for Audit Trails
 const insertAuditLog = async (req, action, entity, entityId, details) => {
@@ -363,45 +351,62 @@ app.use((req, res, next) => {
 
 app.get('/api/usage/stats', async (req, res) => {
   try {
-    const logs = await prisma.apiUsageLog.findMany({
-      orderBy: { timestamp: 'desc' }
-    });
+    // 1. Raw SQL for fast Database Aggregation (Daily)
+    const dailyRaw = await prisma.$queryRaw`
+      SELECT date_trunc('day', timestamp) as day, 
+             COUNT(*)::int as count, 
+             SUM(cost)::float as cost 
+      FROM "ApiUsageLog" 
+      GROUP BY 1 
+      ORDER BY 1 DESC 
+      LIMIT 30;
+    `;
     
-    // Group by Daily, Monthly, Yearly
+    // 2. Raw SQL for fast Database Aggregation (Monthly)
+    const monthlyRaw = await prisma.$queryRaw`
+      SELECT date_trunc('month', timestamp) as month, 
+             COUNT(*)::int as count, 
+             SUM(cost)::float as cost 
+      FROM "ApiUsageLog" 
+      GROUP BY 1 
+      ORDER BY 1 DESC 
+      LIMIT 12;
+    `;
+
+    // 3. Fast Total Aggregate
+    const totalAgg = await prisma.apiUsageLog.aggregate({
+      _sum: { cost: true }
+    });
+
+    // 4. Strict limit on Recent Logs
+    const recent = await prisma.apiUsageLog.findMany({
+      orderBy: { timestamp: 'desc' },
+      take: 100
+    });
+
+    // Structure for Frontend
     const stats = {
       daily: {},
       monthly: {},
-      yearly: {},
-      totalCost: 0,
-      recent: logs.slice(0, 100)
+      yearly: {}, // Frontend only uses monthly/daily currently
+      totalCost: totalAgg._sum.cost || 0,
+      recent
     };
-    
-    logs.forEach(log => {
-      const date = new Date(log.timestamp);
-      const day = date.toISOString().split('T')[0];
-      const month = day.substring(0, 7);
-      const year = day.substring(0, 4);
-      
-      // Daily
-      if (!stats.daily[day]) stats.daily[day] = { count: 0, cost: 0 };
-      stats.daily[day].count += 1;
-      stats.daily[day].cost += log.cost || 0;
-      
-      // Monthly
-      if (!stats.monthly[month]) stats.monthly[month] = { count: 0, cost: 0 };
-      stats.monthly[month].count += 1;
-      stats.monthly[month].cost += log.cost || 0;
-      
-      // Yearly
-      if (!stats.yearly[year]) stats.yearly[year] = { count: 0, cost: 0 };
-      stats.yearly[year].count += 1;
-      stats.yearly[year].cost += log.cost || 0;
-      
-      stats.totalCost += log.cost || 0;
+
+    // Format SQL results for frontend maps
+    dailyRaw.forEach(row => {
+      const dateStr = new Date(row.day).toISOString().split('T')[0];
+      stats.daily[dateStr] = { count: row.count, cost: row.cost || 0 };
     });
-    
+
+    monthlyRaw.forEach(row => {
+      const monthStr = new Date(row.month).toISOString().substring(0, 7);
+      stats.monthly[monthStr] = { count: row.count, cost: row.cost || 0 };
+    });
+
     res.json(stats);
-  } catch (err) {
+  } catch (error) {
+    console.error("GET /api/usage/stats failed:", error);
     res.status(500).json({ error: 'Failed to fetch API stats' });
   }
 });
@@ -429,6 +434,7 @@ app.get('/api/consignors/search', async (req, res) => {
     const results = await prisma.consignor.findMany({
       where: {
         branch,
+        isActive: true,
         OR: [
           { name: { contains: q, mode: 'insensitive' } },
           { gstin: { contains: q, mode: 'insensitive' } }
@@ -462,7 +468,10 @@ app.put('/api/consignors/:id', async (req, res) => {
   try {
     const consignor = await prisma.consignor.update({
       where: { id: parseInt(req.params.id) },
-      data: req.body,
+      data: {
+        ...req.body,
+        stateCode: req.body.stateCode !== undefined ? req.body.stateCode : undefined
+      },
     });
     res.json(consignor);
   } catch (error) {
@@ -473,10 +482,27 @@ app.put('/api/consignors/:id', async (req, res) => {
 
 app.delete('/api/consignors/:id', async (req, res) => {
   try {
-    await prisma.consignor.delete({ where: { id: parseInt(req.params.id) } });
-    res.json({ success: true });
+    const { id } = req.params;
+    await prisma.consignor.update({
+      where: { id: parseInt(id) },
+      data: { isActive: false }
+    });
+    res.json({ message: 'Consignor archived successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete consignor' });
+    res.status(500).json({ error: 'Failed to archive consignor' });
+  }
+});
+
+app.put('/api/consignors/:id/restore', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const consignor = await prisma.consignor.update({
+      where: { id: parseInt(id) },
+      data: { isActive: true }
+    });
+    res.json(consignor);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to restore consignor' });
   }
 });
 
@@ -538,6 +564,7 @@ app.get('/api/consignees/search', async (req, res) => {
     const results = await prisma.consignee.findMany({
       where: {
         branch,
+        isActive: true,
         OR: [
           { name: { contains: q, mode: 'insensitive' } },
           { gstin: { contains: q, mode: 'insensitive' } }
@@ -554,11 +581,11 @@ app.get('/api/consignees/search', async (req, res) => {
 
 app.post('/api/consignees', async (req, res) => {
   try {
-    const { name, branch = 'MAIN', ...rest } = req.body;
+    const { name, branch = 'MAIN', stateCode, ...rest } = req.body;
     const consignee = await prisma.consignee.upsert({
       where: { name_branch: { name, branch } },
-      update: { ...rest, branch },
-      create: { name, branch, ...rest }
+      update: { ...rest, branch, stateCode: stateCode || null },
+      create: { name, branch, stateCode: stateCode || null, ...rest }
     });
     res.json(consignee);
   } catch (error) {
@@ -571,7 +598,10 @@ app.put('/api/consignees/:id', async (req, res) => {
   try {
     const consignee = await prisma.consignee.update({
       where: { id: parseInt(req.params.id) },
-      data: req.body,
+      data: {
+        ...req.body,
+        stateCode: req.body.stateCode !== undefined ? req.body.stateCode : undefined
+      },
     });
     res.json(consignee);
   } catch (error) {
@@ -582,10 +612,27 @@ app.put('/api/consignees/:id', async (req, res) => {
 
 app.delete('/api/consignees/:id', async (req, res) => {
   try {
-    await prisma.consignee.delete({ where: { id: parseInt(req.params.id) } });
-    res.json({ success: true });
+    const { id } = req.params;
+    await prisma.consignee.update({
+      where: { id: parseInt(id) },
+      data: { isActive: false }
+    });
+    res.json({ message: 'Consignee archived successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete consignee' });
+    res.status(500).json({ error: 'Failed to archive consignee' });
+  }
+});
+
+app.put('/api/consignees/:id/restore', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const consignee = await prisma.consignee.update({
+      where: { id: parseInt(id) },
+      data: { isActive: true }
+    });
+    res.json(consignee);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to restore consignee' });
   }
 });
 // ==============================
@@ -1134,6 +1181,7 @@ async function mapGstResponse(data, originalGstin, res) {
     address: addr || 'Address not available',
     city: resolvedCity,
     district: resolvedDistrict,
+    stateCode: rawStateCode,
     state: stateName,
     pincode: pincode,
     addresses: additionalAddresses,
@@ -1524,15 +1572,31 @@ app.get('/api/reports/aggregations', async (req, res) => {
 app.get('/api/gdms/next-number', async (req, res) => {
   try {
     const branch = req.query.branch || 'MAIN';
-    const lastGdm = await prisma.gDM.findFirst({
-      where: { branch },
-      orderBy: { id: 'desc' }
+    const mode = req.query.mode || 'A'; // 'A' or 'B'
+    const prefix = mode === 'A' ? 'AP-' : 'BELL-';
+
+    const gdms = await prisma.gDM.findMany({
+      where: {
+        branch,
+        gdmNumber: { startsWith: prefix }
+      },
+      select: { gdmNumber: true }
     });
-    let nextNum = 1001;
-    if (lastGdm && lastGdm.gdmNumber) {
-      nextNum = parseInt(lastGdm.gdmNumber) + 1;
+
+    if (gdms.length === 0) {
+      return res.json({ nextNumber: '1001' });
     }
-    res.json({ nextNumber: nextNum });
+
+    let maxNumber = 1000;
+    for (const gdm of gdms) {
+      const numStr = gdm.gdmNumber.replace(prefix, '');
+      const num = parseInt(numStr, 10);
+      if (!isNaN(num) && num > maxNumber) {
+        maxNumber = num;
+      }
+    }
+
+    res.json({ nextNumber: (maxNumber + 1).toString() });
   } catch (error) {
     console.error("Error calculating next GDM number:", error);
     res.status(500).json({ error: 'Failed to calculate next GDM number' });
@@ -1658,7 +1722,7 @@ app.post('/api/gdms', async (req, res) => {
   try {
     const { 
       gdmNumber, date, time, vehicleId, driverName, driverPhone, startKm, 
-      destination, fromLocation, toName, deliveryAt, memoAmount, advanceAmount, balanceAmount, gcIds, branch = 'MAIN', dlData
+      destination, fromLocation, toName, deliveryAt, memoAmount, advanceAmount, balanceAmount, gcIds, branch = 'MAIN', dlData, status
     } = req.body;
 
     // Auto-Build Driver Profile
@@ -1707,7 +1771,8 @@ app.post('/api/gdms', async (req, res) => {
         memoAmount: memoAmount !== undefined && memoAmount !== "" ? parseFloat(memoAmount) : null,
         advanceAmount: advanceAmount !== undefined && advanceAmount !== "" ? parseFloat(advanceAmount) : null,
         balanceAmount: balanceAmount !== undefined && balanceAmount !== "" ? parseFloat(balanceAmount) : null,
-        cewbNumber: req.body.cewbNumber || null
+        cewbNumber: req.body.cewbNumber || null,
+        status: status || 'Created'
       }
     });
 
@@ -1736,7 +1801,7 @@ app.put('/api/gdms/:id', async (req, res) => {
     const gdmId = parseInt(req.params.id);
     const { 
       date, time, vehicleId, driverName, driverPhone, startKm, 
-      destination, fromLocation, toName, deliveryAt, memoAmount, advanceAmount, balanceAmount, gcIds, dlData
+      destination, fromLocation, toName, deliveryAt, memoAmount, advanceAmount, balanceAmount, gcIds, dlData, status
     } = req.body;
 
     // Auto-Build Driver Profile
@@ -1784,7 +1849,8 @@ app.put('/api/gdms/:id', async (req, res) => {
         memoAmount: memoAmount !== undefined && memoAmount !== "" ? parseFloat(memoAmount) : null,
         advanceAmount: advanceAmount !== undefined && advanceAmount !== "" ? parseFloat(advanceAmount) : null,
         balanceAmount: balanceAmount !== undefined && balanceAmount !== "" ? parseFloat(balanceAmount) : null,
-        cewbNumber: req.body.cewbNumber || null
+        cewbNumber: req.body.cewbNumber || null,
+        status: status || 'Created'
       }
     });
 
@@ -1990,8 +2056,8 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
       fromAddr2: gcData.consignor?.address2 || "",
       fromPlace: gcData.consignor?.city || "Sivakasi",
       fromPincode: Number(gcData.ewbRawData?.fromPincode) || Number(gcData.consignor?.pincode) || 626123,
-      fromStateCode: Number(gcData.ewbRawData?.fromStateCode) || (gcData.consignor?.gstin?.length >= 2 && !isNaN(gcData.consignor?.gstin?.substring(0,2)) ? Number(gcData.consignor.gstin.substring(0,2)) : 33),
-      actualFromStateCode: Number(gcData.ewbRawData?.fromStateCode) || (gcData.consignor?.gstin?.length >= 2 && !isNaN(gcData.consignor?.gstin?.substring(0,2)) ? Number(gcData.consignor.gstin.substring(0,2)) : 33),
+      fromStateCode: Number(gcData.ewbRawData?.fromStateCode) || resolveStateCode(gcData.consignor?.gstin, gcData.consignor?.state, gcData.consignor?.stateCode) || 33,
+      actualFromStateCode: Number(gcData.ewbRawData?.fromStateCode) || resolveStateCode(gcData.consignor?.gstin, gcData.consignor?.state, gcData.consignor?.stateCode) || 33,
       
       toGstin: (gcData.consignee?.gstin || "URP").toUpperCase(),
       toTrdName: gcData.consignee?.name || "CONSIGNEE",
@@ -1999,8 +2065,8 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
       toAddr2: gcData.consignee?.address2 || "",
       toPlace: gcData.consignee?.city || "Destination",
       toPincode: Number(gcData.ewbRawData?.toPincode) || Number(gcData.consignee?.pincode) || 626123,
-      toStateCode: Number(gcData.ewbRawData?.toStateCode) || (gcData.consignee?.gstin?.length >= 2 && !isNaN(gcData.consignee?.gstin?.substring(0,2)) ? Number(gcData.consignee.gstin.substring(0,2)) : 33),
-      actualToStateCode: Number(gcData.ewbRawData?.toStateCode) || (gcData.consignee?.gstin?.length >= 2 && !isNaN(gcData.consignee?.gstin?.substring(0,2)) ? Number(gcData.consignee.gstin.substring(0,2)) : 33),
+      toStateCode: Number(gcData.ewbRawData?.toStateCode) || resolveStateCode(gcData.consignee?.gstin, gcData.consignee?.state, gcData.consignee?.stateCode) || 33,
+      actualToStateCode: Number(gcData.ewbRawData?.toStateCode) || resolveStateCode(gcData.consignee?.gstin, gcData.consignee?.state, gcData.consignee?.stateCode) || 33,
       
       totalValue: Math.round(taxInfo?.totalTaxable || 0),
       cgstValue: Math.round(taxInfo?.totalCgst || 0),
@@ -2316,11 +2382,8 @@ app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
       tripSheetEwbBills: ewbNos.map(no => ({ ewbNo: Number(no) }))
     };
 
-    delete cewbPayload.transDocNo;
-    delete cewbPayload.transDocDate;
-
     // 3. Post to WhiteBooks CEWB URL
-    const cewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/generatecewb?email=${encodeURIComponent(email)}`;
+    const cewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/gencewb?email=${encodeURIComponent(email)}`;
     const response = await fetch(cewbUrl, {
       method: "POST",
       headers: {
@@ -2902,7 +2965,7 @@ app.get('/api/admin/sessions', authorizeAdmin, async (req, res) => {
   }
 });
 
-app.get('/api/analytics/dashboard', authorizeAdmin, async (req, res) => {
+app.get('/api/stats/overview', authorizeAdmin, async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -2915,12 +2978,12 @@ app.get('/api/analytics/dashboard', authorizeAdmin, async (req, res) => {
       branchStats
     ] = await Promise.all([
       prisma.gC.aggregate({
-        where: { createdAt: { gte: today } },
+        where: { date: { gte: today } },
         _sum: { freightTotal: true },
         _count: { id: true }
       }),
       prisma.gC.aggregate({
-        where: { createdAt: { gte: firstDayOfMonth } },
+        where: { date: { gte: firstDayOfMonth } },
         _sum: { freightTotal: true },
         _count: { id: true }
       }),
@@ -2929,7 +2992,7 @@ app.get('/api/analytics/dashboard', authorizeAdmin, async (req, res) => {
       }),
       prisma.gC.groupBy({
         by: ['branch'],
-        where: { createdAt: { gte: today } },
+        where: { date: { gte: today } },
         _count: { id: true }
       })
     ]);

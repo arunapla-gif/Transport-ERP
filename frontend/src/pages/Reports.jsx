@@ -136,11 +136,14 @@ export default function Reports() {
           
           finalData = (res.data || []).map(gdm => ({
             id: gdm.id,
-            Number: gdm.gdmNumber,
+            'GDM No': gdm.gdmNumber,
             Date: new Date(gdm.date).toLocaleDateString('en-IN'),
             Vehicle: gdm.vehicle?.vehicleNumber || '-',
-            Driver: gdm.driverName || '-',
-            Destination: gdm.destination || gdm.toName || '-',
+            Driver: gdm.driverName ? `${gdm.driverName} ${gdm.driverPhone ? `(${gdm.driverPhone})` : ''}` : '-',
+            'To (Name)': gdm.destination || gdm.toName || '-',
+            'CEWB No': gdm.cewbNumber || 'N/A',
+            'Total GCs': gdm.gcs ? gdm.gcs.length : 0,
+            Freight: gdm.memoAmount ? `₹${parseFloat(gdm.memoAmount).toFixed(2)}` : '₹0.00',
             Status: gdm.status
           }));
         }

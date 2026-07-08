@@ -113,6 +113,12 @@ function Layout({ children, role, onLogout }) {
               <Truck className="text-stone-100 w-4 h-4 md:w-5 md:h-5" />
             </div>
             <h1 className="text-base md:text-lg font-black m-0 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-stone-300">Transport ERP</h1>
+            {/* GLOBAL BRANCH SWITCHER - READ ONLY BADGE (MOVED TO LEFT) */}
+            {localStorage.getItem('assignedBranch') === 'ALL' && (
+              <Link to="/" className="ml-2 px-3 md:px-4 py-1 rounded-full border border-indigo-500/50 bg-indigo-500/10 hover:bg-indigo-500/20 hover:border-indigo-400 transition-all text-[10px] md:text-xs font-black text-indigo-200 shadow-sm flex items-center gap-1.5 cursor-pointer" title="Click to change branch">
+                <span className="text-indigo-400">📍 Active:</span> {localStorage.getItem('activeBranch') === 'AP_BNG' ? 'AP BNG' : 'MAIN BRANCH'}
+              </Link>
+            )}
           </div>
           
           <div className="flex items-center gap-2 md:hidden">
@@ -178,38 +184,7 @@ function Layout({ children, role, onLogout }) {
               </div>
             </div>
           </div>
-          
-          {/* GLOBAL BRANCH SWITCHER - VISIBLE ONLY IF ASSIGNED TO 'ALL' */}
-          {localStorage.getItem('assignedBranch') === 'ALL' && (
-            <div className="relative group">
-              <button onClick={() => toggleMenu('branch_switcher')} className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 hover:border-indigo-500/50 transition-all text-[11px] md:text-xs font-black text-indigo-200 shadow-sm flex items-center gap-1">
-                {localStorage.getItem('activeBranch') === 'AP_BNG' ? 'AP BNG' : 'MAIN BRANCH'} <span className="text-[9px] md:text-[10px] opacity-70">▼</span>
-              </button>
-              <div className={`absolute right-0 top-full pt-1.5 z-50 ${activeDropdown === 'branch_switcher' ? 'block' : 'hidden md:group-hover:block'}`}>
-                <div className="w-40 md:w-48 bg-white shadow-xl shadow-indigo-900/10 border border-indigo-200 rounded-lg overflow-hidden backdrop-blur-xl flex flex-col">
-                  <button 
-                    onClick={() => {
-                      localStorage.setItem('activeBranch', 'MAIN');
-                      window.location.href = '/';
-                    }} 
-                    className={`block w-full text-left px-3 md:px-4 py-2.5 text-[11px] md:text-xs ${localStorage.getItem('activeBranch') === 'MAIN' ? 'bg-indigo-50 text-indigo-700 font-black' : 'text-slate-700 hover:bg-slate-50 font-bold'} border-b border-slate-100 transition-colors`}
-                  >
-                    Main Branch
-                  </button>
-                  <button 
-                    onClick={() => {
-                      localStorage.setItem('activeBranch', 'AP_BNG');
-                      window.location.href = '/';
-                    }} 
-                    className={`block w-full text-left px-3 md:px-4 py-2.5 text-[11px] md:text-xs ${localStorage.getItem('activeBranch') === 'AP_BNG' ? 'bg-amber-50 text-amber-700 font-black' : 'text-slate-700 hover:bg-slate-50 font-bold'} transition-colors`}
-                  >
-                    AP BNG
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          
+
           {/* SETTINGS MENU */}
           <div className="relative group">
             <button onClick={() => toggleMenu('settings')} className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] md:text-xs font-bold shadow-sm flex items-center gap-1">Settings <span className="text-[9px] md:text-[10px] opacity-70">▼</span></button>

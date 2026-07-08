@@ -47,6 +47,18 @@ const GlassCard = ({ children, className = "" }) => (
   </div>
 );
 
+const stateNameToCode = {
+  "jammu and kashmir": "01", "himachal pradesh": "02", "punjab": "03", "chandigarh": "04",
+  "uttarakhand": "05", "haryana": "06", "delhi": "07", "rajasthan": "08", "uttar pradesh": "09",
+  "bihar": "10", "sikkim": "11", "arunachal pradesh": "12", "nagaland": "13", "manipur": "14",
+  "mizoram": "15", "tripura": "16", "meghalaya": "17", "assam": "18", "west bengal": "19",
+  "jharkhand": "20", "odisha": "21", "chhattisgarh": "22", "madhya pradesh": "23",
+  "gujarat": "24", "daman and diu": "25", "dadra and nagar haveli and daman and diu": "26",
+  "maharashtra": "27", "andhra pradesh": "28", "karnataka": "29", "goa": "30",
+  "lakshadweep": "31", "kerala": "32", "tamil nadu": "33", "puducherry": "34",
+  "andaman and nicobar islands": "35", "telangana": "36", "ladakh": "38"
+};
+
 import { useLocation } from 'react-router-dom';
 
 export default function ConsignorMaster() {
@@ -57,7 +69,7 @@ export default function ConsignorMaster() {
 
   const [consignors, setConsignors] = useState([]);
   const [formData, setFormData] = useState({
-    id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: []
+    id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: []
   });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -121,16 +133,28 @@ export default function ConsignorMaster() {
         };
       });
 
-      setFormData(prev => ({
-        ...prev,
-        name: companyName || prev.name,
-        address: cleanAddressParts([addr.bno, addr.bnm, addr.st, addr.flno]) || prev.address,
-        city: addr.loc || addr.city || prev.city,
-        district: addr.dst || prev.district,
-        state: addr.stcd || prev.state,
-        pincode: addr.pncd || addr.pincode || prev.pincode,
-        addresses: additionalAddresses
-      }));
+      setFormData(prev => {
+        const rawState = addr.stcd || '';
+        let mappedStateCode = prev.stateCode;
+        if (rawState) {
+          const normalized = rawState.trim().toLowerCase();
+          if (stateNameToCode[normalized]) {
+            mappedStateCode = stateNameToCode[normalized];
+          }
+        }
+
+        return {
+          ...prev,
+          name: companyName || prev.name,
+          address: cleanAddressParts([addr.bno, addr.bnm, addr.st, addr.flno]) || prev.address,
+          city: addr.loc || addr.city || prev.city,
+          district: addr.dst || prev.district,
+          state: rawState || prev.state,
+          stateCode: mappedStateCode || rawState,
+          pincode: addr.pncd || addr.pincode || prev.pincode,
+          addresses: additionalAddresses
+        };
+      });
       toast.success('GST verified and details auto-filled!');
     } catch (err) {
       toast.error(err.message || 'Failed to verify GSTIN');
@@ -146,16 +170,16 @@ export default function ConsignorMaster() {
     setLoading(true);
     
     try {
-      const payload = { ...formData, branch };
+      const payload = { ...formData, branch, migrationType: 'GST_VERIFIED' };
       if (formData.id) {
         await api.put(`/consignors/${formData.id}`, payload);
         toast.success('Consignor updated successfully');
       } else {
-        const { id, ...dataToCreate } = formData;
-        await api.post('/consignors', { ...dataToCreate, branch });
+        const { id, ...dataToCreate } = payload;
+        await api.post('/consignors', dataToCreate);
         toast.success('Consignor created successfully');
       }
-      setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] });
+      setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] });
       fetchConsignors();
     } catch (err) {
       toast.error('Failed to save record: ' + (err.message || 'Unknown error'));
@@ -168,24 +192,34 @@ export default function ConsignorMaster() {
     setFormData({
       id: consignor.id,
       name: consignor.name || '', address: consignor.address || '', city: consignor.city || '', 
-      district: consignor.district || '', state: consignor.state || '', pincode: consignor.pincode || '', 
+      district: consignor.district || '', state: consignor.state || '', stateCode: consignor.stateCode || '', pincode: consignor.pincode || '', 
       gstin: consignor.gstin || '', phone: consignor.phone || '', email: consignor.email || '', group: consignor.group || '', addresses: consignor.addresses || []
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this record?')) return;
+    if (!window.confirm('Are you sure you want to archive this record?')) return;
     try {
       await api.delete(`/consignors/${id}`);
       fetchConsignors();
-      toast.success('Record deleted');
+      toast.success('Record archived');
     } catch (err) {
-      toast.error('Failed to delete record');
+      toast.error('Failed to archive record');
     }
   };
 
-  const apiOnlyCount = consignors.filter(c => !c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL').length;
+  const handleRestore = async (id) => {
+    try {
+      await api.put(`/consignors/${id}/restore`);
+      fetchConsignors();
+      toast.success('Record restored successfully');
+    } catch (err) {
+      toast.error('Failed to restore record');
+    }
+  };
+
+  const apiOnlyCount = consignors.filter(c => !c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED').length;
   const oldDataCount = consignors.filter(c => c.migrationType === 'OLD_DATA_ONLY').length;
   const mergedCount = consignors.filter(c => c.migrationType === 'MERGED_NAME').length;
 
@@ -194,7 +228,7 @@ export default function ConsignorMaster() {
       (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()));
       
-    if (activeTab === 'API_ONLY') return matchesSearch && (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL');
+    if (activeTab === 'API_ONLY') return matchesSearch && (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED');
     if (activeTab === 'OLD_DATA_ONLY') return matchesSearch && c.migrationType === 'OLD_DATA_ONLY';
     if (activeTab === 'MERGED_NAME') return matchesSearch && c.migrationType === 'MERGED_NAME';
     return false;
@@ -221,7 +255,7 @@ export default function ConsignorMaster() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
           <DenseInput label="Consignor Name *" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="lg:col-span-2 [&>input]:font-bold [&>input]:text-indigo-900" />
           <div className="flex items-end gap-2">
-            <DenseInput label="GSTIN" value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value})} className="flex-1 [&>input]:uppercase" />
+            <DenseInput label="GSTIN" value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})} className="flex-1 [&>input]:uppercase" />
             <button type="button" onClick={handleVerifyGST} disabled={loading} className="h-12 md:h-9 px-4 md:px-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors border border-indigo-200 whitespace-nowrap">Verify</button>
           </div>
           
@@ -229,7 +263,10 @@ export default function ConsignorMaster() {
           
           <DenseInput label="City" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
           <DenseInput label="District" value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} />
-          <DenseInput label="State" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} />
+          <div className="flex gap-2">
+            <DenseInput label="State" value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} className="w-2/3" />
+            <DenseInput label="State Code" value={formData.stateCode} onChange={e => setFormData({...formData, stateCode: e.target.value})} className="w-1/3" />
+          </div>
           
           <DenseInput label="Pincode" value={formData.pincode} onChange={e => setFormData({...formData, pincode: e.target.value})} />
           <DenseInput label="Phone Number" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
@@ -237,7 +274,7 @@ export default function ConsignorMaster() {
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-          <button onClick={() => setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] })} className="h-12 md:h-9 px-6 md:px-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-lg font-bold text-sm md:text-xs hover:bg-slate-50 transition-colors">
+          <button onClick={() => setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] })} className="h-12 md:h-9 px-6 md:px-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-lg font-bold text-sm md:text-xs hover:bg-slate-50 transition-colors">
             Clear
           </button>
           <button onClick={handleSave} disabled={loading || (formData.id && !canEdit)} className="h-12 md:h-9 px-8 md:px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors flex items-center gap-2 disabled:opacity-70">
@@ -293,13 +330,16 @@ export default function ConsignorMaster() {
         <>
           {/* MOBILE CARDS VIEW */}
         <div className="md:hidden divide-y divide-slate-100 max-h-[60vh] overflow-y-auto">
-          {filteredConsignors.length > 0 ? filteredConsignors.map((c) => (
-            <div key={c.id} className="p-4 bg-white hover:bg-slate-50 transition-colors">
+          {filteredConsignors.length > 0 ? filteredConsignors.map((c, index) => (
+            <div key={c.id} className={`p-4 bg-white hover:bg-slate-50 transition-colors ${c.isActive === false ? 'opacity-60 bg-slate-50 border-slate-300' : ''}`}>
               <div className="flex justify-between items-start mb-2">
                 <div className="pr-2">
-                  <h4 className="font-black text-slate-800 text-base leading-tight flex items-center gap-1.5">
+                  <h4 className="font-black text-slate-800 text-base leading-tight flex flex-wrap items-center gap-1.5">
+                    <span className="text-slate-400 font-bold mr-1 text-sm">{index + 1}.</span>
+                    {c.isActive === false && <span title="Archived Record" className="flex items-center justify-center bg-slate-200 text-slate-700 px-1.5 rounded border border-slate-300 text-[10px] font-black shrink-0 whitespace-nowrap">ARCHIVED</span>}
                     {c.name}
-                    {c.gstin && c.migrationType !== 'OLD_DATA_ONLY' && <span title="GST Verified" className="flex items-center justify-center w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full border border-emerald-200 text-[10px] font-black shrink-0">✓</span>}
+                    {c.gstin && c.migrationType === 'GST_VERIFIED' && <span title="Fully Verified" className="flex items-center justify-center w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full border border-emerald-200 text-[10px] font-black shrink-0">✓</span>}
+                    {c.migrationType === 'EWB_LITE' && <span title="Partial Profile - Verify GST" className="flex items-center justify-center bg-amber-100 text-amber-700 px-1.5 rounded border border-amber-300 text-[10px] font-black shrink-0 whitespace-nowrap">⚠️ EWB Lite</span>}
                   </h4>
                   {c.legalName && c.legalName !== c.name && (
                     <p className="text-[11px] font-semibold text-slate-500 mt-1">Legal: {c.legalName}</p>
@@ -313,8 +353,9 @@ export default function ConsignorMaster() {
                   )}
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  {canEdit && <button onClick={() => handleEdit(c)} className="p-2 text-blue-600 bg-blue-50 active:bg-blue-100 rounded-lg transition-colors"><Edit2 size={16} /></button>}
-                  {canDelete && <button onClick={() => handleDelete(c.id)} className="p-2 text-rose-600 bg-rose-50 active:bg-rose-100 rounded-lg transition-colors"><Trash2 size={16} /></button>}
+                  {canEdit && <button onClick={() => handleEdit(c)} className="flex items-center gap-1 px-2 py-1.5 text-blue-600 bg-blue-50 border border-blue-200 active:bg-blue-100 rounded-lg font-medium"><Edit2 size={14} /><span className="text-xs">Edit</span></button>}
+                  {canDelete && c.isActive !== false && <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1 px-2 py-1.5 text-amber-600 bg-amber-50 border border-amber-200 active:bg-amber-100 rounded-lg font-medium"><Trash2 size={14} /><span className="text-xs">Archive</span></button>}
+                  {canDelete && c.isActive === false && <button onClick={() => handleRestore(c.id)} className="flex items-center gap-1 px-2 py-1.5 text-emerald-600 bg-emerald-50 border border-emerald-200 active:bg-emerald-100 rounded-lg font-medium"><span className="text-xs">Restore</span></button>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm font-medium text-slate-600 mt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
@@ -332,21 +373,25 @@ export default function ConsignorMaster() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-500 bg-slate-50/80 sticky top-0 backdrop-blur-md z-10 border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 font-bold uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-wider">City</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-wider">GSTIN</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-wider">Phone</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-wider text-right">Actions</th>
+                <th className="px-3 py-2 font-bold uppercase tracking-wider w-12 text-center">S.No</th>
+                <th className="px-3 py-2 font-bold uppercase tracking-wider w-[40%]">Name</th>
+                <th className="px-3 py-2 font-bold uppercase tracking-wider w-[20%]">City</th>
+                <th className="px-3 py-2 font-bold uppercase tracking-wider">GSTIN</th>
+                <th className="px-3 py-2 font-bold uppercase tracking-wider">Phone</th>
+                <th className="px-3 py-2 font-bold uppercase tracking-wider text-right sticky right-0 bg-slate-50/95 backdrop-blur-md z-20 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.05)] border-l border-slate-100">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredConsignors.length > 0 ? filteredConsignors.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-50/50 transition-colors group">
+              {filteredConsignors.length > 0 ? filteredConsignors.map((c, index) => (
+                <tr key={c.id} className={`hover:bg-slate-50/80 transition-colors group ${c.isActive === false ? 'opacity-60 bg-slate-50' : ''}`}>
+                  <td className="px-3 py-3 font-bold text-slate-400 text-center">{index + 1}</td>
                   <td className="px-4 py-3 font-medium text-slate-800">
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         {c.name}
-                        {c.gstin && c.migrationType !== 'OLD_DATA_ONLY' && <span title="GST Verified" className="flex items-center justify-center w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full border border-emerald-200 text-[10px] font-black shrink-0">✓</span>}
+                        {c.isActive === false && <span title="Archived Record" className="flex items-center justify-center bg-slate-200 text-slate-700 px-1.5 rounded border border-slate-300 text-[10px] font-black shrink-0 whitespace-nowrap">ARCHIVED</span>}
+                        {c.gstin && c.migrationType === 'GST_VERIFIED' && <span title="Fully Verified" className="flex items-center justify-center w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full border border-emerald-200 text-[10px] font-black shrink-0">✓</span>}
+                        {c.migrationType === 'EWB_LITE' && <span title="Partial Profile - Verify GST" className="flex items-center justify-center bg-amber-100 text-amber-700 px-1.5 rounded border border-amber-300 text-[10px] font-black shrink-0 whitespace-nowrap">⚠️ EWB Lite</span>}
                       </div>
                       {c.legalName && c.legalName !== c.name && (
                         <span className="text-[11px] text-slate-500 font-medium mt-0.5">Legal: {c.legalName}</span>
@@ -364,18 +409,19 @@ export default function ConsignorMaster() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-600 font-mono text-xs uppercase">{c.gstin || '-'}</td>
-                  <td className="px-4 py-3 text-slate-600">{c.phone || '-'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2 transition-opacity">
-                      {canEdit && <button onClick={() => handleEdit(c)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit2 size={14} /></button>}
-                      {canDelete && <button onClick={() => handleDelete(c.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 size={14} /></button>}
+                  <td className="px-3 py-2 text-slate-600 font-mono text-xs uppercase">{c.gstin || '-'}</td>
+                  <td className="px-3 py-2 text-slate-600">{c.phone || '-'}</td>
+                  <td className="px-3 py-2 sticky right-0 bg-white z-10 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.03)] border-l border-slate-50 group-hover:bg-slate-50/50 transition-colors">
+                    <div className="flex justify-end gap-2 opacity-100">
+                      {canEdit && <button onClick={() => handleEdit(c)} className="flex items-center gap-1 px-2 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md border border-blue-200 font-medium whitespace-nowrap"><Edit2 size={14} /> <span className="text-xs hidden lg:inline">Edit</span></button>}
+                      {canDelete && c.isActive !== false && <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1 px-2 py-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-md border border-amber-200 font-medium whitespace-nowrap"><Trash2 size={14} /> <span className="text-xs hidden lg:inline">Archive</span></button>}
+                      {canDelete && c.isActive === false && <button onClick={() => handleRestore(c.id)} className="flex items-center gap-1 px-2 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md border border-emerald-200 font-medium whitespace-nowrap"><span className="text-xs hidden lg:inline">Restore</span></button>}
                     </div>
                   </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-slate-500 text-sm">No records found.</td>
+                  <td colSpan="6" className="px-4 py-8 text-center text-slate-500 text-sm">No records found.</td>
                 </tr>
               )}
             </tbody>

@@ -4,7 +4,7 @@ import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
-import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp, Loader2, RefreshCw } from 'lucide-react';
+import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp, Loader2, RefreshCw, Clock, X, Printer, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -21,7 +21,7 @@ const DenseInput = ({ label, className = "", ...props }) => (
 const GlassCard = ({ children, className = "" }) => (
   <div className={`bg-white/80 backdrop-blur-xl rounded-2xl border border-white/50 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-visible ${className}`}>
     <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/0 pointer-events-none rounded-2xl" />
-    <div className="relative z-10">{children}</div>
+    <div className={`relative z-10 ${className.includes('h-full') ? 'h-full flex flex-col' : ''}`}>{children}</div>
   </div>
 );
 
@@ -72,6 +72,7 @@ export default function GdmEntry() {
 
   const [activeGdmId, setActiveGdmId] = useState(null);
   const [recentGdms, setRecentGdms] = useState([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -150,20 +151,34 @@ export default function GdmEntry() {
 
   const fetchInitialData = async () => {
     try {
-      const [v, unitsRes, nextNumRes] = await Promise.all([
+      const [v, unitsRes] = await Promise.all([
         api.get('/vehicles'),
-        api.get('/units').catch(() => []),
-        api.get(`/gdms/next-number?branch=${branch}`)
+        api.get('/units').catch(() => [])
       ]);
       setVehicles(v || []);
       if (unitsRes && unitsRes.length > 0) {
         setAllUnitOptions(unitsRes.map(u => ({ label: u.description, code: u.code, category: u.category })));
       }
-      setGdmNumberDisplay(nextNumRes.nextNumber?.toString() || '1001');
     } catch (err) {
       console.error('Failed to fetch initial data', err);
     }
   };
+
+  // Dynamically update next GDM number when Company Mode changes
+  useEffect(() => {
+    if (!activeGdmId) {
+      const fetchNextNum = async () => {
+        try {
+          const nextNumRes = await api.get(`/gdms/next-number?branch=${branch}&mode=${gdmCompanyMode}`);
+          const prefix = gdmCompanyMode === 'A' ? 'AP-' : 'BELL-';
+          setGdmNumberDisplay(prefix + (nextNumRes.nextNumber?.toString() || '1001'));
+        } catch (err) {
+          console.error("Failed to fetch next GDM number", err);
+        }
+      };
+      fetchNextNum();
+    }
+  }, [gdmCompanyMode, branch, activeGdmId]);
 
   const fetchRecentGdms = async (pageNum = 1, append = false) => {
     try {
@@ -428,7 +443,7 @@ export default function GdmEntry() {
       for (let i = 0; i < gcsForCewb.length; i++) {
         const gc = gcsForCewb[i];
         let currentEwb = gc.privateMark;
-        const companyStr = gc.companyMode === 'B' ? 'BELL' : 'AP';
+        const companyStr = gc.gcNumber?.startsWith('BELL-' ) ? 'BELL' : 'AP';
         const vNo = lorryDetails.lorryNo.replace(/[^A-Z0-9]/gi, '');
         
         // BUCKET 3: Generate from scratch (No existing EWB)
@@ -528,7 +543,7 @@ export default function GdmEntry() {
     }
   };
 
-  const handleSaveGDM = async () => {
+  const handleSaveGDM = async (submitStatus = 'Created') => {
     if (loading) return;
     if (gcs.length === 0) {
       setError('Please add at least one GC to the Delivery Memo.');
@@ -568,7 +583,8 @@ export default function GdmEntry() {
         validityNt: dlData.validity_nt,
         validityTr: dlData.validity_tr,
         vehicleClasses: dlData.vehicle_classes,
-      } : null
+      } : null,
+      status: submitStatus
     };
 
     try {
@@ -693,11 +709,8 @@ export default function GdmEntry() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Lorry Details (Left - 33%) */}
         <div className="col-span-1">
-          <GlassCard>
-            <div 
-              className="flex items-center justify-between mb-4 cursor-pointer group"
-              onClick={() => setIsLorryExpanded(!isLorryExpanded)}
-            >
+          <GlassCard className="h-full flex flex-col">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="bg-emerald-50 text-emerald-600 p-2 rounded-lg shadow-inner border border-emerald-100/50"><Truck size={18} /></div>
                 <h3 className="font-bold text-lg text-slate-800 tracking-tight">Lorry Details</h3>
@@ -709,13 +722,10 @@ export default function GdmEntry() {
                     CEWB: {gdmDetails.cewbNumber}
                   </div>
                 )}
-                <button className="text-slate-400 group-hover:text-emerald-600 transition-colors p-1 bg-slate-50 rounded-md">
-                  <span className="text-xs font-bold">{isLorryExpanded ? '▲' : '▼'}</span>
-                </button>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="flex-1 flex flex-col gap-4 justify-between">
               <SearchableSelect 
                 id="vehicle-select"
                 nextFocusId="gdm-gc-search"
@@ -724,25 +734,24 @@ export default function GdmEntry() {
                 value={lorryDetails.vehicleId?.toString()}
                 onChange={handleVehicleChange}
                 placeholder=""
-                className="[&>div>button]:h-9 [&>div>button]:bg-slate-50/50 [&>div>button]:border-slate-200"
+                className="[&>div>button]:h-10 [&>div>button]:bg-slate-50/50 [&>div>button]:border-slate-200"
               />
               
-              {isLorryExpanded && (
-                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                   <div className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-lg border border-slate-200 shadow-inner">
-                     <div className="flex items-center gap-2">
-                       <ShieldAlert size={14} className="text-blue-500" />
-                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">License Verification</span>
+                <div className="space-y-4 pt-1 mt-1 flex-1 flex flex-col justify-between">
+                   <div className="flex flex-col gap-3 p-4 bg-slate-50/50 rounded-xl border border-slate-200 shadow-inner">
+                     <div className="flex items-center gap-2 mb-1">
+                       <ShieldAlert size={16} className="text-blue-500" />
+                       <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">License Verification</span>
                      </div>
-                     <div className="flex items-end gap-2">
-                       <DenseInput label="DL No." value={dlDetails.license} onChange={e => setDlDetails({...dlDetails, license: e.target.value})} className="flex-1 [&>input]:uppercase" />
-                       <DenseInput label="DOB" type="date" value={dlDetails.dob} onChange={e => setDlDetails({...dlDetails, dob: e.target.value})} className="w-[110px]" />
+                     <div className="flex items-end gap-3">
+                       <DenseInput label="DL No." value={dlDetails.license} onChange={e => setDlDetails({...dlDetails, license: e.target.value.toUpperCase()})} className="flex-1 [&>input]:uppercase [&>input]:h-10" />
+                       <DenseInput label="DOB" type="date" value={dlDetails.dob} onChange={e => setDlDetails({...dlDetails, dob: e.target.value})} className="w-[120px] [&>input]:h-10" />
                      </div>
                      <button 
                        type="button"
                        onClick={handleFetchDL} 
                        disabled={fetchingDl || !dlDetails.license || !dlDetails.dob}
-                       className="h-8 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-md font-bold text-xs shadow-sm hover:shadow transition-all w-full mt-1"
+                       className="h-10 mt-1 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-bold text-sm shadow-sm hover:shadow transition-all w-full"
                      >
                        {fetchingDl ? 'Verifying...' : 'Verify & Check Eligibility'}
                      </button>
@@ -788,19 +797,18 @@ export default function GdmEntry() {
                      )}
                    </div>
 
-                   <div className="flex gap-2">
-                     <DenseInput label="Driver Name" value={lorryDetails.driverName} onChange={e => setLorryDetails({...lorryDetails, driverName: e.target.value})} className="w-1/2" />
-                     <DenseInput label="Driver Phone" value={lorryDetails.driverPhone} onChange={e => setLorryDetails({...lorryDetails, driverPhone: e.target.value})} className="w-1/2" />
+                    <div className="flex gap-3">
+                     <DenseInput label="Driver Name" value={lorryDetails.driverName} onChange={e => setLorryDetails({...lorryDetails, driverName: e.target.value})} className="w-1/2 [&>input]:h-10" />
+                     <DenseInput label="Driver Phone" value={lorryDetails.driverPhone} onChange={e => setLorryDetails({...lorryDetails, driverPhone: e.target.value})} className="w-1/2 [&>input]:h-10" />
                    </div>
                 </div>
-              )}
             </div>
           </GlassCard>
         </div>
 
         {/* Delivery Memo (Right - 66%) */}
         <div className="lg:col-span-2 relative z-20">
-          <GlassCard className="relative z-20">
+          <GlassCard className="relative z-20 h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="bg-indigo-50 text-indigo-600 p-2 rounded-lg shadow-inner border border-indigo-100/50"><PackageCheck size={18} /></div>
@@ -835,18 +843,22 @@ export default function GdmEntry() {
                       }
                       setGdmCompanyMode('B');
                     }}
-                    className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${gdmCompanyMode === 'B' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-3 py-1 text-xs font-black rounded-md transition-all ${gdmCompanyMode === 'B' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     BELL
                   </button>
                 </div>
+                <button onClick={() => setIsHistoryOpen(true)} className="ml-2 flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-xs transition-colors border border-slate-200 shadow-sm">
+                  <Clock size={14} /> Recent GDMs
+                </button>
               </div>
             </div>
             
             <div className="space-y-3">
               <div className="flex gap-2">
-                <DenseInput label="GDM No" value={gdmNumberDisplay} readOnly className="w-1/2 [&>input]:font-black [&>input]:text-indigo-900 [&>input]:bg-indigo-50/50" />
-                <DenseInput label="Date" type="date" value={gdmDetails.date} onChange={e => setGdmDetails({...gdmDetails, date: e.target.value})} className="w-1/2" />
+                <DenseInput label="GDM No" value={gdmNumberDisplay} readOnly className="w-1/3 [&>input]:font-black [&>input]:text-indigo-900 [&>input]:bg-indigo-50/50" />
+                <DenseInput label="Date" type="date" value={gdmDetails.date} onChange={e => setGdmDetails({...gdmDetails, date: e.target.value})} className="w-1/3" />
+                <DenseInput label="Time" type="time" value={gdmDetails.time || ''} onChange={e => setGdmDetails({...gdmDetails, time: e.target.value})} className="w-1/3" />
               </div>
               <div className="flex gap-2">
                 <DenseInput label="From" value={gdmDetails.fromLocation} onChange={e => setGdmDetails({...gdmDetails, fromLocation: e.target.value})} className="w-1/3" />
@@ -1165,19 +1177,26 @@ export default function GdmEntry() {
                 
                 <div className="flex gap-2">
                 <button 
+                  onClick={() => handleSaveGDM('Created')} 
+                  disabled={loading || gcs.length === 0} 
+                  className="h-11 px-4 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed rounded-xl font-bold text-sm shadow-sm hover:shadow-md transform hover:-translate-y-1.5 hover:scale-105 transition-all duration-300 active:scale-95 flex items-center gap-2"
+                >
+                  <Save size={16} className={loading ? 'animate-pulse' : ''} /> Save Draft
+                </button>
+                <button 
                   onClick={handleBulkGenerateEwayBills}
                   disabled={loading || gcs.length === 0 || isCewbGenerating} 
-                  className="h-11 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-wait text-white rounded-xl font-bold text-sm shadow-sm transition-all flex items-center gap-2"
+                  className="h-11 px-4 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm shadow-md hover:shadow-xl hover:shadow-amber-500/40 transform hover:-translate-y-1.5 hover:scale-105 transition-all duration-300 active:scale-95 flex items-center gap-2"
                 >
                   {isCewbGenerating ? <Loader2 size={16} className="animate-spin" /> : <PackageCheck size={16} />} 
                   {isCewbGenerating ? 'Generating...' : 'Generate CEWB'}
                 </button>
                 <button 
-                  onClick={handleSaveGDM} 
+                  onClick={() => handleSaveGDM('Submitted')} 
                   disabled={loading || gcs.length === 0} 
-                  className="h-11 px-8 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center gap-2"
+                  className="h-11 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm shadow-md hover:shadow-xl hover:shadow-indigo-500/40 transform hover:-translate-y-1.5 hover:scale-105 transition-all duration-300 active:scale-95 flex items-center gap-2"
                 >
-                  <Save size={16} className={loading ? 'animate-pulse' : ''} /> {loading ? 'Saving...' : 'Submit Delivery Memo'}
+                  <Truck size={16} className={loading ? 'animate-pulse' : ''} /> {loading ? 'Saving...' : 'Submit Final'}
                 </button>
               </div>
             </div>
@@ -1185,61 +1204,39 @@ export default function GdmEntry() {
           </GlassCard>
       </div>
 
-      {/* RECENT DRAFTS TABLE */}
-      {recentGdms.length > 0 && (
-        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4">
-          <GlassCard className="!p-0 overflow-hidden border-indigo-100">
-            <div className="bg-gradient-to-r from-indigo-50 to-white px-5 py-4 border-b border-indigo-100/50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="bg-indigo-100 text-indigo-700 p-1.5 rounded-lg"><FileText size={16} /></div>
-                <h3 className="font-bold text-slate-800 tracking-tight">Recent Draft GDMs</h3>
-              </div>
-              <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider px-2 py-1 bg-indigo-50 rounded-md">
-                Click Edit to Modify
-              </span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                    <th className="p-3 pl-5">GDM No</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Vehicle</th>
-                    <th className="p-3">Route</th>
-                    <th className="p-3 text-center">GCs</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3 text-right pr-5">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm font-semibold text-slate-700 divide-y divide-slate-50">
-                  {recentGdms.map(gdm => (
-                    <tr key={gdm.id} className="hover:bg-indigo-50/20 transition-colors">
-                      <td className="p-3 pl-5 font-black text-indigo-700">{gdm.gdmNumber}</td>
-                      <td className="p-3 text-slate-600">{gdm.date ? new Date(gdm.date).toLocaleDateString('en-GB') : '-'}</td>
-                      <td className="p-3 font-bold text-slate-800">{gdm.vehicle?.vehicleNumber || '-'}</td>
-                      <td className="p-3 text-slate-600 text-xs">{gdm.fromLocation} → {gdm.toName === 'AS PER BILLS' ? 'Multiple' : gdm.toName}</td>
-                      <td className="p-3 text-center tabular-nums font-bold">{gdm.gcs?.length || 0}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${gdm.status === 'Created' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
-                          {gdm.status === 'Created' ? 'Draft' : gdm.status}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right pr-5">
-                        <button 
-                          onClick={() => loadGdmForEdit(gdm.id)}
-                          className="px-3 py-1 bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-md font-bold text-xs shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all active:scale-95"
-                        >
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </GlassCard>
+      {/* HISTORY DRAWER */}
+      <div className={`fixed inset-y-0 right-0 w-80 bg-white/95 backdrop-blur-xl shadow-2xl border-l border-slate-200 transform transition-transform duration-300 z-50 flex flex-col ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+           <h2 className="font-bold flex items-center gap-2 text-slate-800"><Clock size={18} className="text-indigo-500" /> Recent History</h2>
+           <button onClick={() => setIsHistoryOpen(false)} className="p-1 hover:bg-slate-200 rounded-md text-slate-500"><X size={16} /></button>
         </div>
-      )}
+        <div className="p-4 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
+           {recentGdms.map(gdm => (
+             <div key={gdm.id} className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-300 transition-colors">
+               <div className="flex justify-between items-start mb-2">
+                 <span className="font-black text-indigo-700 text-sm">{gdm.gdmNumber}</span>
+                 <span className="text-[10px] font-bold text-slate-400">{gdm.date ? new Date(gdm.date).toLocaleDateString('en-GB') : '-'}</span>
+               </div>
+               <div className="text-xs font-semibold text-slate-600 mb-2 truncate" title={`${gdm.fromLocation} → ${gdm.toName}`}>
+                 {gdm.fromLocation} &rarr; {gdm.toName === 'AS PER BILLS' ? 'Multiple' : gdm.toName}
+               </div>
+               <div className="flex justify-between items-center">
+                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${gdm.status === 'Created' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
+                   {gdm.status === 'Created' ? 'Draft' : gdm.status}
+                 </span>
+                 <div className="flex justify-end gap-2">
+                   {/* <button onClick={() => { setIsHistoryOpen(false); window.open(`/print/gdm/${gdm.id}`, '_blank'); }} className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1 shadow-sm"><Printer size={12}/> Print</button> */}
+                   <button onClick={() => { setIsHistoryOpen(false); loadGdmForEdit(gdm.id); }} className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1 shadow-sm border border-indigo-100"><Edit2 size={12}/> Edit</button>
+                 </div>
+               </div>
+             </div>
+           ))}
+           {recentGdms.length === 0 && <p className="text-sm text-slate-400 text-center mt-10 font-medium">No recent GDMs found.</p>}
+        </div>
+      </div>
+
+      {/* OVERLAY */}
+      {isHistoryOpen && <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsHistoryOpen(false)} />}
 
     </div>
   );

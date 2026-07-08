@@ -13,6 +13,12 @@
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Transport ERP</title>
+
+    <!-- Load pdfMake directly via CDN to avoid Vite bundler corruption of VFS fonts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.js"></script>
+    <script src="/vfs_fonts_times.js"></script>
+
     <style>
       /* Inline CSS for the exact moment before React loads */
       body {

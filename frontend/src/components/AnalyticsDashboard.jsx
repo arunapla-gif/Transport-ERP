@@ -10,7 +10,7 @@ export default function AnalyticsDashboard() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await api.get('/analytics/dashboard');
+        const res = await api.get('/stats/overview');
         setData(res);
       } catch (err) {
         setError(err.message || 'Failed to load analytics');

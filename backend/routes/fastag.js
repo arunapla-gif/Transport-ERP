@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const xml2js = require('xml2js');
+const { logApiUsage } = require('../utils/logger');
 const router = express.Router();
 
 // Define the API route for FASTag tracking
@@ -36,6 +37,7 @@ router.post('/track', async (req, res) => {
       return res.status(400).json({ error: response.data.message || 'Error tracking vehicle' });
     }
 
+    logApiUsage('FastagTracking', 'FASTAG_TRACK', 'Success', 1.00);
     res.json({ success: true, data: response.data.response });
   } catch (error) {
     console.error('Error in FASTag API:', error.message);
@@ -83,6 +85,7 @@ router.post('/rc', async (req, res) => {
        return res.status(400).json({ error: 'Could not parse RC details' });
     }
 
+    logApiUsage('FastagTracking', 'VAHAN_RC', 'Success', 1.00);
     res.json({ success: true, data: result.VehicleDetails });
   } catch (error) {
     console.error('Error in VAHAN API:', error.message);
@@ -137,6 +140,7 @@ router.post('/dl', async (req, res) => {
       vehicle_classes: rawData.drivingClasses ? rawData.drivingClasses.map(c => c.class) : (rawData.vehicle_classes || [])
     };
 
+    logApiUsage('FastagTracking', 'SARATHI_DL', 'Success', 1.00);
     res.json({ success: true, data: dlData, raw: rawData });
   } catch (error) {
     console.error('Error in DL API:', error.message);

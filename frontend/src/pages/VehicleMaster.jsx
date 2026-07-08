@@ -209,7 +209,7 @@ export default function VehicleMaster() {
                 <DenseInput 
                   label="Vehicle Number *" 
                   value={formData.vehicleNumber} 
-                  onChange={e => setFormData({...formData, vehicleNumber: e.target.value})} 
+                  onChange={e => setFormData({...formData, vehicleNumber: e.target.value.toUpperCase()})} 
                   className="flex-1 [&>input]:font-bold [&>input]:text-emerald-900 [&>input]:uppercase" 
                 />
                 <button 
@@ -364,6 +364,7 @@ export default function VehicleMaster() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-500 bg-slate-50/80 sticky top-0 backdrop-blur-md z-10 border-b border-slate-200">
               <tr>
+                <th className="px-4 py-3 font-bold uppercase tracking-wider w-12 text-center">S.No</th>
                 <th className="px-4 py-3 font-bold uppercase tracking-wider">Vehicle No</th>
                 <th className="px-4 py-3 font-bold uppercase tracking-wider">Type</th>
                 <th className="px-4 py-3 font-bold uppercase tracking-wider">Owner</th>
@@ -371,8 +372,9 @@ export default function VehicleMaster() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredVehicles.length > 0 ? filteredVehicles.map((v) => (
+              {filteredVehicles.length > 0 ? filteredVehicles.map((v, index) => (
                 <tr key={v.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-4 py-3 font-bold text-slate-400 text-center">{index + 1}</td>
                   <td className="px-4 py-3 font-bold text-emerald-700">
                     <div className="flex items-center gap-2">
                        {v.vehicleNumber}
@@ -397,7 +399,7 @@ export default function VehicleMaster() {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-slate-500 text-sm">No records found.</td>
+                  <td colSpan="6" className="px-4 py-8 text-center text-slate-500 text-sm">No records found.</td>
                 </tr>
               )}
             </tbody>
