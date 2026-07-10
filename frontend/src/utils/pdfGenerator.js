@@ -165,23 +165,23 @@ const buildPremiumLayout = (gc, copyType, companyName, companyTamil, address, ph
                     [
                       { text: gc.actualWeight || 'FIXED', rowSpan: 3, fontSize: 11, bold: true, alignment: 'center', margin: [0, 30, 0, 0] },
                       { text: 'FIXED FREIGHT', fontSize: 9, margin: [4, 6, 4, 6] },
-                      { text: totalFreight.toFixed(2), fontSize: 10, bold: true, alignment: 'right', margin: [4, 6, 4, 6] }
+                      { text: copyType === 'LORRY COPY' ? totalFreight.toFixed(2) : 'FIXED', fontSize: 10, bold: true, alignment: 'right', margin: [4, 6, 4, 6] }
                     ],
                     [
                       {},
                       { text: 'LESS: ADVANCE', fontSize: 9, margin: [4, 6, 4, 6] },
-                      { text: advance.toFixed(2), fontSize: 10, bold: true, alignment: 'right', margin: [4, 6, 4, 6] }
+                      { text: copyType === 'LORRY COPY' ? advance.toFixed(2) : 'FIXED', fontSize: 10, bold: true, alignment: 'right', margin: [4, 6, 4, 6] }
                     ],
                     [
                       {},
                       { 
                         stack: [
                           { text: 'BALANCE TO PAY', fontSize: 9, bold: true },
-                          { text: balance > 0 ? 'STATUS: TO PAY' : 'STATUS: PAID', fontSize: 10, bold: true, margin: [0, 8, 0, 0] }
+                          { text: copyType === 'LORRY COPY' ? (balance > 0 ? 'STATUS: TO PAY' : 'STATUS: PAID') : 'STATUS: FIXED', fontSize: 10, bold: true, margin: [0, 8, 0, 0] }
                         ],
                         margin: [4, 6, 4, 8] 
                       },
-                      { text: balance.toFixed(2), fontSize: 11, bold: true, alignment: 'right', margin: [4, 6, 4, 8] }
+                      { text: copyType === 'LORRY COPY' ? balance.toFixed(2) : 'FIXED', fontSize: 11, bold: true, alignment: 'right', margin: [4, 6, 4, 8] }
                     ]
                   ]
                 },
