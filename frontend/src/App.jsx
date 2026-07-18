@@ -3,6 +3,8 @@ import { api } from './api';
 import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation } from 'react-router-dom';
 import { Printer, Wifi, Database, Loader2, Truck, LogOut, AlertCircle, FileText, Package, LayoutGrid, Users, Building2, MapPin, Scale, FileQuestion, BarChart3, Settings, ShieldCheck, QrCode, FileArchive, Navigation, HandCoins, TruckIcon, Banknote } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './api/queryClient';
 
 // Lazy load all pages to drastically reduce the initial bundle size
 const SystemBoot = React.lazy(() => import('./pages/SystemBoot'));
@@ -434,53 +436,55 @@ function App() {
   }
 
   return (
-    <Router>
-      <Toaster position="top-right" toastOptions={{ duration: 3000, style: { fontWeight: 'bold' } }} />
-      <Layout role={role} onLogout={handleLogout}>
-        <React.Suspense fallback={
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-stone-200 border-t-stone-800"></div>
-          </div>
-        }>
-          <Routes>
-            <Route path="/print/gc/:id" element={<GcPrint />} />
-            <Route path="/print/gdm/:id" element={<GdmPrint />} />
-            <Route path="/print/cewb/:id" element={<CewbPrint />} />
-            <Route path="/print/gdm-combined/:id" element={<CombinedGdmPrint />} />
-            <Route path="/" element={<SystemBoot />} />
-            <Route path="/new-gc" element={<NewGcEntry />} />
-            <Route path="/legacy-rapid-entry" element={<LegacyRapidEntry />} />
-            <Route path="/warehouse-entry" element={<WarehouseEntry />} />
-            <Route path="/warehouse-statement" element={<WarehouseStatement />} />
-            <Route path="/freight-entry" element={<FreightEntry />} />
-            
-            <Route path="/lorry-hire" element={<LorryHire />} />
-            <Route path="/trip-settlement" element={<TripSettlement />} />
-            <Route path="/party-accounts" element={<PartyAccounts />} />
-            <Route path="/daily-accounts" element={<DailyAccounts />} />
-            <Route path="/godown-planner" element={<GodownPlanner />} />
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Toaster position="top-right" toastOptions={{ duration: 3000, style: { fontWeight: 'bold' } }} />
+        <Layout role={role} onLogout={handleLogout}>
+          <React.Suspense fallback={
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-stone-200 border-t-stone-800"></div>
+            </div>
+          }>
+            <Routes>
+              <Route path="/print/gc/:id" element={<GcPrint />} />
+              <Route path="/print/gdm/:id" element={<GdmPrint />} />
+              <Route path="/print/cewb/:id" element={<CewbPrint />} />
+              <Route path="/print/gdm-combined/:id" element={<CombinedGdmPrint />} />
+              <Route path="/" element={<SystemBoot />} />
+              <Route path="/new-gc" element={<NewGcEntry />} />
+              <Route path="/legacy-rapid-entry" element={<LegacyRapidEntry />} />
+              <Route path="/warehouse-entry" element={<WarehouseEntry />} />
+              <Route path="/warehouse-statement" element={<WarehouseStatement />} />
+              <Route path="/freight-entry" element={<FreightEntry />} />
+              
+              <Route path="/lorry-hire" element={<LorryHire />} />
+              <Route path="/trip-settlement" element={<TripSettlement />} />
+              <Route path="/party-accounts" element={<PartyAccounts />} />
+              <Route path="/daily-accounts" element={<DailyAccounts />} />
+              <Route path="/godown-planner" element={<GodownPlanner />} />
 
-            <Route path="/gdm" element={<GdmEntry />} />
-            <Route path="/remote-scanner" element={<RemoteScanner />} />
-            <Route path="/print-hub" element={<PrintHub />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/legacy-viewer" element={<LegacyViewer />} />
-            <Route path="/settings/usage" element={<TechnologyUsage />} />
-            <Route path="/settings/audit-logs" element={<AuditLogs />} />
-            <Route path="/settings/admin" element={<AdminDashboard />} />
-            <Route path="/masters/company" element={<CompanyMaster />} />
-            <Route path="/masters/vehicles" element={<VehicleMaster />} />
-            <Route path="/masters/godowns" element={<GodownMaster />} />
-            <Route path="/masters/units" element={<UnitMaster />} />
-            <Route path="/masters/hsn" element={<HSNMaster />} />
-            <Route path="/masters/consignors" element={<ConsignorMaster />} />
-            <Route path="/masters/consignees" element={<ConsigneeMaster />} />
-            <Route path="/qr-demo" element={<QrDemo />} />
+              <Route path="/gdm" element={<GdmEntry />} />
+              <Route path="/remote-scanner" element={<RemoteScanner />} />
+              <Route path="/print-hub" element={<PrintHub />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/legacy-viewer" element={<LegacyViewer />} />
+              <Route path="/settings/usage" element={<TechnologyUsage />} />
+              <Route path="/settings/audit-logs" element={<AuditLogs />} />
+              <Route path="/settings/admin" element={<AdminDashboard />} />
+              <Route path="/masters/company" element={<CompanyMaster />} />
+              <Route path="/masters/vehicles" element={<VehicleMaster />} />
+              <Route path="/masters/godowns" element={<GodownMaster />} />
+              <Route path="/masters/units" element={<UnitMaster />} />
+              <Route path="/masters/hsn" element={<HSNMaster />} />
+              <Route path="/masters/consignors" element={<ConsignorMaster />} />
+              <Route path="/masters/consignees" element={<ConsigneeMaster />} />
+              <Route path="/qr-demo" element={<QrDemo />} />
 
-          </Routes>
-        </React.Suspense>
-      </Layout>
-    </Router>
+            </Routes>
+          </React.Suspense>
+        </Layout>
+      </Router>
+    </QueryClientProvider>
   );
 }
 
