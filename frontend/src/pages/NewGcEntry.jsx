@@ -736,6 +736,8 @@ export default function NewGcEntry() {
     setActiveGcId(null);
     setSearchEditGc('');
     setEwayBillNo('');
+    setFetchedEwbDetails(null);
+    setIsReassigning(false);
     setGcDetails(prev => ({
       ...prev,
       date: new Date().toISOString().split('T')[0],
