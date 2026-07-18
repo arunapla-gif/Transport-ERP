@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Printer, FileText, PackageCheck, Search, CheckSquare } from 'lucide-react';
+import { Printer, FileText, PackageCheck, Search, CheckSquare, Download } from 'lucide-react';
 import { api } from '../api';
 
 export default function PrintHub() {
@@ -339,6 +339,24 @@ export default function PrintHub() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* HARDWARE PRINT AGENT SECTION */}
+      <div className="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 overflow-hidden mt-6 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div>
+          <h2 className="text-xl font-black text-white mb-2 flex items-center gap-2">
+            <Printer size={24} className="text-amber-400" />
+            Hardware Print Agent
+          </h2>
+          <p className="text-slate-400 font-medium text-sm max-w-xl">
+            To use the "Silent Hardware Print" feature without browser popups, you must run this tiny background app on your computer. Download the agent below and leave it running in the background.
+          </p>
+        </div>
+        <div className="flex gap-3 shrink-0">
+          <a href="/LocalPrintAgent.zip" download className="h-11 px-6 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2">
+            <Download size={16} /> Download Agent (Win/Mac)
+          </a>
         </div>
       </div>
 

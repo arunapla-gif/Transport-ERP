@@ -2220,6 +2220,177 @@ app.post('/api/ewaybill/regenerate', paidApiLimiter, async (req, res) => {
   }
 });
 
+// BULK VERIFY EWBs FOR GDM / GATE CHECK
+app.post('/api/ewaybill/bulk-verify', paidApiLimiter, async (req, res) => {
+  try {
+    const { ewbs } = req.body; // Array of { ewbNo, company }
+    if (!ewbs || !Array.isArray(ewbs) || ewbs.length === 0) {
+      return res.json({ results: [] });
+    }
+
+    const results = [];
+    for (const item of ewbs) {
+      if (!item.ewbNo) continue;
+      
+      const cleanEwbNo = item.ewbNo.toString().replace(/\s+/g, '');
+      if (cleanEwbNo.length !== 12) {
+         results.push({ ewbNo: item.ewbNo, error: 'Invalid 12-digit EWB Number', status: 'UNKNOWN' });
+         continue;
+      }
+      
+      try {
+        const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(item.company || 'AP');
+        
+        logApiUsage('WhiteBooks', 'Bulk Verify E-Way Bill (NIC)', 'Success', 0.10);
+        const ewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=${cleanEwbNo}`;
+        
+        const response = await fetch(ewbUrl, {
+          method: "GET",
+          headers: { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.status_cd === "1") {
+           const ewbData = data.data || data;
+           results.push({
+             ewbNo: cleanEwbNo,
+             status: ewbData.status, // 'ACT', 'REJ', 'CNL'
+             rejectStatus: ewbData.rejectStatus, // 'Y' or 'N'
+             rejectDate: ewbData.ewbRejectedDate || ewbData.rejectDate,
+             rejectReason: ewbData.rejectRemark || ewbData.rejectReasonCode || 'No Reason Provided',
+           });
+        } else {
+           results.push({ ewbNo: cleanEwbNo, error: data.error?.message || data.error?.errorDesc || 'API Failed', status: 'UNKNOWN' });
+        }
+      } catch (e) {
+         results.push({ ewbNo: cleanEwbNo, error: e.message, status: 'ERROR' });
+      }
+    }
+    
+    res.json({ results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// BULK HEAL EWBs (Phase 1 of GDM) - Moves the heavy frontend loop to the backend
+app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
+  try {
+    const { gcs, vehicleNo } = req.body;
+    if (!gcs || !Array.isArray(gcs)) return res.json({ healedGcs: [] });
+    
+    const healedGcs = [];
+    const serverPort = process.env.PORT || 5005;
+    
+    // Internal helper to calculate tax based on Prisma HSN
+    const calculateTaxFromHsn = async (gc) => {
+      let totalIgst = 0, totalCgst = 0, totalSgst = 0, totalTaxable = 0;
+      const totalInvoiceValue = parseFloat(gc.invoiceValue) || 0;
+      
+      for (const item of (gc.goods || [])) {
+        const hsnCode = item.hsn;
+        let taxRate = 18;
+        try {
+          const hsnRec = await prisma.hsn.findFirst({ where: { code: hsnCode } });
+          if (hsnRec && hsnRec.gstRate) taxRate = hsnRec.gstRate;
+        } catch (e) { /* ignore */ }
+        
+        const itemBaseValue = totalInvoiceValue / (1 + (taxRate / 100));
+        const itemTax = totalInvoiceValue - itemBaseValue;
+        totalTaxable += itemBaseValue;
+        
+        const isInterstate = gc.consignor?.state !== gc.consignee?.state;
+        if (isInterstate) {
+          totalIgst += itemTax;
+        } else {
+          totalCgst += itemTax / 2;
+          totalSgst += itemTax / 2;
+        }
+      }
+      return { totalTaxable, totalIgst, totalCgst, totalSgst };
+    };
+
+    // We use node-fetch to call our OWN internal routes to reuse the exact tested logic safely
+    const authHeader = req.headers.authorization || '';
+    
+    for (let i = 0; i < gcs.length; i++) {
+      const gc = gcs[i];
+      let currentEwb = gc.privateMark;
+      const companyStr = gc.gcNumber?.startsWith('B') ? 'BELL' : 'AP';
+      const vNo = (vehicleNo || '').replace(/[^A-Z0-9]/gi, '');
+      
+      try {
+        if (!currentEwb) {
+           // BUCKET 3: Generate
+           const taxInfo = await calculateTaxFromHsn(gc);
+           const genRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/generate?company=${companyStr}`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+             body: JSON.stringify({ company: companyStr, gcData: gc, taxInfo, vehicleNo: vNo })
+           });
+           const genData = await genRes.json();
+           if (!genRes.ok) throw new Error(genData.error || 'Generate Failed');
+           
+           currentEwb = genData.ewayBillNo;
+           await prisma.goodsConsignment.update({ where: { id: gc.id }, data: { privateMark: currentEwb } });
+        } 
+        else if (gc.ewbAge > 15) {
+           // BUCKET 2: Regenerate
+           const regRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/regenerate?company=${companyStr}`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+             body: JSON.stringify({ company: companyStr, ewbRawData: gc.ewbRawData, vehicleNo: vNo })
+           });
+           const regData = await regRes.json();
+           if (!regRes.ok) throw new Error(regData.error || 'Regenerate Failed');
+           
+           currentEwb = regData.ewayBillNo;
+           await prisma.goodsConsignment.update({ where: { id: gc.id }, data: { privateMark: currentEwb } });
+        }
+        else {
+           // BUCKET 1: Update Part B
+           const updRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/update-part-b?company=${companyStr}`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+             body: JSON.stringify({ company: companyStr, ewbNo: currentEwb, vehicleNo: vNo })
+           });
+           const updData = await updRes.json();
+           
+           if (!updRes.ok) {
+              const errorMsg = (updData.error || '').toLowerCase();
+              if (errorMsg.includes('expired') || errorMsg.includes('validity') || errorMsg.includes('343')) {
+                 // Fallback to Regenerate
+                 const regRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/regenerate?company=${companyStr}`, {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                   body: JSON.stringify({ company: companyStr, ewbRawData: gc.ewbRawData, vehicleNo: vNo })
+                 });
+                 const regData = await regRes.json();
+                 if (!regRes.ok) throw new Error(regData.error || 'Regenerate Fallback Failed');
+                 
+                 currentEwb = regData.ewayBillNo;
+                 await prisma.goodsConsignment.update({ where: { id: gc.id }, data: { privateMark: currentEwb } });
+              } else {
+                 throw new Error(updData.error || 'Part B Update Failed');
+              }
+           }
+        }
+        
+        healedGcs.push({ ...gc, privateMark: currentEwb, ewbStatus: 'Valid', ewbAge: 0 });
+      } catch (e) {
+        console.error("Internal GC Error:", e);
+        throw new Error(`GC ${gc.gcNumber} Failed: ${e.message}`);
+      }
+    }
+    
+    res.json({ healedGcs });
+  } catch (err) {
+    console.error("Bulk Heal Fatal Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
   try {
     const { company, ewbNo, vehicleNo } = req.body;
@@ -2229,7 +2400,7 @@ app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
     const updUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/vehewb?email=${encodeURIComponent(email)}`;
     
     const payload = {
-      ewbNo: Number(ewbNo),
+      ewbNo: Number(ewbNo?.toString().replace(/\s+/g, '')),
       vehicleNo: vehicleNo,
       fromPlace: "Sivakasi", // Assuming Origin
       fromState: 33, // TN Code
@@ -2312,7 +2483,7 @@ app.post('/api/ewaybill/reassign', paidApiLimiter, async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" },
       body: JSON.stringify({
-        ewbNo: parseInt(ewbNo, 10),
+        ewbNo: Number(ewbNo?.toString().replace(/\s+/g, '')),
         transporterId: targetGstin
       })
     });
@@ -2379,7 +2550,7 @@ app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
       fromPlace: fromPlace || "Sivakasi",
       fromState: 33, // Default Tamil Nadu
       transMode: "1", // Road
-      tripSheetEwbBills: ewbNos.map(no => ({ ewbNo: Number(no) }))
+      tripSheetEwbBills: ewbNos.map(no => ({ ewbNo: Number(no?.toString().replace(/\s+/g, '')) }))
     };
 
     // 3. Post to WhiteBooks CEWB URL

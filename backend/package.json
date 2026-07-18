@@ -13,6 +13,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/preset-react": "^8.0.1",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
     "axios": "^1.18.0",
@@ -22,6 +24,7 @@
     "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
     "mdb-reader": "^3.2.0",
+    "pg": "^8.22.0",
     "prisma": "^5.22.0",
     "socket.io": "^4.8.3",
     "xlsx": "^0.18.5",

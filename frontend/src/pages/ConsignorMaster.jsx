@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
@@ -41,7 +41,7 @@ const DenseSelect = ({ label, options, className = "", ...props }) => (
 );
 
 const GlassCard = ({ children, className = "" }) => (
-  <div className={`bg-white/80 backdrop-blur-2xl border border-white/60 rounded-xl p-4 shadow-[0_4px_20px_rgb(79,70,229,0.04)] relative overflow-hidden transition-all duration-300 hover:shadow-[0_4px_20px_rgb(79,70,229,0.06)] ${className}`}>
+  <div className={`bg-white border border-slate-200/60 rounded-xl p-4 shadow-sm relative overflow-hidden transition-shadow duration-300 hover:shadow-md ${className}`}>
     <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
     {children}
   </div>
@@ -223,16 +223,72 @@ export default function ConsignorMaster() {
   const oldDataCount = consignors.filter(c => c.migrationType === 'OLD_DATA_ONLY').length;
   const mergedCount = consignors.filter(c => c.migrationType === 'MERGED_NAME').length;
 
-  const filteredConsignors = consignors.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-    if (activeTab === 'API_ONLY') return matchesSearch && (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED');
-    if (activeTab === 'OLD_DATA_ONLY') return matchesSearch && c.migrationType === 'OLD_DATA_ONLY';
-    if (activeTab === 'MERGED_NAME') return matchesSearch && c.migrationType === 'MERGED_NAME';
-    return false;
-  });
+  const filteredConsignors = useMemo(() => {
+    return consignors.filter(c => {
+      const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()));
+        
+      if (activeTab === 'API_ONLY') return matchesSearch && (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED');
+      if (activeTab === 'OLD_DATA_ONLY') return matchesSearch && c.migrationType === 'OLD_DATA_ONLY';
+      if (activeTab === 'MERGED_NAME') return matchesSearch && c.migrationType === 'MERGED_NAME';
+      return false;
+    });
+  }, [consignors, searchTerm, activeTab]);
+
+  // Memoize heavy table row rendering to prevent typing lag
+  const desktopTableRows = useMemo(() => {
+    if (filteredConsignors.length === 0) {
+      return (
+        <tr>
+          <td colSpan="6" className="px-4 py-16 bg-slate-50/30">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-white shadow-sm border border-slate-100 rounded-full flex items-center justify-center mb-4 text-indigo-200">
+                <Search size={28} />
+              </div>
+              <h3 className="text-sm font-black text-slate-700">No records found</h3>
+              <p className="text-xs font-medium text-slate-400 mt-1 max-w-xs">We couldn't find any consignors matching your current filters or search criteria.</p>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+    return filteredConsignors.map((c, index) => (
+      <tr key={c.id} className={`group hover:bg-indigo-50/30 transition-all duration-200 even:bg-slate-50/50 ${c.isActive === false ? 'opacity-60 bg-slate-100/50 grayscale-[50%]' : ''}`}>
+        <td className="px-4 py-3 font-bold text-slate-400 text-center text-xs group-hover:text-indigo-400 transition-colors">{index + 1}</td>
+        <td className="px-4 py-3">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-800 text-sm group-hover:text-indigo-900 transition-colors">{c.name}</span>
+              {c.isActive === false && <span title="Archived Record" className="flex items-center justify-center bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded border border-slate-300 text-[9px] font-black shrink-0 whitespace-nowrap shadow-sm">ARCHIVED</span>}
+              {c.gstin && c.migrationType === 'GST_VERIFIED' && <span title="Fully Verified" className="flex items-center justify-center w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full border border-emerald-200 text-[10px] font-black shrink-0 shadow-sm">✓</span>}
+              {c.migrationType === 'EWB_LITE' && <span title="Partial Profile - Verify GST" className="flex items-center justify-center bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200 text-[9px] font-black shrink-0 whitespace-nowrap shadow-sm">⚠️ Lite</span>}
+            </div>
+            {c.legalName && c.legalName !== c.name && (
+              <span className="text-[10px] text-slate-500 font-semibold mt-0.5">Legal: {c.legalName}</span>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-3 text-slate-600 text-xs font-medium">
+          <div className="flex flex-col">
+            <span className="flex items-center gap-1"><MapPin size={12} className="text-slate-400"/> {c.city || '-'}</span>
+            {Array.isArray(c.addresses) && c.addresses.length > 0 && (
+              <span className="text-[9px] text-amber-600 font-black mt-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 w-fit">+{c.addresses.length} ADDR</span>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-3 text-slate-700 font-mono text-xs font-bold uppercase tracking-wider">{c.gstin || '-'}</td>
+        <td className="px-4 py-3 text-slate-600 text-xs font-medium">{c.phone || '-'}</td>
+        <td className="px-4 py-3 sticky right-0 bg-white group-even:bg-slate-50 group-hover:bg-indigo-50/90 z-10 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.03)] border-l border-slate-100 transition-colors duration-200">
+          <div className="flex justify-end gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+            {canEdit && <button onClick={() => handleEdit(c)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg border border-indigo-200/50 shadow-sm font-bold text-xs transition-all hover:scale-105 active:scale-95"><Edit2 size={12} /> Edit</button>}
+            {canDelete && c.isActive !== false && <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg border border-rose-200/50 shadow-sm font-bold text-xs transition-all hover:scale-105 active:scale-95"><Trash2 size={12} /> Archive</button>}
+            {canDelete && c.isActive === false && <button onClick={() => handleRestore(c.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg border border-emerald-200/50 shadow-sm font-bold text-xs transition-all hover:scale-105 active:scale-95">Restore</button>}
+          </div>
+        </td>
+      </tr>
+    ));
+  }, [filteredConsignors, canEdit, canDelete]);
 
   return (
     <div className="space-y-4 max-w-[1200px] mx-auto pb-10" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
@@ -315,14 +371,16 @@ export default function ConsignorMaster() {
              <button onClick={() => setActiveTab('OLD_DATA_ONLY')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'OLD_DATA_ONLY' ? 'bg-white text-rose-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Kept Old Data ({oldDataCount})</button>
              <button onClick={() => setActiveTab('MERGED_NAME')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'MERGED_NAME' ? 'bg-white text-blue-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Merged Names ({mergedCount})</button>
           </div>
-          <div className="relative w-full md:w-auto">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 md:w-3.5 md:h-3.5" />
+          <div className="relative w-full md:w-auto group">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 md:w-3.5 md:h-3.5 group-focus-within:text-indigo-500 transition-colors z-10" />
+            {/* The Glow */}
+            <div className="absolute inset-0 bg-indigo-500/20 blur-md rounded-lg opacity-0 group-focus-within:opacity-100 transition-opacity duration-500"></div>
             <input 
               type="text" 
               placeholder="Search party..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-12 md:h-8 pl-10 md:pl-9 pr-3 w-full md:w-64 border border-slate-200 rounded-xl md:rounded-lg bg-white text-base md:text-xs focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm md:shadow-none"
+              className="relative h-12 md:h-8 pl-10 md:pl-9 pr-3 w-full md:w-64 border border-slate-200 rounded-xl md:rounded-lg bg-white/90 backdrop-blur text-base md:text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm transition-all duration-300"
             />
           </div>
         </div>
@@ -368,62 +426,21 @@ export default function ConsignorMaster() {
           )}
         </div>
 
-        {/* DESKTOP TABLE VIEW */}
-        <div className="hidden md:block overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500 bg-slate-50/80 sticky top-0 backdrop-blur-md z-10 border-b border-slate-200">
+        {/* DESKTOP TABLE VIEW - PREMIUM DATA GRID */}
+        <div className="hidden md:block overflow-x-auto max-h-[500px] overflow-y-auto custom-scrollbar border border-slate-200/60 rounded-b-xl rounded-t-none">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead className="text-[11px] font-black text-slate-500 uppercase tracking-wider bg-slate-50/95 sticky top-0 backdrop-blur-xl z-20 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
               <tr>
-                <th className="px-3 py-2 font-bold uppercase tracking-wider w-12 text-center">S.No</th>
-                <th className="px-3 py-2 font-bold uppercase tracking-wider w-[40%]">Name</th>
-                <th className="px-3 py-2 font-bold uppercase tracking-wider w-[20%]">City</th>
-                <th className="px-3 py-2 font-bold uppercase tracking-wider">GSTIN</th>
-                <th className="px-3 py-2 font-bold uppercase tracking-wider">Phone</th>
-                <th className="px-3 py-2 font-bold uppercase tracking-wider text-right sticky right-0 bg-slate-50/95 backdrop-blur-md z-20 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.05)] border-l border-slate-100">Actions</th>
+                <th className="px-4 py-3 w-12 text-center border-b border-slate-200">#</th>
+                <th className="px-4 py-3 w-[40%] border-b border-slate-200">Consignor Details</th>
+                <th className="px-4 py-3 w-[20%] border-b border-slate-200">Location</th>
+                <th className="px-4 py-3 border-b border-slate-200">Tax ID (GSTIN)</th>
+                <th className="px-4 py-3 border-b border-slate-200">Contact</th>
+                <th className="px-4 py-3 text-right sticky right-0 bg-slate-50/95 backdrop-blur-xl z-30 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.05)] border-l border-b border-slate-200">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredConsignors.length > 0 ? filteredConsignors.map((c, index) => (
-                <tr key={c.id} className={`hover:bg-slate-50/80 transition-colors group ${c.isActive === false ? 'opacity-60 bg-slate-50' : ''}`}>
-                  <td className="px-3 py-3 font-bold text-slate-400 text-center">{index + 1}</td>
-                  <td className="px-4 py-3 font-medium text-slate-800">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        {c.name}
-                        {c.isActive === false && <span title="Archived Record" className="flex items-center justify-center bg-slate-200 text-slate-700 px-1.5 rounded border border-slate-300 text-[10px] font-black shrink-0 whitespace-nowrap">ARCHIVED</span>}
-                        {c.gstin && c.migrationType === 'GST_VERIFIED' && <span title="Fully Verified" className="flex items-center justify-center w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full border border-emerald-200 text-[10px] font-black shrink-0">✓</span>}
-                        {c.migrationType === 'EWB_LITE' && <span title="Partial Profile - Verify GST" className="flex items-center justify-center bg-amber-100 text-amber-700 px-1.5 rounded border border-amber-300 text-[10px] font-black shrink-0 whitespace-nowrap">⚠️ EWB Lite</span>}
-                      </div>
-                      {c.legalName && c.legalName !== c.name && (
-                        <span className="text-[11px] text-slate-500 font-medium mt-0.5">Legal: {c.legalName}</span>
-                      )}
-                      {Array.isArray(c.tradeNames) && c.tradeNames.length > 0 && c.tradeNames[0] !== c.name && (
-                        <span className="text-[11px] text-slate-500 font-medium mt-0.5">Trade: {c.tradeNames.join(', ')}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    <div className="flex flex-col">
-                      <span>{c.city || '-'}</span>
-                      {Array.isArray(c.addresses) && c.addresses.length > 0 && (
-                        <span className="text-[10px] text-amber-600 font-medium mt-0.5">+{c.addresses.length} Addr</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-slate-600 font-mono text-xs uppercase">{c.gstin || '-'}</td>
-                  <td className="px-3 py-2 text-slate-600">{c.phone || '-'}</td>
-                  <td className="px-3 py-2 sticky right-0 bg-white z-10 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.03)] border-l border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                    <div className="flex justify-end gap-2 opacity-100">
-                      {canEdit && <button onClick={() => handleEdit(c)} className="flex items-center gap-1 px-2 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md border border-blue-200 font-medium whitespace-nowrap"><Edit2 size={14} /> <span className="text-xs hidden lg:inline">Edit</span></button>}
-                      {canDelete && c.isActive !== false && <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1 px-2 py-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-md border border-amber-200 font-medium whitespace-nowrap"><Trash2 size={14} /> <span className="text-xs hidden lg:inline">Archive</span></button>}
-                      {canDelete && c.isActive === false && <button onClick={() => handleRestore(c.id)} className="flex items-center gap-1 px-2 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md border border-emerald-200 font-medium whitespace-nowrap"><span className="text-xs hidden lg:inline">Restore</span></button>}
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-slate-500 text-sm">No records found.</td>
-                </tr>
-              )}
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {desktopTableRows}
             </tbody>
           </table>
         </div>

@@ -4,7 +4,7 @@ import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
-import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp, Loader2, RefreshCw, Clock, X, Printer, Edit2 } from 'lucide-react';
+import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp, Loader2, RefreshCw, Clock, X, Printer, Edit2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -73,6 +73,7 @@ export default function GdmEntry() {
   const [activeGdmId, setActiveGdmId] = useState(null);
   const [recentGdms, setRecentGdms] = useState([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isDispatchDrawerOpen, setIsDispatchDrawerOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -96,6 +97,12 @@ export default function GdmEntry() {
   const [overallRate, setOverallRate] = useState(() => loadDraft('overallRate', ''));
   
   const [isLorryExpanded, setIsLorryExpanded] = useState(false);
+
+  // Bulk Verification State
+  const [isVerifyingEwbs, setIsVerifyingEwbs] = useState(false);
+  const [verificationResults, setVerificationResults] = useState([]);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+
 
   // Auto-Save Draft
   useEffect(() => {
@@ -390,126 +397,65 @@ export default function GdmEntry() {
     return { cases, cartons, bundles, others, total, totalFreightAmount };
   }, [gcs, freightMode, overallRate, allUnitOptions]);
 
-  const handleBulkGenerateEwayBills = async () => {
+  // Phase 1: E-Way Bill Auto-Healing (Only updates/generates EWBs)
+  const handleHealEwayBills = async () => {
+    if (!lorryDetails.vehicleId) {
+      setError('Please select a Lorry first. The vehicle number is required for E-Way Bills.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    const gcsForCewb = gcs.filter(gc => gc.includeInCewb !== false);
+    if (gcsForCewb.length === 0) return;
+    
+    setLoading(true);
+    setIsBulkGenerating(true);
+    setSuccess('Initiating Smart E-Way Bill Auto-Healing on Backend...');
+    
+    try {
+      const vNo = lorryDetails.lorryNo.replace(/[^A-Z0-9]/gi, '');
+      const res = await api.post('/ewaybill/bulk-heal', { gcs: gcsForCewb, vehicleNo: vNo });
+      
+      if (res.healedGcs) {
+        // Update the GCs array with the healed data
+        const updatedGcs = gcs.map(gc => {
+          const healed = res.healedGcs.find(h => h.id === gc.id);
+          return healed ? healed : gc;
+        });
+        setGcs(updatedGcs);
+      }
+      
+      setSuccess('Successfully bulk generated and healed all E-Way Bills!');
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.error || err.message || 'Failed to bulk generate EWBs. Check backend logs.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setLoading(false);
+      setIsBulkGenerating(false);
+    }
+  };
+
+  // Phase 2: Consolidate into CEWB
+  const handleGenerateCEWB = async () => {
     if (!lorryDetails.vehicleId) {
       setError('Please select a Lorry first. The vehicle number is required to generate the Consolidated E-Way Bill.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     
-    const gcsForCewb = gcs.filter(gc => gc.includeInCewb !== false);
-    
+    const validEwbs = gcs.filter(gc => gc.includeInCewb !== false && gc.privateMark).map(gc => gc.privateMark);
+    if (validEwbs.length === 0) {
+      setError('No valid E-Way Bills found. Please Bulk Generate E-Way Bills first.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setLoading(true);
-    setIsBulkGenerating(true);
     setIsCewbGenerating(true);
-    setSuccess('Initiating Smart E-Way Bill Auto-Healing & Generation...');
+    setSuccess('Consolidating EWBs into CEWB...');
     
     try {
-      // Helper function to calculate tax from HSN for Bucket 3
-      const calculateTaxFromHsn = async (gc) => {
-        let totalIgst = 0, totalCgst = 0, totalSgst = 0, totalTaxable = 0;
-        const totalInvoiceValue = parseFloat(gc.invoiceValue) || 0;
-        
-        for (const item of gc.goods) {
-          const hsnCode = item.hsn;
-          let taxRate = 18; // Default fallback
-          try {
-            const hsnRes = await api.get(`/hsn?q=${hsnCode}`);
-            if (hsnRes && hsnRes.gstRate) taxRate = hsnRes.gstRate;
-          } catch (e) { /* ignore */ }
-          
-          // Reverse Tax Calculation: Base Value = Total / (1 + Tax%)
-          // Assuming the entire invoice value belongs to this item for simplicity if 1 item.
-          // For multiple items, we'd distribute invoice value proportionally, but usually it's 1 item per GC.
-          const itemBaseValue = totalInvoiceValue / (1 + (taxRate / 100));
-          const itemTax = totalInvoiceValue - itemBaseValue;
-          
-          totalTaxable += itemBaseValue;
-          
-          // Interstate vs Intrastate
-          const isInterstate = gc.consignor?.state !== gc.consignee?.state;
-          if (isInterstate) {
-            totalIgst += itemTax;
-          } else {
-            totalCgst += itemTax / 2;
-            totalSgst += itemTax / 2;
-          }
-        }
-        return { totalTaxable, totalIgst, totalCgst, totalSgst };
-      };
-
-      // Phase 1: Self-Healing Bucket Sort & Fix (Sequential to avoid Government API Rate Limits)
-      const healedGcs = [];
-      for (let i = 0; i < gcsForCewb.length; i++) {
-        const gc = gcsForCewb[i];
-        let currentEwb = gc.privateMark;
-        const companyStr = gc.gcNumber?.startsWith('BELL-' ) ? 'BELL' : 'AP';
-        const vNo = lorryDetails.lorryNo.replace(/[^A-Z0-9]/gi, '');
-        
-        // BUCKET 3: Generate from scratch (No existing EWB)
-        if (!currentEwb) {
-           setSuccess(`[${i+1}/${gcsForCewb.length}] Bucket 3: Generating fresh EWB for GC ${gc.gcNumber}...`);
-           const taxInfo = await calculateTaxFromHsn(gc);
-           try {
-             const res = await api.post(`/ewaybill/generate?company=${companyStr}`, { gcData: gc, taxInfo, vehicleNo: vNo });
-             currentEwb = res.ewayBillNo;
-             await api.put(`/gcs/${gc.id}/ewb`, { privateMark: currentEwb });
-           } catch(e) { 
-             const errorMsg = e.response?.data?.error || e.message || 'Unknown error';
-             throw new Error(`Failed to Generate EWB for GC ${gc.gcNumber}: ${errorMsg}`);
-           }
-        } 
-        // BUCKET 2: Regenerate (Expired > 15 days)
-        else if (gc.ewbAge > 15) {
-           setSuccess(`[${i+1}/${gcsForCewb.length}] Bucket 2: Regenerating expired EWB ${currentEwb} for GC ${gc.gcNumber}...`);
-           try {
-             const res = await api.post(`/ewaybill/regenerate?company=${companyStr}`, { ewbRawData: gc.ewbRawData, vehicleNo: vNo });
-             currentEwb = res.ewayBillNo;
-             await api.put(`/gcs/${gc.id}/ewb`, { privateMark: currentEwb });
-           } catch(e) { 
-             const errorMsg = e.response?.data?.error || e.message || 'Unknown error';
-             throw new Error(`Failed to Regenerate EWB for GC ${gc.gcNumber}: ${errorMsg}`);
-           }
-        }
-        // BUCKET 1: Valid (<= 15 days) -> Update Part B
-        else {
-           setSuccess(`[${i+1}/${gcsForCewb.length}] Bucket 1: Updating Part B for EWB ${currentEwb}...`);
-           try {
-             await api.post(`/ewaybill/update-part-b?company=${companyStr}`, { ewbNo: currentEwb, vehicleNo: vNo });
-           } catch(e) { 
-             const errorMsg = (e.response?.data?.error || e.message || '').toLowerCase();
-             
-             // PRECISE ERROR HANDLING: Only fallback if the government says it's an expiration issue
-             // Government Error Code 343 or keywords like "expired", "validity", "lapsed"
-             if (errorMsg.includes('expired') || errorMsg.includes('validity') || errorMsg.includes('343')) {
-               console.warn(`Part B update rejected due to expiration. Falling back to Regeneration.`);
-               setSuccess(`[${i+1}/${gcsForCewb.length}] Safety Net Triggered: Regenerating EWB for GC ${gc.gcNumber}...`);
-               try {
-                 const res = await api.post(`/ewaybill/regenerate?company=${companyStr}`, { ewbRawData: gc.ewbRawData, vehicleNo: vNo });
-                 currentEwb = res.ewayBillNo;
-                 await api.put(`/gcs/${gc.id}/ewb`, { privateMark: currentEwb });
-               } catch (fallbackError) {
-                 const fallbackMsg = fallbackError.response?.data?.error || fallbackError.message;
-                 throw new Error(`Regeneration also failed for GC ${gc.gcNumber}: ${fallbackMsg}`);
-               }
-             } else {
-               // Hard Data Errors (e.g., Code 238: Invalid GSTIN, Code 227: Cancelled, Code 215: Invalid HSN)
-               // Do NOT fallback. Stop and tell the operator exactly what is broken.
-               throw new Error(`Government Portal Error for GC ${gc.gcNumber}: ${e.response?.data?.error || e.message}`);
-             }
-           }
-        }
-        
-        healedGcs.push({ ...gc, privateMark: currentEwb, ewbStatus: 'Valid', ewbAge: 0 });
-      }
-      
-      // Update UI with healed EWBs
-      setGcs(healedGcs);
-      
-      // Phase 2: Consolidate
-      setSuccess('Consolidating Healed EWBs into CEWB...');
-      const gdmEwbs = healedGcs.map(gc => gc.privateMark).filter(Boolean);
-      
       const basePayload = {
         vehicleNo: lorryDetails.lorryNo.replace(/[^A-Z0-9]/gi, ''), 
         fromPlace: gdmDetails.fromLocation,
@@ -520,13 +466,9 @@ export default function GdmEntry() {
       const generatedCewbs = [];
       const companyString = gdmCompanyMode === 'A' ? 'AP' : 'BELL';
       
-      // Generate for strictly single company mode
-      if (gdmEwbs.length > 0) {
-        const res = await api.post(`/ewaybill/cewb?company=${companyString}`, { ...basePayload, ewbNos: gdmEwbs });
-        if (res && res.cEwbNo) generatedCewbs.push(`${companyString}: ${res.cEwbNo}`);
-      }
+      const res = await api.post(`/ewaybill/cewb?company=${companyString}`, { ...basePayload, ewbNos: validEwbs });
+      if (res && res.cEwbNo) generatedCewbs.push(`${companyString}: ${res.cEwbNo}`);
       
-      // Note: We don't need to manually map setGcs valid status here since we did it above
       if (generatedCewbs.length > 0) {
         setGdmDetails(prev => ({ ...prev, cewbNumber: generatedCewbs.join(' | ') }));
       }
@@ -534,12 +476,52 @@ export default function GdmEntry() {
       setSuccess(`Successfully generated CEWBs -> ${generatedCewbs.join(' | ')}`);
       setTimeout(() => setSuccess(''), 8000);
     } catch (err) {
-      setError(err.error || err.message || 'Failed to generate CEWBs via API. One of the splits may have failed.');
+      setError(err.error || err.message || 'Failed to generate CEWBs via API.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
-      setIsBulkGenerating(false);
       setIsCewbGenerating(false);
+    }
+  };
+
+  // EWB VERIFICATION LOGIC
+  const handleVerifyEwbs = async () => {
+    if (gcs.length === 0) return;
+    
+    // Extract valid EWB numbers
+    const ewbsToVerify = gcs
+      .filter(gc => gc.ewbNumber)
+      .map(gc => ({ ewbNo: gc.ewbNumber, company: gc.gcNumber.startsWith('B') ? 'BELL' : 'AP' }));
+      
+    if (ewbsToVerify.length === 0) {
+       alert("No E-Way Bills to verify in this GDM.");
+       return;
+    }
+    
+    setIsVerifyingEwbs(true);
+    setIsVerificationModalOpen(true);
+    setVerificationResults([]);
+    
+    try {
+       const res = await api.post('/ewaybill/bulk-verify', { ewbs: ewbsToVerify });
+       
+       // Match results with GC info
+       const enrichedResults = (res.results || []).map(r => {
+          const matchingGc = gcs.find(g => g.ewbNumber === r.ewbNo);
+          return {
+             ...r,
+             gcNumber: matchingGc ? matchingGc.gcNumber : 'Unknown',
+             consigneeName: matchingGc?.consignee?.name || 'Unknown'
+          };
+       });
+       
+       setVerificationResults(enrichedResults);
+    } catch (err) {
+       console.error("Verification failed", err);
+       alert("Verification API Failed: " + err.message);
+       setIsVerificationModalOpen(false);
+    } finally {
+       setIsVerifyingEwbs(false);
     }
   };
 
@@ -700,13 +682,64 @@ export default function GdmEntry() {
   };
 
   return (
-    <div className="space-y-4 max-w-[1300px] mx-auto pb-10" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
+    <div className="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-100/50" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       
-      {/* Alerts moved to inline search bar to prevent layout shifts */}
+      {/* HEADER RIBBON */}
+      <div className="bg-white border-b border-slate-200 p-3 flex justify-between items-center shrink-0 z-20 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-800 text-lg">New GDM</span>
+            
+            {/* Strict GDM Company Toggle */}
+            <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 h-8 ml-2">
+              <button 
+                type="button"
+                onClick={() => {
+                  if (gcs.length > 0) {
+                    setError('Cannot switch company mode while GCs are loaded. Clear the list first.');
+                    setTimeout(() => setError(''), 3000);
+                    return;
+                  }
+                  setGdmCompanyMode('A');
+                }}
+                className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${gdmCompanyMode === 'A' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                AP
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  if (gcs.length > 0) {
+                    setError('Cannot switch company mode while GCs are loaded. Clear the list first.');
+                    setTimeout(() => setError(''), 3000);
+                    return;
+                  }
+                  setGdmCompanyMode('B');
+                }}
+                className={`px-3 flex items-center justify-center text-xs font-black rounded-md transition-all ${gdmCompanyMode === 'B' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                BELL
+              </button>
+            </div>
+          </div>
+        </div>
 
+        <div className="flex items-center gap-3">
+          {error && <div className="text-rose-600 font-bold text-sm flex items-center gap-1 animate-pulse"><AlertCircle size={14}/> {error}</div>}
+          {success && <div className="text-emerald-600 font-bold text-sm flex items-center gap-1">✓ {success}</div>}
+          
+          <button onClick={() => setIsHistoryOpen(true)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-xs transition-colors border border-slate-200 shadow-sm">
+            <Clock size={14} /> Recent GDMs
+          </button>
+        </div>
+      </div>
+
+      {/* MAIN SCROLLABLE CONTENT */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+        <div className="max-w-[1300px] mx-auto space-y-4 pb-10">
       
-      {/* TOP ROW: Lorry & Memo Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* TOP ROW: Lorry & Memo Details */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Lorry Details (Left - 33%) */}
         <div className="col-span-1">
           <GlassCard className="h-full flex flex-col">
@@ -809,48 +842,10 @@ export default function GdmEntry() {
         {/* Delivery Memo (Right - 66%) */}
         <div className="lg:col-span-2 relative z-20">
           <GlassCard className="relative z-20 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
               <div className="flex items-center gap-2">
                 <div className="bg-indigo-50 text-indigo-600 p-2 rounded-lg shadow-inner border border-indigo-100/50"><PackageCheck size={18} /></div>
                 <h3 className="font-bold text-lg text-slate-800 tracking-tight">Delivery Memo</h3>
-              </div>
-              
-              {/* Strict GDM Company Toggle */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">GDM Company:</span>
-                <div className="flex bg-slate-100/80 p-0.5 rounded-lg border border-slate-200 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] h-8">
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      if (gcs.length > 0) {
-                        setError('Cannot switch company mode while GCs are loaded. Clear the list first.');
-                        setTimeout(() => setError(''), 3000);
-                        return;
-                      }
-                      setGdmCompanyMode('A');
-                    }}
-                    className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${gdmCompanyMode === 'A' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    AP
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      if (gcs.length > 0) {
-                        setError('Cannot switch company mode while GCs are loaded. Clear the list first.');
-                        setTimeout(() => setError(''), 3000);
-                        return;
-                      }
-                      setGdmCompanyMode('B');
-                    }}
-                    className={`px-3 py-1 text-xs font-black rounded-md transition-all ${gdmCompanyMode === 'B' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    BELL
-                  </button>
-                </div>
-                <button onClick={() => setIsHistoryOpen(true)} className="ml-2 flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-xs transition-colors border border-slate-200 shadow-sm">
-                  <Clock size={14} /> Recent GDMs
-                </button>
               </div>
             </div>
             
@@ -1015,7 +1010,7 @@ export default function GdmEntry() {
                   </div>
                 </div>
                 <button 
-                  onClick={handleBulkGenerateEwayBills}
+                  onClick={handleHealEwayBills}
                   disabled={loading || isBulkGenerating}
                   className="h-9 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-70 disabled:cursor-wait text-white rounded-lg font-bold text-xs shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1.5"
                 >
@@ -1145,7 +1140,7 @@ export default function GdmEntry() {
             {/* Totals Footer */}
             <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 p-4 rounded-xl border">
               
-              <div className="flex gap-6">
+              <div className="flex flex-wrap gap-6">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cases</span>
                   <span className="text-2xl font-black text-indigo-900">{totals.cases}</span>
@@ -1168,40 +1163,30 @@ export default function GdmEntry() {
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Packages</span>
                   <span className="text-2xl font-black text-indigo-900">{totals.total}</span>
                 </div>
-                <div className="flex flex-col">
+                <div className="flex flex-col border-l border-slate-200 pl-4">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Freight</span>
                   <span className="text-2xl font-black text-emerald-600">₹{totals.totalFreightAmount.toFixed(2)}</span>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto mt-4 sm:mt-0 justify-between sm:justify-end">
-                
-                <div className="flex gap-2">
-                <button 
-                  onClick={() => handleSaveGDM('Created')} 
-                  disabled={loading || gcs.length === 0} 
-                  className="h-11 px-4 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed rounded-xl font-bold text-sm shadow-sm hover:shadow-md transform hover:-translate-y-1.5 hover:scale-105 transition-all duration-300 active:scale-95 flex items-center gap-2"
-                >
-                  <Save size={16} className={loading ? 'animate-pulse' : ''} /> Save Draft
-                </button>
-                <button 
-                  onClick={handleBulkGenerateEwayBills}
-                  disabled={loading || gcs.length === 0 || isCewbGenerating} 
-                  className="h-11 px-4 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm shadow-md hover:shadow-xl hover:shadow-amber-500/40 transform hover:-translate-y-1.5 hover:scale-105 transition-all duration-300 active:scale-95 flex items-center gap-2"
-                >
-                  {isCewbGenerating ? <Loader2 size={16} className="animate-spin" /> : <PackageCheck size={16} />} 
-                  {isCewbGenerating ? 'Generating...' : 'Generate CEWB'}
-                </button>
-                <button 
-                  onClick={() => handleSaveGDM('Submitted')} 
-                  disabled={loading || gcs.length === 0} 
-                  className="h-11 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm shadow-md hover:shadow-xl hover:shadow-indigo-500/40 transform hover:-translate-y-1.5 hover:scale-105 transition-all duration-300 active:scale-95 flex items-center gap-2"
-                >
-                  <Truck size={16} className={loading ? 'animate-pulse' : ''} /> {loading ? 'Saving...' : 'Submit Final'}
-                </button>
+
+              <div className="flex gap-3">
+                 <button 
+                   onClick={() => handleSaveGDM('Created')}
+                   disabled={loading || gcs.length === 0}
+                   className="h-12 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center gap-2 whitespace-nowrap border border-slate-300"
+                 >
+                   <Save size={16} className={loading ? 'animate-pulse' : ''} /> Save Draft
+                 </button>
+                 <button 
+                   onClick={() => setIsDispatchDrawerOpen(true)}
+                   className="h-12 px-6 sm:px-8 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black shadow-lg hover:shadow-xl hover:shadow-slate-500/30 transform hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-3 whitespace-nowrap"
+                 >
+                    Proceed to Dispatch <ChevronDown className="-rotate-90" size={20} />
+                 </button>
               </div>
+
             </div>
-            </div>
-          </GlassCard>
+        </GlassCard>
       </div>
 
       {/* HISTORY DRAWER */}
@@ -1236,7 +1221,189 @@ export default function GdmEntry() {
       </div>
 
       {/* OVERLAY */}
-      {isHistoryOpen && <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsHistoryOpen(false)} />}
+      {(isHistoryOpen || isDispatchDrawerOpen) && <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => { setIsHistoryOpen(false); setIsDispatchDrawerOpen(false); }} />}
+
+      {/* DISPATCH DRAWER */}
+      <div className={`fixed inset-y-0 right-0 w-full sm:w-[450px] bg-white/95 backdrop-blur-xl shadow-2xl border-l border-slate-200 transform transition-transform duration-300 z-50 flex flex-col ${isDispatchDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50/80">
+           <div>
+             <h2 className="text-2xl font-black flex items-center gap-2 text-slate-800">Dispatch Operations</h2>
+             <p className="text-xs font-bold text-slate-500 mt-1">Complete the checklist to finalize dispatch.</p>
+           </div>
+           <button onClick={() => setIsDispatchDrawerOpen(false)} className="p-2 hover:bg-slate-200 rounded-xl text-slate-500 transition-colors"><X size={20} /></button>
+        </div>
+        
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+           
+           {/* Step 1: Security & Compliance */}
+           <div className="flex flex-col gap-4 p-5 bg-white rounded-2xl shadow-sm border border-slate-200">
+             <div className="flex items-center gap-3 text-slate-700 font-black text-lg border-b border-slate-100 pb-3">
+               <ShieldAlert size={20} className="text-sky-600" />
+               <h3>Step 1: Gate-Check</h3>
+             </div>
+             <p className="text-xs font-semibold text-slate-500">Verify EWBs for validity. Auto-heal any expired or missing bills to ensure a clean slate.</p>
+             <div className="flex flex-col gap-3 mt-2">
+               <button 
+                 onClick={handleVerifyEwbs}
+                 disabled={loading || gcs.length === 0 || isVerifyingEwbs} 
+                 className="w-full h-12 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-black text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+               >
+                 {isVerifyingEwbs ? <Loader2 size={16} className="animate-spin" /> : <ShieldAlert size={16} />} 
+                 {isVerifyingEwbs ? 'Verifying...' : 'Verify Lorry EWBs'}
+               </button>
+               <button 
+                 onClick={handleHealEwayBills}
+                 disabled={loading || isBulkGenerating || gcs.length === 0}
+                 className="w-full h-12 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-black text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+               >
+                 {isBulkGenerating ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} 
+                 {isBulkGenerating ? 'Healing EWBs...' : 'Auto-Heal EWBs'}
+               </button>
+             </div>
+           </div>
+
+           {/* Step 2: Consolidation */}
+           <div className="flex flex-col gap-4 p-5 bg-white rounded-2xl shadow-sm border border-slate-200">
+             <div className="flex items-center gap-3 text-slate-700 font-black text-lg border-b border-slate-100 pb-3">
+               <PackageCheck size={20} className="text-emerald-600" />
+               <h3>Step 2: Consolidation</h3>
+             </div>
+             <p className="text-xs font-semibold text-slate-500">Combine all active E-Way Bills into a single Consolidated E-Way Bill (CEWB).</p>
+             <button 
+               onClick={handleGenerateCEWB}
+               disabled={loading || gcs.length === 0 || isCewbGenerating} 
+               className="w-full h-12 mt-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-black text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+             >
+               {isCewbGenerating ? <Loader2 size={16} className="animate-spin" /> : <PackageCheck size={16} />} 
+               {isCewbGenerating ? 'Generating...' : 'Generate CEWB via NIC API'}
+             </button>
+             
+             <div className="mt-2 pt-4 border-t border-slate-100">
+               <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 block flex items-center gap-1"><Edit2 size={10}/> Manual CEWB Override</label>
+               <input 
+                 type="text" 
+                 placeholder="Paste CEWB Number if API fails" 
+                 value={gdmDetails.cewbNumber || ''} 
+                 onChange={e => setGdmDetails({...gdmDetails, cewbNumber: e.target.value})}
+                 className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:font-medium placeholder:text-slate-400"
+               />
+             </div>
+           </div>
+
+           {/* Step 3: Execution */}
+           <div className="flex flex-col gap-4 p-5 bg-white rounded-2xl shadow-sm border border-slate-200">
+             <div className="flex items-center gap-3 text-slate-700 font-black text-lg border-b border-slate-100 pb-3">
+               <Truck size={20} className="text-indigo-600" />
+               <h3>Step 3: Final Dispatch</h3>
+             </div>
+             <p className="text-xs font-semibold text-slate-500">Save your progress as a draft, or submit the final GDM to complete dispatch.</p>
+             <div className="flex flex-col gap-3 mt-2">
+               <button 
+                 onClick={() => { setIsDispatchDrawerOpen(false); handleSaveGDM('Submitted'); }} 
+                 disabled={loading || gcs.length === 0} 
+                 className="w-full h-12 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2"
+               >
+                 <Truck size={16} className={loading ? 'animate-pulse' : ''} /> {loading ? 'Saving...' : 'Submit Final GDM'}
+               </button>
+               <button 
+                 onClick={() => { setIsDispatchDrawerOpen(false); handleSaveGDM('Created'); }} 
+                 disabled={loading || gcs.length === 0} 
+                 className="w-full h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 rounded-xl font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2"
+               >
+                 <Save size={14} className={loading ? 'animate-pulse' : ''} /> Save as Draft
+               </button>
+             </div>
+           </div>
+
+        </div>
+      </div>
+
+      {/* VERIFICATION MODAL */}
+      {isVerificationModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[90] flex justify-center items-center p-4">
+          <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="bg-sky-100 p-2 rounded-xl text-sky-600">
+                  <ShieldAlert size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-800">E-Way Bill Gate-Check</h3>
+                  <p className="text-xs font-bold text-slate-500 mt-0.5">Live status verification from NIC Server</p>
+                </div>
+              </div>
+              <button onClick={() => setIsVerificationModalOpen(false)} className="text-slate-400 hover:bg-slate-200 p-2 rounded-xl transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+               {isVerifyingEwbs ? (
+                 <div className="flex flex-col items-center justify-center p-12 gap-4">
+                    <Loader2 size={48} className="text-sky-500 animate-spin" />
+                    <p className="font-black text-slate-500 animate-pulse">Contacting NIC E-Way Bill Server...</p>
+                 </div>
+               ) : (
+                 <div className="space-y-4">
+                   {verificationResults.length === 0 ? (
+                      <div className="text-center p-8 font-bold text-slate-500">No results found.</div>
+                   ) : (
+                      verificationResults.map((res, idx) => {
+                        const isRejected = res.status === 'REJ' || res.rejectStatus === 'Y';
+                        const isCancelled = res.status === 'CNL';
+                        const isDanger = isRejected || isCancelled;
+                        
+                        return (
+                          <div key={idx} className={`p-4 rounded-2xl border-2 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${isDanger ? 'border-rose-300 bg-rose-50 shadow-md shadow-rose-100' : 'border-emerald-200 bg-emerald-50'}`}>
+                            <div className="flex flex-col gap-1">
+                               <div className="flex items-center gap-2">
+                                 <span className="font-black text-lg text-slate-800">{res.gcNumber}</span>
+                                 <span className="text-xs font-bold bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-500">EWB: {res.ewbNo}</span>
+                               </div>
+                               <span className="text-sm font-bold text-slate-600">{res.consigneeName}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                               {isDanger ? (
+                                  <div className="flex flex-col items-end">
+                                    <div className="bg-rose-600 text-white px-3 py-1 rounded-lg font-black text-xs uppercase animate-pulse flex items-center gap-1 shadow-sm">
+                                      <ShieldAlert size={14} /> {isRejected ? 'REJECTED BY CONSIGNEE' : 'CANCELLED'}
+                                    </div>
+                                    <div className="text-xs font-bold text-rose-700 mt-2 bg-white px-2 py-1 rounded border border-rose-200 shadow-sm">
+                                      <span className="opacity-70">Reason:</span> {res.rejectReason || 'N/A'}
+                                    </div>
+                                    <div className="text-[10px] font-bold text-rose-500 mt-1">
+                                      <span className="opacity-70">Date:</span> {res.rejectDate || 'Unknown'}
+                                    </div>
+                                  </div>
+                               ) : (
+                                  <div className="bg-emerald-500 text-white px-3 py-1 rounded-lg font-black text-xs uppercase flex items-center gap-1 shadow-sm">
+                                    <PackageCheck size={14} /> SAFE (ACTIVE)
+                                  </div>
+                               )}
+                            </div>
+                          </div>
+                        );
+                      })
+                   )}
+                 </div>
+               )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+               <button 
+                  onClick={() => setIsVerificationModalOpen(false)} 
+                  className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold shadow-sm transition-colors"
+               >
+                  Close Gate-Check
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+        </div>
+      </div>
 
     </div>
   );

@@ -26,15 +26,18 @@ export function useKeyboardFlow(options = {}) {
 
         const focusableSelector = 'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])';
 
-        const focusableElements = Array.from(
-          document.querySelectorAll(focusableSelector)
-        ).filter(el => {
-           return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-        });
-
+        const focusableElements = Array.from(document.querySelectorAll(focusableSelector));
         const currentIndex = focusableElements.indexOf(target);
-        if (currentIndex > -1 && currentIndex < focusableElements.length - 1) {
-          focusableElements[currentIndex + 1].focus();
+        
+        if (currentIndex > -1) {
+          for (let i = currentIndex + 1; i < focusableElements.length; i++) {
+            const el = focusableElements[i];
+            // Fast visibility check (offsetParent is null if display:none)
+            if (el.offsetParent !== null) {
+              el.focus();
+              break;
+            }
+          }
         }
       }
     };

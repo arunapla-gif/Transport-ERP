@@ -1,0 +1,238 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "x-ibm-name": "posting-notification-mocks-apigw",
+    "title": "Posting notification",
+    "version": "1.0.0",
+    "description": "This API is part of virtual account product. It is used to send receipt entry notification for funds received from client."
+  },
+  "schemes": [
+    "https"
+  ],
+  "basePath": "/gateway/api/v1",
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "clientIdHeader": {
+      "description": "clientIdHeader to pass the client id from the API keys shared. Used for Authentication and Authorization",
+      "in": "header",
+      "name": "X-IBM-Client-Id",
+      "type": "apiKey"
+    },
+    "clientIdSecret": {
+      "description": "clientIdSecret header to pass the client secret from the API keys shared. Used for Authentication and Authorization",
+      "in": "header",
+      "name": "X-IBM-Client-Secret",
+      "type": "apiKey"
+    }
+  },
+  "security": [
+    {
+      "clientIdHeader": [],
+      "clientIdSecret": []
+    }
+  ],
+  "x-ibm-configuration": {
+    "testable": true,
+    "enforced": true,
+    "cors": {
+      "enabled": true
+    },
+    "phase": "realized",
+    "type": "rest",
+    "servers": [
+      {
+        "url": "https://apiportal.axis.bank.in/gateway/api/v1",
+        "type": [
+          "production",
+          "development"
+        ]
+      }
+    ]
+  },
+  "paths": {
+    "/posting-notification": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "200 OK",
+            "schema": {
+              "$ref": "#/definitions/PostingNotificationResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "RequestBody",
+            "required": true,
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/PostingNotificationRequest"
+            }
+          },
+          {
+            "name": "X-AXIS-TEST-ID",
+            "type": "integer",
+            "required": true,
+            "in": "header",
+            "description": "This is the test-id header. It will be used for creating the type of response that is required.",
+            "format": "int32"
+          }
+        ],
+        "description": "This API is part of virtual account product. It is used to send receipt entry notification for funds received from client. On the basis of  the X-AXIS-TEST-ID parameter, the API will respond accordingly for different conditions. For eg: 1 = Success,  2 =Authentication failure,   Others = Invalid Test Id."
+      }
+    }
+  },
+  "definitions": {
+    "SubHeader": {
+      "properties": {
+        "requestUUID": {
+          "type": "string",
+          "example": "OCR123",
+          "description": "Unique alphanumeric ID (without special characters) from the source system, max length = 20"
+        },
+        "serviceRequestId": {
+          "type": "string",
+          "example": "OCR",
+          "description": "Unique alphanumeric ID (without special characters) from the source system"
+        },
+        "serviceRequestVersion": {
+          "type": "string",
+          "example": "1.0",
+          "description": "Service request version configured at API Connect for the source system"
+        },
+        "channelId": {
+          "type": "string",
+          "example": "UAT",
+          "description": "Channel ID configured at API Connect for the source system"
+        }
+      },
+      "additionalProperties": false,
+      "description": "SubHeader is the common identifier and audit parameter used for all the services built in API Connect. SubHeader structure is same for both request and response bodies of an API Connect service.",
+      "required": [
+        "requestUUID",
+        "serviceRequestId",
+        "serviceRequestVersion",
+        "channelId"
+      ]
+    },
+    "PostingNotificationResponse": {
+      "description": "",
+      "type": "object",
+      "properties": {
+        "SubHeader": {
+          "$ref": "#/definitions/SubHeader"
+        },
+        "PostingNotification ResponseBody": {
+          "$ref": "#/definitions/PostingNotificationResponseBody"
+        }
+      },
+      "required": [
+        "SubHeader",
+        "PostingNotification ResponseBody"
+      ]
+    },
+    "PostingNotificationResponseBody": {
+      "description": "",
+      "type": "object",
+      "properties": {
+        "Stts_flg": {
+          "type": "string"
+        },
+        "Err_cd": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "example": {
+        "Stts_flg": "S",
+        "Err_cd": "000",
+        "message": "Success"
+      }
+    },
+    "PostingNotificationRequest": {
+      "description": "",
+      "type": "object",
+      "properties": {
+        "SubHeader": {
+          "$ref": "#/definitions/SubHeader"
+        },
+        "PostingNotificationRequestBody": {
+          "$ref": "#/definitions/PostingNotificationRequestBody"
+        }
+      },
+      "required": [
+        "SubHeader",
+        "PostingNotificationRequestBody"
+      ]
+    },
+    "PostingNotificationRequestBody": {
+      "description": "",
+      "type": "object",
+      "properties": {
+        "UTR": {
+          "type": "string"
+        },
+        "Bene_acc_no": {
+          "type": "string"
+        },
+        "Req_type": {
+          "type": "string"
+        },
+        "Req_dt_time": {
+          "type": "string"
+        },
+        "Txn_amnt": {
+          "type": "string"
+        },
+        "Corp_code": {
+          "type": "string"
+        },
+        "Pmode": {
+          "type": "string"
+        },
+        "Sndr_acnt": {
+          "type": "string"
+        },
+        "Sndr_nm": {
+          "type": "string"
+        },
+        "Sndr_acnt1": {
+          "type": "string"
+        },
+        "Sndr_nm1": {
+          "type": "string"
+        },
+        "Sndr_ifsc": {
+          "type": "string"
+        },
+        "Tran_id": {
+          "type": "string"
+        }
+      },
+      "example": {
+        "UTR": "28062021",
+        "Bene_acc_no": "NBSP123MHW987654321",
+        "Req_type": "notification",
+        "Req_dt_time": "2021-06-28T15:24:33.000Z",
+        "Txn_amnt": "49999.99",
+        "Corp_code": " NBSP ",
+        "Pmode": "NEFT",
+        "Sndr_acnt": "910910910910910",
+        "Sndr_nm": "ABC Pvt Ltd",
+        "Sndr_acnt1": "120120120120120",
+        "Sndr_nm1": "ABC Pvt Ltd",
+        "Sndr_ifsc": "HDFC0000522",
+        "Tran_id": " "
+      }
+    }
+  },
+  "tags": [],
+  "host": "apiportal.axis.bank.in"
+}

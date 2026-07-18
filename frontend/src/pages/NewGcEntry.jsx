@@ -6,44 +6,103 @@ import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
 import PrintCopiesModal from '../components/ui/PrintCopiesModal';
 import ScannerModal from '../components/ui/ScannerModal';
 import { Save, Plus, Trash2, MapPin, Building2, Receipt, Package, Wallet, FileText, Camera, AlertCircle, Clock, X, Edit2, Printer } from 'lucide-react';
+import { z } from 'zod';
 
-// Specialized compact input primitives for the Premium layout
-const DenseInput = ({ label, className = "", ...props }) => (
-  <div className={`flex flex-col group ${className}`}>
-    {label && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 transition-colors group-focus-within:text-indigo-600">{label}</label>}
-    <input 
-      className="w-full h-9 px-2.5 border border-slate-200 rounded-lg bg-white/50 text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 hover:border-slate-300 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" 
-      {...props} 
-    />
-  </div>
-);
-
-const DenseSelect = ({ label, options, className = "", ...props }) => (
-  <div className={`flex flex-col group ${className}`}>
-    {label && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 transition-colors group-focus-within:text-indigo-600">{label}</label>}
-    <select 
-      className="w-full h-9 px-2.5 border border-slate-200 rounded-lg bg-white/50 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 hover:border-slate-300 transition-all appearance-none cursor-pointer shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" 
-      {...props}
-    >
-      {options.map((opt, i) => (
-        <option key={i} value={opt.value || opt}>{opt.label || opt}</option>
-      ))}
-    </select>
-  </div>
-);
-
-// Overriding SearchableSelect classes for premium dense layout
-const denseSearchableSelectClass = "[&>label]:!text-[10px] [&>label]:!font-bold [&>label]:!text-slate-500 [&>label]:!mb-0.5 [&>div:nth-of-type(1)]:!h-9 [&>div:nth-of-type(1)]:!min-h-0 [&>div:nth-of-type(1)]:!py-0 [&>div:nth-of-type(1)]:!rounded-lg [&>div:nth-of-type(1)]:!border-slate-200 [&>div:nth-of-type(1)]:!bg-white/50 [&>div:nth-of-type(1)]:!shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] [&>div:nth-of-type(1):focus-within]:!border-indigo-500 [&>div:nth-of-type(1):focus-within]:!ring-2 [&>div:nth-of-type(1):focus-within]:!ring-indigo-500/20 [&>div:nth-of-type(1)>input]:!text-sm [&>div:nth-of-type(1)>input]:!font-medium [&>div:nth-of-type(1)>input]:!text-slate-800 [&>div:nth-of-type(1)>div]:!text-sm [&>div:nth-of-type(1)>div]:!font-medium [&>div:nth-of-type(1)>svg]:!w-4 [&>div:nth-of-type(1)>svg]:!h-4 [&:hover>div:nth-of-type(1)]:!border-slate-300 [&:focus-within>label]:!text-indigo-600 [&>label]:transition-colors";
-
-// Glassmorphic Card Wrapper Component (Tighter Padding)
-const GlassCard = ({ children, className = "" }) => (
-  <div className={`bg-white/80 backdrop-blur-2xl border border-white/60 rounded-xl p-3.5 shadow-[0_4px_20px_rgb(79,70,229,0.04)] relative overflow-visible transition-all duration-300 hover:shadow-[0_4px_20px_rgb(79,70,229,0.06)] ${className}`}>
-    <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
-    {children}
-  </div>
-);
+import { DenseInput, DenseSelect, denseSearchableSelectClass, GlassCard } from '../components/ui/DensePrimitives';
 
 import { useLocation } from 'react-router-dom';
+
+const GoodsRow = React.memo(({ item, index, isLast, branch, unitHierarchy, allUnitOptions, getUnitBadge, updateItem, addRow, removeRow, canRemove }) => {
+  return (
+    <div className={`grid ${branch === 'BNG' ? 'grid-cols-[60px_180px_100px_1fr_80px_80px_80px_60px]' : 'grid-cols-[60px_100px_180px_100px_1fr_80px]'} gap-2 p-1 rounded-lg focus-within:bg-indigo-50/50 focus-within:ring-1 focus-within:ring-indigo-500 transition-all border border-transparent`}>
+      <DenseInput type="number" autoFocus={item.isNew} value={item.articles} onChange={(e) => updateItem(item.id, { articles: e.target.value })} />
+      
+      {branch !== 'BNG' && (
+        <DenseSelect 
+          value={item.unitCategory} 
+          onChange={(e) => {
+            const newCat = e.target.value;
+            const defaultItem = unitHierarchy[newCat] ? unitHierarchy[newCat][0] : null;
+            const defaultDesc = defaultItem ? defaultItem.label : '';
+            const defaultHsn = defaultItem?.hsn || '';
+            const defaultGoodsDesc = defaultItem?.goodsDesc || '';
+            updateItem(item.id, {
+              unitCategory: newCat, 
+              units: defaultDesc,
+              hsn: (!item.hsn || item.hsn.trim() === '') ? defaultHsn : item.hsn,
+              description: (!item.description || item.description.trim() === '') ? defaultGoodsDesc : item.description
+            });
+          }} 
+          options={Object.keys(unitHierarchy).map(k => ({ value: k, label: k }))} 
+        />
+      )}
+
+      <DenseSelect 
+        value={item.units} 
+        onChange={(e) => {
+          const newUnitDesc = e.target.value;
+          const match = allUnitOptions.find(o => o.label === newUnitDesc);
+          const defaultHsn = match?.hsn || '';
+          const defaultGoodsDesc = match?.goodsDesc || '';
+          updateItem(item.id, {
+            units: newUnitDesc,
+            hsn: branch !== 'BNG' && (!item.hsn || item.hsn.trim() === '') ? defaultHsn : item.hsn,
+            description: branch !== 'BNG' && (!item.description || item.description.trim() === '') ? defaultGoodsDesc : item.description
+          });
+        }} 
+        options={branch === 'BNG' 
+          ? [ { value: '', label: 'Select...' }, ...allUnitOptions.map(u => ({ value: u.label, label: u.label })) ]
+          : (unitHierarchy[item.unitCategory || 'Cases'] || []).map(u => ({ value: u.label, label: u.label }))} 
+      />
+      <DenseInput value={item.hsn} onChange={(e) => updateItem(item.id, { hsn: e.target.value })} />
+      <div className="flex items-center gap-1 w-full">
+        <DenseInput className="flex-1" value={item.description} onChange={(e) => updateItem(item.id, { description: e.target.value })} 
+          onKeyDown={(e) => {
+            if (branch !== 'BNG' && (e.key === 'Enter' || e.key === 'Tab') && isLast) {
+              if (item.description.trim() !== '' || item.articles !== '') {
+                e.preventDefault();
+                addRow();
+              } else if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('freight-remarks')?.focus();
+              }
+            }
+          }}/>
+        {branch !== 'BNG' && getUnitBadge(item.units)}
+      </div>
+      {branch === 'BNG' && (
+        <>
+          <DenseInput type="number" value={item.weight || ''} onChange={(e) => {
+             const w = e.target.value;
+             updateItem(item.id, { weight: w, amount: (parseFloat(w) || 0) * (parseFloat(item.rate) || 0) });
+          }} />
+          <DenseInput type="number" value={item.rate || ''} onChange={(e) => {
+             const r = e.target.value;
+             updateItem(item.id, { rate: r, amount: (parseFloat(item.weight) || 0) * (parseFloat(r) || 0) });
+          }} 
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === 'Tab') && isLast) {
+              if (item.rate !== '' || item.weight !== '') {
+                e.preventDefault();
+                addRow();
+              } else if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('freight-remarks')?.focus();
+              }
+            }
+          }}/>
+          <div className="flex items-center justify-center font-mono font-bold text-sm bg-slate-50 border border-slate-200 rounded px-2">
+             {item.amount || 0}
+          </div>
+        </>
+      )}
+      <div className="flex gap-1 justify-center items-center">
+        <button type="button" tabIndex="-1" onClick={addRow} className="h-9 w-9 flex items-center justify-center bg-white hover:bg-indigo-50 rounded-lg border border-slate-200 text-slate-600 shadow-sm"><Plus size={16} /></button>
+        <button type="button" tabIndex="-1" onClick={() => removeRow(item.id)} disabled={!canRemove} className="h-9 w-9 flex items-center justify-center bg-white hover:bg-rose-50 text-slate-400 disabled:opacity-50 border border-slate-200 rounded-lg shadow-sm"><Trash2 size={16} /></button>
+      </div>
+    </div>
+  );
+});
 
 export default function NewGcEntry() {
   const { canEdit } = usePermissions();
@@ -127,9 +186,11 @@ export default function NewGcEntry() {
     freightNote: '',
   }));
 
-  // Auto-Save Draft
+  // Auto-Save Draft (Debounced)
   useEffect(() => {
-    if (!activeGcId) {
+    if (activeGcId) return;
+
+    const timeoutId = setTimeout(() => {
       const draft = {
         ewayBillNo,
         fetchedEwbDetails,
@@ -139,7 +200,9 @@ export default function NewGcEntry() {
         freight
       };
       localStorage.setItem('gcDraft', JSON.stringify(draft));
-    }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [ewayBillNo, fetchedEwbDetails, gcDetails, partyDetails, goods, freight, activeGcId]);
 
   useKeyboardFlow({ onSave: () => handleSaveGC() });
@@ -529,9 +592,13 @@ export default function NewGcEntry() {
     }));
   }, []);
 
-  const addRow = () => {
+  const updateItem = useCallback((id, updates) => {
+    setGoods(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
+  }, []);
+
+  const addRow = useCallback(() => {
     const defaultItem = unitHierarchy['Cases'] ? unitHierarchy['Cases'][0] : null;
-    setGoods([...goods, { 
+    setGoods(prev => [...prev, { 
       id: Date.now(), 
       articles: '', 
       unitCategory: branch === 'BNG' ? '' : 'Cases', 
@@ -543,15 +610,13 @@ export default function NewGcEntry() {
       amount: 0, 
       isNew: true 
     }]);
-  };
+  }, [branch, unitHierarchy]);
 
-  const removeRow = (id) => {
-    if (goods.length > 1) {
-      setGoods(goods.filter(g => g.id !== id));
-    }
-  };
+  const removeRow = useCallback((id) => {
+    setGoods(prev => prev.length > 1 ? prev.filter(g => g.id !== id) : prev);
+  }, []);
 
-  const getUnitBadge = (unitValue) => {
+  const getUnitBadge = useCallback((unitValue) => {
     const match = allUnitOptions.find(o => o.label.toLowerCase() === (unitValue || '').toLowerCase());
     if (!match) return null;
     return (
@@ -559,7 +624,7 @@ export default function NewGcEntry() {
         <span className="text-current opacity-80 mr-1">✓</span> {match.code}
       </span>
     );
-  };
+  }, [allUnitOptions]);
 
   const tally = useMemo(() => {
     let cases = 0, cartons = 0, bundles = 0, total = 0;
@@ -576,15 +641,39 @@ export default function NewGcEntry() {
   }, [goods]);
 
   const handleSaveGC = async () => {
+    // ANTI-REJECTION DEFENSE
+    if (fetchedEwbDetails && fetchedEwbDetails.rawData) {
+      if (fetchedEwbDetails.rawData.status === 'REJ') {
+        setError('CRITICAL: This E-Way Bill has been REJECTED by the Consignee. You cannot generate a GC for it.');
+        return;
+      }
+      if (fetchedEwbDetails.rawData.status === 'CNL') {
+        setError('CRITICAL: This E-Way Bill has been CANCELLED. You cannot generate a GC for it.');
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       
-      if (!partyDetails.consignorId || !partyDetails.consigneeId) {
-        throw new Error('Please select both Consignor and Consignee');
-      }
-      
-      if (branch !== 'BNG' && !gcDetails.godown) {
-        throw new Error('Godown is mandatory. Please select a Godown.');
+      const validationSchema = z.object({
+        consignorId: z.union([z.string(), z.number()]).refine(val => !!val, { message: 'Please select a Consignor' }),
+        consigneeId: z.union([z.string(), z.number()]).refine(val => !!val, { message: 'Please select a Consignee' }),
+        godown: branch !== 'BNG' ? z.string().min(1, 'Godown is mandatory. Please select a Godown.') : z.string().optional(),
+        goods: z.array(z.object({
+          articles: z.union([z.string(), z.number()]).refine(val => !!val && parseInt(val) > 0, { message: 'Quantity is required and must be > 0' }),
+        })).min(1, 'At least one item must be added')
+      });
+
+      try {
+        validationSchema.parse({
+          consignorId: partyDetails.consignorId,
+          consigneeId: partyDetails.consigneeId,
+          godown: gcDetails.godown,
+          goods: goods
+        });
+      } catch (validationError) {
+        throw new Error(validationError.errors[0].message);
       }
 
       // Calculate total amount for BNG
@@ -674,7 +763,7 @@ export default function NewGcEntry() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-60px)] max-w-[1600px] mx-auto overflow-hidden bg-slate-100/50" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
+    <div className="flex flex-col flex-1 w-full max-w-[1600px] mx-auto overflow-hidden bg-slate-100/50" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
 
       
       {/* HEADER RIBBON */}
@@ -709,9 +798,16 @@ export default function NewGcEntry() {
                    </span>
                  )}
                  {fetchedEwbDetails.rawData?.status === 'CNL' && (
-                   <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-2 py-0.5 rounded border border-rose-200 uppercase flex items-center h-8">
-                     ⚠️ CANCELED EWB
+                   <span className="bg-red-100 text-red-700 text-[10px] font-black px-2 py-0.5 rounded border border-red-300 uppercase flex items-center h-8 animate-pulse shadow-sm">
+                     🚨 CANCELED EWB
                    </span>
+                 )}
+                 {fetchedEwbDetails.rawData?.status === 'REJ' && (
+                   <div className="flex flex-col ml-2">
+                     <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded border border-red-700 uppercase flex items-center h-8 animate-pulse shadow-md">
+                       🚨 REJECTED BY CONSIGNEE!
+                     </span>
+                   </div>
                  )}
                  {fetchedEwbDetails.rawData?.status === 'ACT' && (
                    <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded border border-emerald-200 uppercase flex items-center h-8">
@@ -748,7 +844,7 @@ export default function NewGcEntry() {
         {/* LEFT COLUMN - DATA ENTRY (NOW FULL WIDTH) */}
         <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50">
           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-            <div className="max-w-6xl mx-auto space-y-6">
+            <div className="max-w-6xl mx-auto space-y-6 flex flex-col min-h-full">
             
             {/* DOC DETAILS */}
             <GlassCard>
@@ -825,7 +921,7 @@ export default function NewGcEntry() {
             </div>
 
             {/* GOODS & INVOICE */}
-            <GlassCard>
+            <GlassCard className="flex-1 flex flex-col">
                <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
                  <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2"><Package size={16} className="text-amber-500"/> Goods & Invoice Details</h3>
                  <div className="flex gap-4 items-center">
@@ -874,95 +970,20 @@ export default function NewGcEntry() {
               
               <div className="space-y-1">
                 {goods.map((item, index) => (
-                  <div key={item.id} className={`grid ${branch === 'BNG' ? 'grid-cols-[60px_180px_100px_1fr_80px_80px_80px_60px]' : 'grid-cols-[60px_100px_180px_100px_1fr_80px]'} gap-2 p-1 rounded-lg focus-within:bg-indigo-50/50 focus-within:ring-1 focus-within:ring-indigo-500 transition-all border border-transparent`}>
-                    <DenseInput type="number" autoFocus={item.isNew} value={item.articles} onChange={(e) => setGoods(goods.map(g => g.id === item.id ? {...g, articles: e.target.value} : g))} />
-                    
-                    {branch !== 'BNG' && (
-                      <DenseSelect 
-                        value={item.unitCategory} 
-                        onChange={(e) => {
-                          const newCat = e.target.value;
-                          const defaultItem = unitHierarchy[newCat] ? unitHierarchy[newCat][0] : null;
-                          const defaultDesc = defaultItem ? defaultItem.label : '';
-                          const defaultHsn = defaultItem?.hsn || '';
-                          const defaultGoodsDesc = defaultItem?.goodsDesc || '';
-                          setGoods(goods.map(g => g.id === item.id ? {
-                            ...g, 
-                            unitCategory: newCat, 
-                            units: defaultDesc,
-                            hsn: (!g.hsn || g.hsn.trim() === '') ? defaultHsn : g.hsn,
-                            description: (!g.description || g.description.trim() === '') ? defaultGoodsDesc : g.description
-                          } : g));
-                        }} 
-                        options={Object.keys(unitHierarchy).map(k => ({ value: k, label: k }))} 
-                      />
-                    )}
-
-                    <DenseSelect 
-                      value={item.units} 
-                      onChange={(e) => {
-                        const newUnitDesc = e.target.value;
-                        const match = allUnitOptions.find(o => o.label === newUnitDesc);
-                        const defaultHsn = match?.hsn || '';
-                        const defaultGoodsDesc = match?.goodsDesc || '';
-                        setGoods(goods.map(g => g.id === item.id ? {
-                          ...g, 
-                          units: newUnitDesc,
-                          hsn: branch !== 'BNG' && (!g.hsn || g.hsn.trim() === '') ? defaultHsn : g.hsn,
-                          description: branch !== 'BNG' && (!g.description || g.description.trim() === '') ? defaultGoodsDesc : g.description
-                        } : g));
-                      }} 
-                      options={branch === 'BNG' 
-                        ? [ { value: '', label: 'Select...' }, ...allUnitOptions.map(u => ({ value: u.label, label: u.label })) ]
-                        : (unitHierarchy[item.unitCategory || 'Cases'] || []).map(u => ({ value: u.label, label: u.label }))} 
-                    />
-                    <DenseInput value={item.hsn} onChange={(e) => setGoods(goods.map(g => g.id === item.id ? {...g, hsn: e.target.value} : g))} />
-                    <div className="flex items-center gap-1 w-full">
-                      <DenseInput className="flex-1" value={item.description} onChange={(e) => setGoods(goods.map(g => g.id === item.id ? {...g, description: e.target.value} : g))} 
-                        onKeyDown={(e) => {
-                          if (branch !== 'BNG' && (e.key === 'Enter' || e.key === 'Tab') && index === goods.length - 1) {
-                            if (item.description.trim() !== '' || item.articles !== '') {
-                              e.preventDefault();
-                              addRow();
-                            } else if (e.key === 'Enter') {
-                              e.preventDefault();
-                              document.getElementById('freight-remarks')?.focus();
-                            }
-                          }
-                        }}/>
-                      {branch !== 'BNG' && getUnitBadge(item.units)}
-                    </div>
-                    {branch === 'BNG' && (
-                      <>
-                        <DenseInput type="number" value={item.weight || ''} onChange={(e) => {
-                           const w = e.target.value;
-                           setGoods(goods.map(g => g.id === item.id ? {...g, weight: w, amount: (parseFloat(w) || 0) * (parseFloat(g.rate) || 0)} : g));
-                        }} />
-                        <DenseInput type="number" value={item.rate || ''} onChange={(e) => {
-                           const r = e.target.value;
-                           setGoods(goods.map(g => g.id === item.id ? {...g, rate: r, amount: (parseFloat(g.weight) || 0) * (parseFloat(r) || 0)} : g));
-                        }} 
-                        onKeyDown={(e) => {
-                          if ((e.key === 'Enter' || e.key === 'Tab') && index === goods.length - 1) {
-                            if (item.rate !== '' || item.weight !== '') {
-                              e.preventDefault();
-                              addRow();
-                            } else if (e.key === 'Enter') {
-                              e.preventDefault();
-                              document.getElementById('freight-remarks')?.focus();
-                            }
-                          }
-                        }}/>
-                        <div className="flex items-center justify-center font-mono font-bold text-sm bg-slate-50 border border-slate-200 rounded px-2">
-                           {item.amount || 0}
-                        </div>
-                      </>
-                    )}
-                    <div className="flex gap-1 justify-center items-center">
-                      <button type="button" tabIndex="-1" onClick={addRow} className="h-9 w-9 flex items-center justify-center bg-white hover:bg-indigo-50 rounded-lg border border-slate-200 text-slate-600 shadow-sm"><Plus size={16} /></button>
-                      <button type="button" tabIndex="-1" onClick={() => removeRow(item.id)} disabled={goods.length === 1} className="h-9 w-9 flex items-center justify-center bg-white hover:bg-rose-50 text-slate-400 disabled:opacity-50 border border-slate-200 rounded-lg shadow-sm"><Trash2 size={16} /></button>
-                    </div>
-                  </div>
+                  <GoodsRow 
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    isLast={index === goods.length - 1}
+                    branch={branch}
+                    unitHierarchy={unitHierarchy}
+                    allUnitOptions={allUnitOptions}
+                    getUnitBadge={getUnitBadge}
+                    updateItem={updateItem}
+                    addRow={addRow}
+                    removeRow={removeRow}
+                    canRemove={goods.length > 1}
+                  />
                 ))}
               </div>
             </GlassCard>
@@ -972,26 +993,44 @@ export default function NewGcEntry() {
         </div>
 
          {/* ACTION FOOTER STICKY (MOVED FROM RIGHT COLUMN) */}
-        <div className="p-4 bg-white border-t border-slate-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+        <div className="p-4 bg-white border-t border-slate-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 relative">
            <div className="max-w-6xl mx-auto flex items-end justify-between gap-6">
-             <div className="flex-1 flex items-center gap-6">
-               <DenseInput id="freight-remarks" label="Remarks" value={freight.freightNote} onChange={e => setFreight({...freight, freightNote: e.target.value})} className="max-w-lg w-full" />
-               {branch !== 'BNG' && (
-                 <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-bold text-[11px] uppercase tracking-wide">
-                   <div className="text-slate-500">Total: <span className="text-slate-800 text-[13px] ml-1">{tally.total}</span></div>
-                   <div className="w-px h-4 bg-slate-300"></div>
-                   <div className="text-emerald-700">C/S: <span className="text-emerald-900 text-[13px] ml-1">{tally.cases}</span></div>
-                   <div className="text-amber-700">C/N: <span className="text-amber-900 text-[13px] ml-1">{tally.cartons}</span></div>
-                   <div className="text-rose-700">BD/S: <span className="text-rose-900 text-[13px] ml-1">{tally.bundles}</span></div>
-                 </div>
-               )}
+             
+             {/* Left: Remarks */}
+             <div className="flex-1 max-w-[40%]">
+               <DenseInput id="freight-remarks" label="Remarks" value={freight.freightNote} onChange={e => setFreight({...freight, freightNote: e.target.value})} className="w-full" />
              </div>
-              <div className="flex gap-3 w-[400px]">
-               <button type="button" onClick={handleReset} className="flex-1 h-12 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-sm transition-all border border-slate-300">Reset</button>
-               <button type="button" onClick={handleSaveGC} disabled={loading || (activeGcId && !canEdit)} className="flex-[2] h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+
+             {/* Center: Totals */}
+             {branch !== 'BNG' && (
+               <div className="flex-1 flex justify-center gap-8 pb-1">
+                 <div className="flex flex-col items-center">
+                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total</span>
+                   <span className="text-xl font-black text-slate-800 leading-none">{tally.total}</span>
+                 </div>
+                 <div className="flex flex-col items-center">
+                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">C/S</span>
+                   <span className="text-xl font-black text-emerald-600 leading-none">{tally.cases}</span>
+                 </div>
+                 <div className="flex flex-col items-center">
+                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">C/N</span>
+                   <span className="text-xl font-black text-amber-600 leading-none">{tally.cartons}</span>
+                 </div>
+                 <div className="flex flex-col items-center">
+                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">BD/S</span>
+                   <span className="text-xl font-black text-rose-600 leading-none">{tally.bundles}</span>
+                 </div>
+               </div>
+             )}
+
+             {/* Right: Actions */}
+             <div className="flex-1 flex gap-3 justify-end max-w-[35%]">
+               <button type="button" onClick={handleReset} className="w-28 h-12 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-sm transition-all border border-slate-300">Reset</button>
+               <button type="button" onClick={handleSaveGC} disabled={loading || (activeGcId && !canEdit)} className="w-48 h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
                  <Save size={18} /> {loading ? 'Saving...' : (activeGcId ? 'Update GC' : 'Save GC')}
                </button>
              </div>
+
            </div>
         </div>
 

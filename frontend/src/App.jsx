@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation } from 'react-router-dom';
-import { Printer, Wifi, Database, Loader2 } from 'lucide-react';
-import { Truck } from 'lucide-react';
-import { LogOut, AlertCircle } from 'lucide-react';
+import { Printer, Wifi, Database, Loader2, Truck, LogOut, AlertCircle, FileText, Package, LayoutGrid, Users, Building2, MapPin, Scale, FileQuestion, BarChart3, Settings, ShieldCheck, QrCode, FileArchive, Navigation, HandCoins, TruckIcon, Banknote } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 // Lazy load all pages to drastically reduce the initial bundle size
@@ -38,6 +36,7 @@ const RemoteScanner = React.lazy(() => import('./pages/RemoteScanner'));
 const LegacyViewer = React.lazy(() => import('./pages/LegacyViewer'));
 const AuditLogs = React.lazy(() => import('./pages/AuditLogs'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+const QrDemo = React.lazy(() => import('./pages/QrDemo'));
 
 const SystemStatus = () => {
   const [dbStatus, setDbStatus] = useState('idle'); // idle, waking, ready, error
@@ -66,22 +65,22 @@ const SystemStatus = () => {
   }, []);
 
   return (
-    <div className="flex items-center gap-2 mx-2 px-2 py-1 rounded-lg bg-stone-900/40 border border-white/10 shadow-inner">
+    <div className="flex items-center gap-3 mx-2 h-9 px-3 rounded-lg bg-stone-900/40 border border-white/10 shadow-inner">
       {/* Network Status */}
-      <div title={isOnline ? 'Network Online' : 'Network Offline'} className={`flex items-center gap-1 ${isOnline ? 'text-emerald-400' : 'text-rose-500 animate-pulse'}`}>
-        <Wifi size={13} />
+      <div title={isOnline ? 'Network Online' : 'Network Offline'} className={`flex items-center justify-center ${isOnline ? 'text-emerald-400' : 'text-rose-500 animate-pulse'}`}>
+        <Wifi size={18} />
       </div>
       
-      <div className="w-px h-3 bg-stone-700"></div>
+      <div className="w-px h-5 bg-stone-700"></div>
 
       {/* DB Status */}
-      <div title={`Database ${dbStatus === 'idle' ? 'Connected (Idle)' : dbStatus}`} className={`flex items-center gap-1 ${
+      <div title={`Database ${dbStatus === 'idle' ? 'Connected (Idle)' : dbStatus}`} className={`flex items-center justify-center transition-all duration-300 ${
         dbStatus === 'waking' ? 'text-amber-400' :
-        dbStatus === 'ready' ? 'text-emerald-400' :
+        dbStatus === 'ready' ? 'text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.8)] scale-110' :
         dbStatus === 'error' ? 'text-rose-500' :
-        'text-blue-400'
+        'text-emerald-600'
       }`}>
-        {dbStatus === 'waking' ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
+        {dbStatus === 'waking' ? <Loader2 size={18} className="animate-spin" /> : <Database size={18} />}
       </div>
     </div>
   );
@@ -105,8 +104,8 @@ function Layout({ children, role, onLogout }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F6F0] selection:bg-stone-200 print:bg-white print:min-h-0">
-      <header className="bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white px-3 md:px-5 py-2 md:py-2.5 shadow-md border-b border-white/10 sticky top-0 z-50 flex flex-col md:flex-row justify-between items-center min-h-[52px] gap-2 md:gap-0 backdrop-blur-sm print:hidden">
+    <div className="flex flex-col h-screen w-full bg-[#F8F6F0] selection:bg-stone-200 print:bg-white print:h-auto overflow-hidden">
+      <header className="shrink-0 bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white px-3 md:px-5 py-2 md:py-2.5 shadow-md border-b border-white/10 z-50 flex flex-col md:flex-row justify-between items-center min-h-[52px] gap-2 md:gap-0 print:hidden">
         <div className="flex items-center justify-between w-full md:w-auto">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-gradient-to-br from-stone-600 to-stone-800 flex items-center justify-center shadow-inner border border-stone-500/30">
@@ -131,7 +130,7 @@ function Layout({ children, role, onLogout }) {
         </div>
 
         <nav className="flex flex-wrap justify-center gap-1.5 md:gap-2.5 items-center w-full md:w-auto pb-1 md:pb-0">
-          <Link to="/" className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] md:text-xs font-bold shadow-sm flex items-center gap-1 text-white">Dashboard</Link>
+          <Link to="/" className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] md:text-xs font-bold shadow-sm flex items-center gap-1 text-white">Home</Link>
           <div className="relative group">
             <button onClick={() => toggleMenu('warehouse')} className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] md:text-xs font-bold shadow-sm flex items-center gap-1 text-emerald-200">Warehouse <span className="text-[9px] md:text-[10px] opacity-70">▼</span></button>
             <div className={`absolute left-0 top-full pt-1.5 z-50 ${activeDropdown === 'warehouse' ? 'block' : 'hidden md:group-hover:block'}`}>
@@ -144,29 +143,118 @@ function Layout({ children, role, onLogout }) {
           
           <div className="relative group">
             <button onClick={() => toggleMenu('operations')} className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] md:text-xs font-bold shadow-sm flex items-center gap-1 text-amber-200">Entry <span className="text-[9px] md:text-[10px] opacity-70">▼</span></button>
-            <div className={`absolute right-0 md:left-0 top-full pt-1.5 z-50 ${activeDropdown === 'operations' ? 'block' : 'hidden md:group-hover:block'}`}>
-              <div className="w-40 md:w-48 bg-white shadow-xl shadow-slate-900/10 border border-slate-200 rounded-lg overflow-hidden backdrop-blur-xl">
-                <Link onClick={closeMenu} to="/new-gc" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-amber-50 hover:text-amber-700 border-b border-slate-100 font-bold transition-colors">GC Entry</Link>
-                <Link onClick={closeMenu} to="/legacy-rapid-entry" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-amber-50 hover:text-amber-700 border-b border-slate-100 font-bold transition-colors">Legacy Rapid Entry</Link>
-                <Link onClick={closeMenu} to="/gdm" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">GDM Entry</Link>
-                <Link onClick={closeMenu} to="/freight-entry" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Freight Entry</Link>
-                <Link onClick={closeMenu} to="/lorry-hire" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 border-b border-slate-100 font-bold transition-colors">Lorry Hire</Link>
-                <Link onClick={closeMenu} to="/trip-settlement" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-bold transition-colors">Trip Settlement</Link>
+            <div className={`absolute left-0 top-full pt-1.5 z-50 ${activeDropdown === 'operations' ? 'block' : 'hidden md:group-hover:block'}`}>
+              <div className="w-[420px] bg-white/95 shadow-2xl shadow-slate-900/10 border border-slate-200 rounded-2xl overflow-hidden backdrop-blur-xl p-3 grid grid-cols-2 gap-2">
+                 <div className="col-span-2 mb-1 pb-2 border-b border-slate-100 flex items-center justify-between px-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logistics Operations</span>
+                 </div>
+                 
+                 <Link onClick={closeMenu} to="/new-gc" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-500 group-hover:text-white transition-colors shadow-sm"><FileText size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">GC Entry</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Create Consignments</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/gdm" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors shadow-sm"><Package size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">GDM Entry</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Generate Delivery Memos</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/freight-entry" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors shadow-sm"><HandCoins size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Freight Entry</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Manage Income & FPA</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/lorry-hire" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-amber-500 group-hover:text-white transition-colors shadow-sm"><TruckIcon size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Lorry Hire</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Record Lorry Advances</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/trip-settlement" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-rose-50 text-rose-600 rounded-lg group-hover:bg-rose-500 group-hover:text-white transition-colors shadow-sm"><Banknote size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Trip Settlement</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Finalize Driver Expenses</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/legacy-rapid-entry" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-slate-100 text-slate-600 rounded-lg group-hover:bg-slate-600 group-hover:text-white transition-colors shadow-sm"><FileArchive size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Legacy Entry</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Rapid Old Data Input</p>
+                   </div>
+                 </Link>
               </div>
             </div>
           </div>
 
           <div className="relative group">
             <button onClick={() => toggleMenu('masters')} className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] md:text-xs font-bold shadow-sm flex items-center gap-1">Masters <span className="text-[9px] md:text-[10px] opacity-70">▼</span></button>
-            <div className={`absolute right-0 top-full pt-1.5 z-50 ${activeDropdown === 'masters' ? 'block' : 'hidden md:group-hover:block'}`}>
-              <div className="w-40 md:w-48 bg-white shadow-xl shadow-slate-900/10 border border-slate-200 rounded-lg overflow-hidden backdrop-blur-xl">
-                <Link onClick={closeMenu} to="/masters/consignors" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Consignor Master</Link>
-                <Link onClick={closeMenu} to="/masters/consignees" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Consignee Master</Link>
-                <Link onClick={closeMenu} to="/masters/vehicles" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Vehicle Master</Link>
-                <Link onClick={closeMenu} to="/masters/godowns" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Godown Master</Link>
-                <Link onClick={closeMenu} to="/masters/units" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Unit Master</Link>
-                <Link onClick={closeMenu} to="/masters/hsn" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">HSN Tax Master</Link>
-
+            <div className={`absolute left-1/2 -translate-x-1/2 top-full pt-1.5 z-50 ${activeDropdown === 'masters' ? 'block' : 'hidden md:group-hover:block'}`}>
+              <div className="w-[420px] bg-white/95 shadow-2xl shadow-slate-900/10 border border-slate-200 rounded-2xl overflow-hidden backdrop-blur-xl p-3 grid grid-cols-2 gap-2">
+                 <div className="col-span-2 mb-1 pb-2 border-b border-slate-100 flex items-center justify-between px-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Master Directories</span>
+                 </div>
+                 
+                 <Link onClick={closeMenu} to="/masters/consignors" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-500 group-hover:text-white transition-colors shadow-sm"><Building2 size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Consignors</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Sender Profiles & GST</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/masters/consignees" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors shadow-sm"><Users size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Consignees</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Receiver Profiles & GST</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/masters/vehicles" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-amber-500 group-hover:text-white transition-colors shadow-sm"><Truck size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Vehicles</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Lorry Registry & RTO</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/masters/godowns" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors shadow-sm"><LayoutGrid size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Godowns</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Warehouse Locations</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/masters/units" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-slate-100 text-slate-600 rounded-lg group-hover:bg-slate-600 group-hover:text-white transition-colors shadow-sm"><Scale size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Units</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Measurement Codes</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/masters/hsn" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-slate-100 text-slate-600 rounded-lg group-hover:bg-slate-600 group-hover:text-white transition-colors shadow-sm"><FileQuestion size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">HSN Tax</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Commodities</p>
+                   </div>
+                 </Link>
               </div>
             </div>
           </div>
@@ -174,25 +262,96 @@ function Layout({ children, role, onLogout }) {
           <div className="relative group">
             <button onClick={() => toggleMenu('reports')} className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] md:text-xs font-bold shadow-sm flex items-center gap-1">Print/Hub <span className="text-[9px] md:text-[10px] opacity-70">▼</span></button>
             <div className={`absolute right-0 top-full pt-1.5 z-50 ${activeDropdown === 'reports' ? 'block' : 'hidden md:group-hover:block'}`}>
-              <div className="w-40 md:w-48 bg-white shadow-xl shadow-slate-900/10 border border-slate-200 rounded-lg overflow-hidden backdrop-blur-xl">
-                <Link onClick={closeMenu} to="/print-hub" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Print Hub</Link>
-                <Link onClick={closeMenu} to="/reports" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Reports</Link>
-                <Link onClick={closeMenu} to="/godown-planner" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Godown Planner</Link>
-                <Link onClick={closeMenu} to="/party-accounts" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 border-b border-slate-100 font-bold transition-colors">Party Accounts</Link>
-                <Link onClick={closeMenu} to="/daily-accounts" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 font-bold transition-colors">Daily Accounts</Link>
-                <Link onClick={closeMenu} to="/legacy-viewer" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-rose-50 hover:text-rose-700 border-t border-slate-100 font-black transition-colors">Old ERP Data (MS Access)</Link>
+              <div className="w-[420px] bg-white/95 shadow-2xl shadow-slate-900/10 border border-slate-200 rounded-2xl overflow-hidden backdrop-blur-xl p-3 grid grid-cols-2 gap-2">
+                 <div className="col-span-2 mb-1 pb-2 border-b border-slate-100 flex items-center justify-between px-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reports & Print Hub</span>
+                 </div>
+                 
+                 <Link onClick={closeMenu} to="/print-hub" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-500 group-hover:text-white transition-colors shadow-sm"><Printer size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Print Hub</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Batch Print GCs & GDMs</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/reports" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors shadow-sm"><BarChart3 size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Reports</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Analytics & Extracts</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/godown-planner" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-amber-500 group-hover:text-white transition-colors shadow-sm"><Navigation size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Godown Planner</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Floor & Loading Plan</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/party-accounts" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors shadow-sm"><Users size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Party Accounts</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Customer Ledgers</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/daily-accounts" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors shadow-sm"><Database size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Daily Accounts</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Day Book & Cash</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/legacy-viewer" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-rose-50 text-rose-600 rounded-lg group-hover:bg-rose-500 group-hover:text-white transition-colors shadow-sm"><FileArchive size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Legacy Data</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Old MS Access Archive</p>
+                   </div>
+                 </Link>
               </div>
             </div>
           </div>
-
+          
           {/* SETTINGS MENU */}
           <div className="relative group">
             <button onClick={() => toggleMenu('settings')} className="px-2.5 md:px-3.5 py-1.5 rounded-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] md:text-xs font-bold shadow-sm flex items-center gap-1">Settings <span className="text-[9px] md:text-[10px] opacity-70">▼</span></button>
             <div className={`absolute right-0 top-full pt-1.5 z-50 ${activeDropdown === 'settings' ? 'block' : 'hidden md:group-hover:block'}`}>
-              <div className="w-40 md:w-48 bg-white shadow-xl shadow-slate-900/10 border border-slate-200 rounded-lg overflow-hidden backdrop-blur-xl">
-                {role === 'admin' && <Link onClick={closeMenu} to="/settings/admin" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-b border-indigo-100 font-black transition-colors">Admin Dashboard</Link>}
-                <Link onClick={closeMenu} to="/settings/audit-logs" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Audit Trails</Link>
-                <Link onClick={closeMenu} to="/settings/usage" className="block px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-b border-slate-100 font-bold transition-colors">Tech Usage</Link>
+              <div className="w-[280px] bg-white/95 shadow-2xl shadow-slate-900/10 border border-slate-200 rounded-2xl overflow-hidden backdrop-blur-xl p-3 flex flex-col gap-2">
+                 <div className="mb-1 pb-2 border-b border-slate-100 flex items-center justify-between px-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">System & Config</span>
+                 </div>
+                 
+                 {role === 'admin' && (
+                 <Link onClick={closeMenu} to="/settings/admin" className="group flex items-center gap-3 p-2.5 hover:bg-indigo-50 rounded-xl transition-all border border-transparent hover:border-indigo-100 hover:shadow-sm">
+                   <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors shadow-sm"><Settings size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-indigo-900">Admin Dashboard</h4>
+                     <p className="text-[10px] font-medium text-indigo-500 mt-0.5 leading-tight">Manage Users & Settings</p>
+                   </div>
+                 </Link>
+                 )}
+                 
+                 <Link onClick={closeMenu} to="/settings/audit-logs" className="group flex items-center gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-slate-100 text-slate-600 rounded-lg group-hover:bg-slate-600 group-hover:text-white transition-colors shadow-sm"><ShieldCheck size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Audit Trails</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">System Activity Logs</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/settings/usage" className="group flex items-center gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-slate-100 text-slate-600 rounded-lg group-hover:bg-slate-600 group-hover:text-white transition-colors shadow-sm"><Loader2 size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Tech Usage</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">API & System Metrics</p>
+                   </div>
+                 </Link>
               </div>
             </div>
           </div>
@@ -207,7 +366,7 @@ function Layout({ children, role, onLogout }) {
 
         </nav>
       </header>
-      <main className="w-full px-4 py-3">
+      <main className={`flex-1 flex flex-col w-full overflow-y-auto custom-scrollbar relative print:h-auto print:overflow-visible ${location.pathname === '/new-gc' || location.pathname === '/gdm' ? '' : 'px-4 py-4 md:px-6 md:py-6'}`}>
         {children}
       </main>
     </div>
@@ -316,6 +475,7 @@ function App() {
             <Route path="/masters/hsn" element={<HSNMaster />} />
             <Route path="/masters/consignors" element={<ConsignorMaster />} />
             <Route path="/masters/consignees" element={<ConsigneeMaster />} />
+            <Route path="/qr-demo" element={<QrDemo />} />
 
           </Routes>
         </React.Suspense>
