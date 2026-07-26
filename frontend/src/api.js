@@ -1,6 +1,8 @@
 import { toast } from 'react-hot-toast';
 
-export const API_BASE = import.meta.env?.VITE_API_URL || 'http://127.0.0.1:5005/api';
+export const API_BASE = import.meta.env.DEV 
+  ? (import.meta.env?.VITE_API_URL || 'http://127.0.0.1:5005/api')
+  : 'https://transport-erp-production.up.railway.app/api';
 
 const getHeaders = () => {
   const token = localStorage.getItem('erp_token');
