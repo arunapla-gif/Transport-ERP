@@ -41,6 +41,10 @@ export default defineConfig({
     })
   ],
   build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+      include: [/react-window/, /react-virtualized-auto-sizer/, /node_modules/]
+    },
     rollupOptions: {
       input: {
         main: 'index.html',
