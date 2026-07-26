@@ -338,7 +338,7 @@ export default function VehicleMaster() {
               }} className="h-10 px-6 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50 shadow-sm transition-all">
                 Clear Form
               </button>
-              <button type="button" onClick={handleSave} disabled={loading} className="h-10 px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg font-bold text-sm shadow-md hover:shadow-lg hover:-translate-y-[1px] active:scale-[0.98] transition-all flex items-center gap-2">
+              <button type="button" onClick={handleSave} disabled={loading} className="h-10 px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center min-w-[180px] gap-2">
                 <Save size={16} className={loading ? 'animate-pulse' : ''} /> {formData.id ? 'Update Record' : 'Save Vehicle Record'}
               </button>
             </div>
