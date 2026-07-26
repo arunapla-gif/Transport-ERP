@@ -8,21 +8,7 @@ import { Button } from '../components/ui/Button';
 import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp, Loader2, RefreshCw, Clock, X, Printer, Edit2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-    {label && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 transition-colors group-focus-within:text-indigo-600">{label}</label>}
-    <input 
-      className={`h-9 px-3 bg-slate-50/50 border border-slate-200 text-sm font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white transition-all text-slate-800 placeholder-slate-300 shadow-sm ${props.readOnly ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'hover:border-slate-300'}`}
-      {...props}
-    />
-  </div>
-);
 
-// Reusable card container
-const GlassCard = ({ children, className = "" }) => (
-  <div className={`bg-white/80 backdrop-blur-xl rounded-2xl border border-white/50 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-visible ${className}`}>
-    <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/0 pointer-events-none rounded-2xl" />
-    <div className={`relative z-10 ${className.includes('h-full') ? 'h-full flex flex-col' : ''}`}>{children}</div>
-  </div>
-);
 
 export default function GdmEntry() {
   const location = useLocation();
