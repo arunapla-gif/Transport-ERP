@@ -4,6 +4,7 @@
   "description": "Root package.json for Railway deployment",
   "scripts": {
     "build": "cd backend && npm install && npx prisma generate",
+    "vercel-build": "cd frontend && npm install && npm run build && rm -rf ../dist && cp -R dist ../dist",
     "start": "cd backend && npm start"
   },
   "engines": {
