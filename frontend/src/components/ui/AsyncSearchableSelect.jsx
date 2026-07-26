@@ -151,12 +151,12 @@ export const AsyncSearchableSelect = React.memo(function AsyncSearchableSelect({
   };
 
   return (
-    <div className={`flex flex-col relative ${className}`} ref={wrapperRef} onKeyDown={handleKeyDown}>
-      {label && <label className="text-xs font-bold tracking-wider text-slate-500 uppercase mb-1">{label}</label>}
+    <div className={`flex flex-col group relative ${className}`} ref={wrapperRef} onKeyDown={handleKeyDown}>
+      {label && <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 transition-colors group-focus-within:text-indigo-600">{label}</label>}
       
       <div 
-        className={`relative flex items-center w-full px-3 py-2 rounded-lg text-sm transition-all cursor-text
-          ${isOpen ? 'bg-white border-blue-500 ring-2 ring-blue-500/20' : 'bg-slate-50 border-slate-200 border hover:border-slate-300'}`}
+        className={`relative flex items-center w-full px-3 py-2 rounded-xl text-sm transition-all cursor-text shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]
+          ${isOpen ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20' : 'bg-slate-50 border-slate-200 border hover:border-slate-300'}`}
         onClick={() => setIsOpen(true)}
       >
         {(!isOpen && selectedOption) ? (
