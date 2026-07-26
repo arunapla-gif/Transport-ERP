@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
+import { Button } from '../components/ui/Button';
 import { Search, Calculator, FileText, CheckCircle2 } from 'lucide-react';
 
 // Specialized compact input primitives for the Premium layout
@@ -157,20 +158,22 @@ export default function FreightEntry() {
            <div className="flex flex-col">
              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Company</label>
              <div className="flex bg-slate-100/80 p-0.5 rounded-lg border border-slate-200 h-9">
-               <button 
+               <Button 
+                 variant="secondary"
                  type="button"
                  onClick={() => setCompanyMode('A')}
-                 className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${companyMode === 'A' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                 className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all h-full ${companyMode === 'A' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50' : 'bg-transparent text-slate-500 hover:text-slate-700 border-transparent'}`}
                >
                  AP
-               </button>
-               <button 
+               </Button>
+               <Button 
+                 variant="secondary"
                  type="button"
                  onClick={() => setCompanyMode('B')}
-                 className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all ${companyMode === 'B' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                 className={`px-3 flex items-center justify-center text-xs font-bold rounded-md transition-all h-full ${companyMode === 'B' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50' : 'bg-transparent text-slate-500 hover:text-slate-700 border-transparent'}`}
                >
                  BELL
-               </button>
+               </Button>
              </div>
            </div>
 
@@ -191,14 +194,15 @@ export default function FreightEntry() {
              </div>
            </div>
 
-           <button 
+           <Button 
+             variant="primary"
              type="button" 
              onClick={handleSearch} 
              disabled={loading}
-             className="h-9 px-5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs shadow-[0_2px_8px_rgba(79,70,229,0.3)] hover:shadow-[0_4px_12px_rgba(79,70,229,0.4)] transition-all flex items-center"
+             className="h-9 px-5 text-xs shadow-[0_2px_8px_rgba(79,70,229,0.3)] hover:shadow-[0_4px_12px_rgba(79,70,229,0.4)] flex items-center"
            >
              {loading && !activeGc ? 'Searching...' : 'Search GC'}
-           </button>
+           </Button>
         </div>
       </GlassCard>
 
@@ -260,12 +264,12 @@ export default function FreightEntry() {
             </div>
 
             <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100">
-               <button type="button" tabIndex="-1" onClick={() => setActiveGc(null)} className="h-9 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50 shadow-sm transition-all flex items-center">
+               <Button variant="secondary" type="button" tabIndex="-1" onClick={() => setActiveGc(null)} className="h-9 px-4 text-xs shadow-sm flex items-center">
                  Cancel
-               </button>
-               <button type="button" onClick={handleSave} disabled={loading} className="h-9 px-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs shadow-sm transition-all flex items-center gap-1.5">
+               </Button>
+               <Button variant="success" type="button" onClick={handleSave} disabled={loading} className="h-9 px-6 text-xs shadow-sm flex items-center gap-1.5">
                  <CheckCircle2 size={14} className={loading ? 'animate-pulse' : ''} /> {loading ? 'Saving...' : 'Save Freight Entry'}
-               </button>
+               </Button>
             </div>
           </GlassCard>
         </>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import { Truck, Save, CheckCircle, IndianRupee } from 'lucide-react';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { Button } from '../components/ui/Button';
 
 export default function LorryHire() {
   const [vehicles, setVehicles] = useState([]);
@@ -267,13 +268,14 @@ export default function LorryHire() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
-          <button 
+          <Button 
+            variant="primary"
             onClick={handleSaveHire} 
             disabled={loading}
-            className="px-8 h-12 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-300 text-white rounded-xl font-black shadow-[0_4px_15px_rgba(217,119,6,0.3)] transition-all flex items-center justify-center gap-2"
+            className="px-8 h-12 bg-amber-600 hover:bg-amber-500 shadow-[0_4px_15px_rgba(217,119,6,0.3)] flex items-center justify-center gap-2"
           >
             <Save size={18} /> {loading ? 'Saving...' : 'Lock Lorry Hire'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

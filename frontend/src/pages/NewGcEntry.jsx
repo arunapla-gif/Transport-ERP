@@ -9,6 +9,7 @@ import { Save, Plus, Trash2, MapPin, Building2, Receipt, Package, Wallet, FileTe
 import { z } from 'zod';
 
 import { DenseInput, DenseSelect, denseSearchableSelectClass, GlassCard } from '../components/ui/DensePrimitives';
+import { Button } from '../components/ui/Button';
 
 import { useLocation } from 'react-router-dom';
 
@@ -97,8 +98,8 @@ const GoodsRow = React.memo(({ item, index, isLast, branch, unitHierarchy, allUn
         </>
       )}
       <div className="flex gap-1 justify-center items-center">
-        <button type="button" tabIndex="-1" onClick={addRow} className="h-9 w-9 flex items-center justify-center bg-white hover:bg-indigo-50 rounded-lg border border-slate-200 text-slate-600 shadow-sm"><Plus size={16} /></button>
-        <button type="button" tabIndex="-1" onClick={() => removeRow(item.id)} disabled={!canRemove} className="h-9 w-9 flex items-center justify-center bg-white hover:bg-rose-50 text-slate-400 disabled:opacity-50 border border-slate-200 rounded-lg shadow-sm"><Trash2 size={16} /></button>
+        <Button variant="secondary" type="button" tabIndex="-1" onClick={addRow} className="h-9 w-9 p-0 flex items-center justify-center shadow-sm"><Plus size={16} /></Button>
+        <Button variant="secondary" type="button" tabIndex="-1" onClick={() => removeRow(item.id)} disabled={!canRemove} className="h-9 w-9 p-0 flex items-center justify-center text-rose-500 hover:text-rose-600 hover:bg-rose-50 shadow-sm"><Trash2 size={16} /></Button>
       </div>
     </div>
   );
@@ -781,19 +782,20 @@ export default function NewGcEntry() {
           
           <div className="flex items-center gap-2 bg-indigo-50/50 p-1 rounded-lg border border-indigo-100">
              <DenseInput placeholder="Enter E-Way Bill" value={ewayBillNo} onChange={e => { setEwayBillNo(e.target.value); setFetchedEwbDetails(null); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleEwayBillSearch(); } }} className="w-48 [&>input]:h-8" />
-             <button type="button" onClick={handleEwayBillSearch} disabled={isFetchingEwb} className="h-8 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md font-bold text-xs shadow-sm flex items-center gap-1">{isFetchingEwb ? '...' : 'Fetch EWB'}</button>
-             <button type="button" onClick={() => setIsScannerOpen(true)} className="h-8 w-8 flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 text-white rounded-md shadow-sm mr-2"><Camera size={14}/></button>
+             <Button variant="primary" type="button" onClick={handleEwayBillSearch} disabled={isFetchingEwb} className="h-8 px-3 py-0 text-xs shadow-sm flex items-center gap-1">{isFetchingEwb ? '...' : 'Fetch EWB'}</Button>
+             <Button variant="success" type="button" onClick={() => setIsScannerOpen(true)} className="h-8 w-8 p-0 flex items-center justify-center shadow-sm mr-2"><Camera size={14}/></Button>
              
              {fetchedEwbDetails && (
                <>
-                 <button 
+                 <Button 
+                   variant="secondary"
                    type="button" 
                    onClick={handleReassignTransporter} 
                    disabled={isReassigning}
-                   className="h-8 px-3 bg-amber-500 hover:bg-amber-400 text-white rounded-md font-bold text-xs shadow-sm flex items-center gap-1 border border-amber-600 transition-all"
+                   className="h-8 px-3 py-0 text-xs shadow-sm flex items-center gap-1 border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-all"
                  >
                    {isReassigning ? 'Reassigning...' : `Reassign to ${fetchedEwbDetails.company === 'BELL' ? 'AP' : 'BELL'}`}
-                 </button>
+                 </Button>
                  {fetchedEwbDetails.rawData?.status === 'DIS' && (
                    <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-2 py-0.5 rounded border border-rose-200 uppercase flex items-center h-8">
                      ⚠️ EXPIRED (Part-A Lapsed)
@@ -827,17 +829,17 @@ export default function NewGcEntry() {
           
           <div className="flex items-center gap-2 bg-amber-50/50 p-1 rounded-lg border border-amber-200 ml-4">
              <DenseInput placeholder="GC Number" value={searchEditGc} onChange={e => setSearchEditGc(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); loadGcForEdit(); } }} className="w-32 [&>input]:h-8 [&>input]:bg-white" />
-             <button type="button" onClick={loadGcForEdit} disabled={loading} className="h-8 px-3 bg-amber-500 hover:bg-amber-400 text-white rounded-md font-bold text-xs shadow-sm">Load</button>
-             <button type="button" onClick={(e) => { e.preventDefault(); if (searchEditGc) setShowPrintModal(true); }} className={`h-8 px-3 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md font-bold text-xs shadow-sm transition-all ${!searchEditGc ? 'opacity-50 pointer-events-none' : ''}`}>Print</button>
+             <Button variant="secondary" type="button" onClick={loadGcForEdit} disabled={loading} className="h-8 px-3 py-0 text-xs shadow-sm border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100">Load</Button>
+             <Button variant="secondary" type="button" onClick={(e) => { e.preventDefault(); if (searchEditGc) setShowPrintModal(true); }} className={`h-8 px-3 py-0 text-xs shadow-sm transition-all border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 ${!searchEditGc ? 'opacity-50 pointer-events-none' : ''}`}>Print</Button>
           </div>
 
           <div className="bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 text-indigo-700 font-bold text-sm flex items-center gap-2 ml-2">
             {gcDetails.companyMode === 'A' ? 'AP' : 'BELL'} - {gcDetails.gcNumber}
           </div>
           
-          <button onClick={() => setIsHistoryOpen(true)} className="ml-2 flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-xs transition-colors border border-slate-200 shadow-sm">
+          <Button variant="secondary" onClick={() => setIsHistoryOpen(true)} className="ml-2 flex items-center gap-2 h-9 px-3 py-0 text-xs shadow-sm">
             <Clock size={14} /> Recent GCs
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -880,9 +882,9 @@ export default function NewGcEntry() {
                      />
                    </div>
                    {partyDetails.consignorId && (
-                     <button type="button" onClick={() => window.open('/consignor-master', '_blank')} className="h-9 px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg flex items-center justify-center shadow-sm" title="Edit Consignor">
+                     <Button variant="icon" type="button" onClick={() => window.open('/consignor-master', '_blank')} className="h-9 w-9 p-0 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200" title="Edit Consignor">
                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                     </button>
+                     </Button>
                    )}
                  </div>
                  <div className="text-xs text-slate-500 mt-2 bg-slate-50 p-2 rounded border border-slate-100 min-h-[40px]">{partyDetails.consignorAddressPreview || 'No Address Selected'}</div>
@@ -909,9 +911,9 @@ export default function NewGcEntry() {
                      />
                    </div>
                    {partyDetails.consigneeId && (
-                     <button type="button" onClick={() => window.open('/consignee-master', '_blank')} className="h-9 px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg flex items-center justify-center shadow-sm" title="Edit Consignee">
+                     <Button variant="icon" type="button" onClick={() => window.open('/consignee-master', '_blank')} className="h-9 w-9 p-0 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200" title="Edit Consignee">
                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                     </button>
+                     </Button>
                    )}
                  </div>
                  <div className="text-xs text-slate-500 mt-2 bg-slate-50 p-2 rounded border border-slate-100 min-h-[40px]">{partyDetails.consigneeAddressPreview || 'No Address Selected'}</div>
@@ -1027,10 +1029,10 @@ export default function NewGcEntry() {
 
              {/* Right: Actions */}
              <div className="flex-1 flex gap-3 justify-end max-w-[35%]">
-               <button type="button" onClick={handleReset} className="w-28 h-12 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-sm transition-all border border-slate-300">Reset</button>
-               <button type="button" onClick={handleSaveGC} disabled={loading || (activeGcId && !canEdit)} className="w-48 h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+               <Button variant="secondary" type="button" onClick={handleReset} className="w-28 h-12 text-sm shadow-sm">Reset</Button>
+               <Button variant="primary" type="button" onClick={handleSaveGC} disabled={loading || (activeGcId && !canEdit)} className="w-48 h-12 text-sm flex items-center justify-center gap-2">
                  <Save size={18} /> {loading ? 'Saving...' : (activeGcId ? 'Update GC' : 'Save GC')}
-               </button>
+               </Button>
              </div>
 
            </div>
@@ -1058,8 +1060,8 @@ export default function NewGcEntry() {
                  {gc.consignor?.name || 'Unknown'} &rarr; {gc.consignee?.name || 'Unknown'}
                </div>
                <div className="flex justify-end gap-2 mt-2">
-                 <button onClick={() => { setIsHistoryOpen(false); setSearchEditGc(gc.gcNumber); setShowPrintModal(true); }} className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1 shadow-sm"><Printer size={12}/> Print</button>
-                 <button onClick={() => { setIsHistoryOpen(false); setSearchEditGc(gc.gcNumber); loadGcForEdit(null, gc.gcNumber); }} className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1 shadow-sm border border-indigo-100"><Edit2 size={12}/> Edit</button>
+                  <Button variant="secondary" onClick={() => { setIsHistoryOpen(false); setSearchEditGc(gc.gcNumber); setShowPrintModal(true); }} className="h-7 px-2.5 py-0 text-[11px] flex items-center gap-1 shadow-sm"><Printer size={12}/> Print</Button>
+                  <Button variant="secondary" onClick={() => { setIsHistoryOpen(false); setSearchEditGc(gc.gcNumber); loadGcForEdit(null, gc.gcNumber); }} className="h-7 px-2.5 py-0 text-[11px] flex items-center gap-1 shadow-sm border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100"><Edit2 size={12}/> Edit</Button>
                </div>
              </div>
            ))}

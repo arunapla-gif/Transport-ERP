@@ -3,6 +3,7 @@ import { api } from '../api';
 import toast from 'react-hot-toast';
 import ScannerModal from '../components/ui/ScannerModal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { Button } from '../components/ui/Button';
 import { Building2, Camera, PackageCheck, CheckCircle2, Save, Printer, Edit3, Smartphone, X } from 'lucide-react';
 
 const GlassCard = ({ children, className = "" }) => (
@@ -331,32 +332,35 @@ export default function WarehouseEntry() {
         </div>
 
         <div className="flex gap-2 w-full sm:w-auto">
-          <button 
+          <Button 
+            variant="primary"
             type="button"
             onClick={handleEwayBillSearch} 
             disabled={isFetchingEwb} 
-            className="flex-1 sm:flex-none h-14 md:h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[15px] md:text-sm shadow-[0_4px_12px_rgba(79,70,229,0.3)] hover:shadow-[0_6px_16px_rgba(79,70,229,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2"
+            className="flex-1 sm:flex-none h-14 md:h-12 px-6 text-[15px] md:text-sm flex items-center justify-center gap-2"
           >
             {isFetchingEwb ? 'Fetching...' : 'Fetch EWB'}
-          </button>
+          </Button>
           
-          <button 
+          <Button 
+            variant="secondary"
             type="button"
             onClick={startPairing}
             title="Use Phone as Scanner"
-            className="h-14 w-14 md:h-12 md:w-12 flex-shrink-0 flex items-center justify-center bg-indigo-100 hover:bg-indigo-200 text-indigo-600 rounded-xl transition-all active:scale-95"
+            className="h-14 w-14 md:h-12 md:w-12 p-0 flex-shrink-0 flex items-center justify-center text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
           >
             <Smartphone size={24} className="md:w-5 md:h-5" />
-          </button>
+          </Button>
           
-          <button 
+          <Button 
+            variant="success"
             type="button"
             onClick={() => setIsScannerOpen(true)}
             title="Scan QR or E-Way Bill"
-            className="h-14 w-14 md:h-12 md:w-12 flex-shrink-0 flex items-center justify-center bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl shadow-[0_4px_12px_rgba(16,185,129,0.3)] hover:shadow-[0_6px_16px_rgba(16,185,129,0.4)] transition-all active:scale-95"
+            className="h-14 w-14 md:h-12 md:w-12 p-0 flex-shrink-0 flex items-center justify-center"
           >
             <Camera size={24} className="md:w-5 md:h-5" />
-          </button>
+          </Button>
         </div>
       </GlassCard>
 
@@ -426,24 +430,26 @@ export default function WarehouseEntry() {
         
         <div className="mt-8 flex justify-end">
           {editingId && (
-            <button 
+            <Button 
+              variant="secondary"
               type="button"
               onClick={() => {
                 setEditingId(null);
                 setEwayBillNo(''); setConsignorName(''); setConsigneeName(''); setConsigneeCity(''); setArticles(''); setGodownNo(''); setRemarks('');
               }}
-              className="w-full sm:w-auto h-14 md:h-12 px-6 mr-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-black text-lg md:text-base transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto h-14 md:h-12 px-6 mr-3 text-lg md:text-base flex items-center justify-center gap-2"
             >
               Cancel Edit
-            </button>
+            </Button>
           )}
-          <button 
+          <Button 
+            variant="primary"
             onClick={handleInward}
             disabled={loading}
-            className={`w-full sm:w-auto h-14 md:h-12 px-10 text-white rounded-xl font-black text-lg md:text-base shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${editingId ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/30' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/30'}`}
+            className={`w-full sm:w-auto h-14 md:h-12 px-10 text-lg md:text-base flex items-center justify-center gap-2 ${editingId ? 'bg-blue-600 hover:bg-blue-500' : 'bg-emerald-600 hover:bg-emerald-500'}`}
           >
             <Save size={20} /> {loading ? 'Saving...' : (editingId ? 'Update Entry' : 'Confirm Entry')}
-          </button>
+          </Button>
         </div>
       </GlassCard>
 
@@ -460,12 +466,12 @@ export default function WarehouseEntry() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button onClick={handleEditRecent} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Edit">
+              <Button variant="icon" onClick={handleEditRecent} className="p-2 w-9 h-9 text-blue-600 bg-blue-50 hover:bg-blue-100 bg-transparent flex items-center justify-center" title="Edit">
                 <Edit3 size={16} />
-              </button>
-              <button onClick={handlePrintRecent} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors" title="Print Slip">
+              </Button>
+              <Button variant="icon" onClick={handlePrintRecent} className="p-2 w-9 h-9 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 bg-transparent flex items-center justify-center" title="Print Slip">
                 <Printer size={16} />
-              </button>
+              </Button>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -563,12 +569,13 @@ export default function WarehouseEntry() {
       {isPairing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center relative overflow-hidden animate-in zoom-in-95 duration-300">
-            <button 
+            <Button 
+              variant="icon"
               onClick={stopPairing}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              className="absolute top-4 right-4 p-2 w-9 h-9 flex items-center justify-center bg-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-100"
             >
               <X size={20} />
-            </button>
+            </Button>
             
             <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner animate-pulse">
               <Smartphone size={32} />

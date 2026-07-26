@@ -39,6 +39,7 @@ const LegacyViewer = React.lazy(() => import('./pages/LegacyViewer'));
 const AuditLogs = React.lazy(() => import('./pages/AuditLogs'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const QrDemo = React.lazy(() => import('./pages/QrDemo'));
+const GovtCompliance = React.lazy(() => import('./pages/GovtCompliance'));
 
 const SystemStatus = () => {
   const [dbStatus, setDbStatus] = useState('idle'); // idle, waking, ready, error
@@ -188,6 +189,14 @@ function Layout({ children, role, onLogout }) {
                    <div>
                      <h4 className="text-xs font-black text-slate-800">Trip Settlement</h4>
                      <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Finalize Driver Expenses</p>
+                   </div>
+                 </Link>
+                 
+                 <Link onClick={closeMenu} to="/govt-compliance" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-sky-50 text-sky-600 rounded-lg group-hover:bg-sky-500 group-hover:text-white transition-colors shadow-sm"><ShieldCheck size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Govt EWB Hub</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Master CEWB & Verify</p>
                    </div>
                  </Link>
                  
@@ -456,6 +465,7 @@ function App() {
               <Route path="/warehouse-entry" element={<WarehouseEntry />} />
               <Route path="/warehouse-statement" element={<WarehouseStatement />} />
               <Route path="/freight-entry" element={<FreightEntry />} />
+              <Route path="/govt-compliance" element={<GovtCompliance />} />
               
               <Route path="/lorry-hire" element={<LorryHire />} />
               <Route path="/trip-settlement" element={<TripSettlement />} />
