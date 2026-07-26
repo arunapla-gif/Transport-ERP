@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import { Building2, Search, Save, Edit2, Trash2, CheckCircle2 } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 const Input = ({ label, className = "", ...props }) => (
   <div className={`flex flex-col ${className}`}>
@@ -177,14 +178,15 @@ export default function CompanyMaster() {
                 onChange={e => setSearchGstin(e.target.value.toUpperCase())}
                 className="flex-1 [&>input]:font-black [&>input]:tracking-widest"
               />
-              <button 
+              <Button 
+                variant="primary"
                 type="button"
                 onClick={handleSearchGst}
                 disabled={isSearchingGst}
-                className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-all active:scale-95 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center gap-2"
+                className="h-10 px-5 flex items-center gap-2"
               >
                 {isSearchingGst ? 'Fetching...' : 'Fetch'}
-              </button>
+              </Button>
             </div>
             <p className="text-[10px] font-medium text-slate-400 mt-2">Fetches Legal Name, Address, and Status directly from NIC/WhiteBooks.</p>
           </div>
@@ -213,12 +215,12 @@ export default function CompanyMaster() {
             </div>
 
             <div className="flex gap-3 pt-4 border-t border-slate-100">
-              <button type="button" onClick={resetForm} className="h-10 px-5 bg-white border border-slate-200 text-slate-600 font-bold rounded-lg hover:bg-slate-50 transition-all flex-1">
+              <Button variant="secondary" type="button" onClick={resetForm} className="h-10 px-5 flex-1">
                 Clear
-              </button>
-              <button type="submit" disabled={loading} className="h-10 px-5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-all flex-[2] flex items-center justify-center gap-2">
+              </Button>
+              <Button variant="primary" type="submit" disabled={loading} className="h-10 px-5 flex-[2] flex items-center justify-center gap-2">
                 <Save size={16} /> {formData.id ? 'Update Company' : 'Save Company'}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -253,12 +255,12 @@ export default function CompanyMaster() {
                         <td className="p-4 font-mono text-xs">{comp.gstin}</td>
                         <td className="p-4">{comp.city}</td>
                         <td className="p-4 flex items-center justify-center gap-2">
-                          <button onClick={() => handleEdit(comp)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                          <Button variant="icon" onClick={() => handleEdit(comp)} className="p-2 bg-transparent shadow-none hover:bg-indigo-50 text-slate-400 hover:text-indigo-600">
                             <Edit2 size={16} />
-                          </button>
-                          <button onClick={() => handleDelete(comp.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                          </Button>
+                          <Button variant="iconDanger" onClick={() => handleDelete(comp.id)} className="p-2 bg-transparent shadow-none hover:bg-rose-50 text-slate-400 hover:text-rose-600">
                             <Trash2 size={16} />
-                          </button>
+                          </Button>
                         </td>
                       </tr>
                     ))

@@ -3,6 +3,7 @@ import { api } from '../api';
 import toast from 'react-hot-toast';
 import { Plus, Save, Trash2, Edit2, Package, Search } from 'lucide-react';
 import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 
 const DenseInput = ({ label, className = "", ...props }) => (
   <div className={`flex flex-col group ${className}`}>
@@ -122,22 +123,24 @@ export default function GodownMaster() {
             
             <div className="flex gap-2 h-9">
               {editingId && (
-                <button 
+                <Button 
+                  variant="secondary"
                   type="button" 
                   onClick={handleCancel}
-                  className="px-4 border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50 transition-colors"
+                  className="px-4 text-xs h-full"
                 >
                   Cancel
-                </button>
+                </Button>
               )}
-              <button 
+              <Button 
+                variant="primary"
                 type="submit" 
                 disabled={loading}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70"
+                className="flex-1 text-xs flex items-center justify-center gap-2 disabled:opacity-70 h-full py-0"
               >
                 {editingId ? <Edit2 size={14} /> : <Plus size={14} />}
                 {editingId ? 'Update Godown' : 'Add Godown'}
-              </button>
+              </Button>
             </div>
           </div>
         </form>
@@ -184,12 +187,12 @@ export default function GodownMaster() {
                     <td className="p-4 text-indigo-900 font-bold">{godown.name}</td>
                     <td className="p-4">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleEdit(godown)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors">
+                        <Button variant="icon" onClick={() => handleEdit(godown)} className="p-1.5 bg-transparent shadow-none hover:bg-indigo-50 text-slate-400 hover:text-indigo-600">
                           <Edit2 size={14} />
-                        </button>
-                        <button onClick={() => handleDelete(godown.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors">
+                        </Button>
+                        <Button variant="iconDanger" onClick={() => handleDelete(godown.id)} className="p-1.5 bg-transparent shadow-none hover:bg-rose-50 text-slate-400 hover:text-rose-600">
                           <Trash2 size={14} />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

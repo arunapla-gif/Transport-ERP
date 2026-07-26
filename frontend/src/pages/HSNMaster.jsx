@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import { Settings, Plus, Search, Trash2, Edit2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Button } from '../components/ui/Button';
 
 export default function HSNMaster() {
   const [hsnList, setHsnList] = useState([]);
@@ -84,9 +85,9 @@ export default function HSNMaster() {
           </h1>
           <p className="text-slate-500 text-sm mt-1">Manage HSN Codes and GST Rates for accurate E-Way Bill generation.</p>
         </div>
-        <button onClick={() => openModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+        <Button variant="primary" onClick={() => openModal()} className="px-4 py-2 flex items-center gap-2">
           <Plus size={18} /> Add New HSN
-        </button>
+        </Button>
       </div>
 
       {error && (
@@ -139,8 +140,8 @@ export default function HSNMaster() {
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => openModal(item)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"><Edit2 size={16} /></button>
-                          <button onClick={() => handleDelete(item.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded"><Trash2 size={16} /></button>
+                          <Button variant="icon" onClick={() => openModal(item)} className="p-1.5 bg-transparent shadow-none hover:bg-indigo-50 text-slate-400 hover:text-indigo-600"><Edit2 size={16} /></Button>
+                          <Button variant="iconDanger" onClick={() => handleDelete(item.id)} className="p-1.5 bg-transparent shadow-none hover:bg-rose-50 text-slate-400 hover:text-rose-600"><Trash2 size={16} /></Button>
                         </div>
                       </td>
                     </tr>
@@ -203,8 +204,8 @@ export default function HSNMaster() {
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-50">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">Save HSN</button>
+                <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border-slate-200">Cancel</Button>
+                <Button variant="primary" type="submit" className="flex-1 px-4 py-2">Save HSN</Button>
               </div>
             </form>
           </div>

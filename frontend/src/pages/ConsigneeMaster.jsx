@@ -3,6 +3,7 @@ import { api } from '../api';
 import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { Edit2, Trash2, MapPin, Save, Search } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 // Premium Dense Primitives
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -269,7 +270,7 @@ export default function ConsigneeMaster() {
           <DenseInput label="Legal Name" value={formData.legalName} onChange={e => setFormData({...formData, legalName: e.target.value})} />
           <div className="flex items-end gap-2 lg:col-span-3">
             <DenseInput label="GSTIN" value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})} className="w-64 [&>input]:uppercase" />
-            <button type="button" onClick={handleVerifyGST} disabled={loading} className="h-12 md:h-9 px-4 md:px-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors border border-emerald-200 whitespace-nowrap">Verify</button>
+            <Button variant="secondary" type="button" onClick={handleVerifyGST} disabled={loading} className="h-12 md:h-9 px-4 md:px-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200 whitespace-nowrap text-sm md:text-xs">Verify</Button>
           </div>
           
           <DenseTextarea label="Full Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="lg:col-span-3" rows={2} />
@@ -297,12 +298,12 @@ export default function ConsigneeMaster() {
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-          <button onClick={() => setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [], parentId: '' })} className="h-12 md:h-9 px-6 md:px-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-lg font-bold text-sm md:text-xs hover:bg-slate-50 transition-colors">
+          <Button variant="secondary" onClick={() => setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [], parentId: '' })} className="h-12 md:h-9 px-6 md:px-4 text-sm md:text-xs">
             Clear
-          </button>
-          <button onClick={handleSave} disabled={loading} className="h-12 md:h-9 px-8 md:px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors flex items-center gap-2 disabled:opacity-70">
+          </Button>
+          <Button variant="success" onClick={handleSave} disabled={loading} className="h-12 md:h-9 px-8 md:px-5 flex items-center gap-2 text-sm md:text-xs">
             <Save size={16} className="md:w-3.5 md:h-3.5" /> {formData.id ? 'Update Consignee' : 'Save Consignee'}
-          </button>
+          </Button>
         </div>
       </GlassCard>
 
@@ -380,9 +381,9 @@ export default function ConsigneeMaster() {
                   )}
                 </div>
                 <div className="flex gap-2 shrink-0 opacity-100">
-                  <button onClick={() => handleEdit(c)} className="flex items-center gap-1 px-2 py-1.5 text-blue-600 bg-blue-50 border border-blue-200 active:bg-blue-100 rounded-lg font-medium"><Edit2 size={14} /><span className="text-xs">Edit</span></button>
-                  {c.isActive !== false && <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1 px-2 py-1.5 text-amber-600 bg-amber-50 border border-amber-200 active:bg-amber-100 rounded-lg font-medium"><Trash2 size={14} /><span className="text-xs">Archive</span></button>}
-                  {c.isActive === false && <button onClick={() => handleRestore(c.id)} className="flex items-center gap-1 px-2 py-1.5 text-emerald-600 bg-emerald-50 border border-emerald-200 active:bg-emerald-100 rounded-lg font-medium"><span className="text-xs">Restore</span></button>}
+                  <Button variant="secondary" onClick={() => handleEdit(c)} className="flex items-center gap-1 px-2 py-1.5 h-auto text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-200 shadow-none"><Edit2 size={14} /><span className="text-xs">Edit</span></Button>
+                  {c.isActive !== false && <Button variant="secondary" onClick={() => handleDelete(c.id)} className="flex items-center gap-1 px-2 py-1.5 h-auto text-amber-600 bg-amber-50 hover:bg-amber-100 border-amber-200 shadow-none"><Trash2 size={14} /><span className="text-xs">Archive</span></Button>}
+                  {c.isActive === false && <Button variant="secondary" onClick={() => handleRestore(c.id)} className="flex items-center gap-1 px-2 py-1.5 h-auto text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 shadow-none"><span className="text-xs">Restore</span></Button>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm font-medium text-slate-600 mt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
@@ -468,18 +469,18 @@ export default function ConsigneeMaster() {
                   <td className="px-3 py-2 text-slate-600">{c.phone || '-'}</td>
                   <td className="px-3 py-2 sticky right-0 bg-white z-10 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.03)] border-l border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                     <div className="flex justify-end gap-2 opacity-100">
-                      <button onClick={() => handleEdit(c)} className="flex items-center gap-1 px-2 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md border border-blue-200 font-medium whitespace-nowrap">
+                      <Button variant="secondary" onClick={() => handleEdit(c)} className="flex items-center gap-1 px-2 py-1.5 h-auto bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 whitespace-nowrap shadow-none">
                         <Edit2 size={14} /> <span className="text-xs hidden lg:inline">Edit</span>
-                      </button>
+                      </Button>
                       {c.isActive !== false && (
-                        <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1 px-2 py-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-md border border-amber-200 font-medium whitespace-nowrap">
+                        <Button variant="secondary" onClick={() => handleDelete(c.id)} className="flex items-center gap-1 px-2 py-1.5 h-auto bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200 whitespace-nowrap shadow-none">
                           <Trash2 size={14} /> <span className="text-xs hidden lg:inline">Archive</span>
-                        </button>
+                        </Button>
                       )}
                       {c.isActive === false && (
-                        <button onClick={() => handleRestore(c.id)} className="flex items-center gap-1 px-2 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md border border-emerald-200 font-medium whitespace-nowrap">
+                        <Button variant="secondary" onClick={() => handleRestore(c.id)} className="flex items-center gap-1 px-2 py-1.5 h-auto bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border-emerald-200 whitespace-nowrap shadow-none">
                           <span className="text-xs hidden lg:inline">Restore</span>
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </td>

@@ -3,6 +3,7 @@ import { api } from '../api';
 import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { Edit2, Trash2, Save, Search, Truck, User, FileCheck, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 // Premium Dense Primitives
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -212,13 +213,14 @@ export default function VehicleMaster() {
                   onChange={e => setFormData({...formData, vehicleNumber: e.target.value.toUpperCase()})} 
                   className="flex-1 [&>input]:font-bold [&>input]:text-emerald-900 [&>input]:uppercase" 
                 />
-                <button 
+                <Button 
+                  variant="primary"
                   onClick={handleFetchRC} 
                   disabled={fetchingRc || !formData.vehicleNumber}
-                  className="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs shadow-sm hover:shadow active:scale-[0.98] transition-all whitespace-nowrap"
+                  className="whitespace-nowrap h-9 disabled:opacity-50 text-xs px-4"
                 >
                   {fetchingRc ? 'Fetching...' : 'Verify RC'}
-                </button>
+                </Button>
               </div>
               <DenseSelect label="Vehicle Type" options={['6 Wheel (Lorry/Truck)', '10 Wheel (Taurus)', '12 Wheeler', '14 Wheeler', '18 Wheeler', '22 Wheeler', '4 Wheel (Van/Minidor)']} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} />
               <DenseSelect label="Laden Type" options={['Open Body', 'Container']} value={formData.ladenType} onChange={e => setFormData({...formData, ladenType: e.target.value})} />
@@ -332,15 +334,15 @@ export default function VehicleMaster() {
         {/* ACTION BUTTONS */}
         <GlassCard>
             <div className="flex items-center justify-end gap-3 py-2">
-              <button type="button" onClick={() => {
+              <Button variant="secondary" type="button" onClick={() => {
                 setFormData({ id: null, vehicleNumber: '', type: '6 Wheel (Lorry/Truck)', ladenType: 'Open Body', ownerName: '', ownerPhone: '', ownerPhone2: '', makeModel: '', fitnessExpiry: null, insuranceExpiry: null, npExpiry: null, grossWeight: '', rcStatus: '', rcVerified: false });
                 setVahanData(null);
-              }} className="h-10 px-6 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50 shadow-sm transition-all">
+              }} className="h-10 px-6 text-xs">
                 Clear Form
-              </button>
-              <button type="button" onClick={handleSave} disabled={loading} className="h-10 px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center min-w-[180px] gap-2">
+              </Button>
+              <Button variant="success" type="button" onClick={handleSave} disabled={loading} className="h-10 px-8 flex items-center justify-center min-w-[180px] gap-2">
                 <Save size={16} className={loading ? 'animate-pulse' : ''} /> {formData.id ? 'Update Record' : 'Save Vehicle Record'}
-              </button>
+              </Button>
             </div>
         </GlassCard>
       </div>
@@ -392,8 +394,8 @@ export default function VehicleMaster() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleEdit(v)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(v.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 size={14} /></button>
+                      <Button variant="icon" onClick={() => handleEdit(v)}><Edit2 size={14} /></Button>
+                      <Button variant="iconDanger" onClick={() => handleDelete(v.id)}><Trash2 size={14} /></Button>
                     </div>
                   </td>
                 </tr>

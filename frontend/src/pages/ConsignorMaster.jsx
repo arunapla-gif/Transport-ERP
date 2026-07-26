@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { usePermissions } from '../hooks/usePermissions';
 import { Edit2, Trash2, Building2, Save, FileText, Search, MapPin } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 // Premium Dense Primitives
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -281,9 +282,9 @@ export default function ConsignorMaster() {
         <td className="px-4 py-3 text-slate-600 text-xs font-medium">{c.phone || '-'}</td>
         <td className="px-4 py-3 sticky right-0 bg-white group-even:bg-slate-50 group-hover:bg-indigo-50/90 z-10 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.03)] border-l border-slate-100 transition-colors duration-200">
           <div className="flex justify-end gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-            {canEdit && <button onClick={() => handleEdit(c)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg border border-indigo-200/50 shadow-sm font-bold text-xs transition-all hover:scale-105 active:scale-95"><Edit2 size={12} /> Edit</button>}
-            {canDelete && c.isActive !== false && <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg border border-rose-200/50 shadow-sm font-bold text-xs transition-all hover:scale-105 active:scale-95"><Trash2 size={12} /> Archive</button>}
-            {canDelete && c.isActive === false && <button onClick={() => handleRestore(c.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg border border-emerald-200/50 shadow-sm font-bold text-xs transition-all hover:scale-105 active:scale-95">Restore</button>}
+            {canEdit && <Button variant="secondary" onClick={() => handleEdit(c)} className="flex items-center gap-1.5 px-2.5 py-1.5 h-auto text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 bg-white border-indigo-200/50 shadow-sm text-xs"><Edit2 size={12} /> Edit</Button>}
+            {canDelete && c.isActive !== false && <Button variant="secondary" onClick={() => handleDelete(c.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 h-auto text-rose-600 hover:bg-rose-50 hover:text-rose-700 bg-white border-rose-200/50 shadow-sm text-xs"><Trash2 size={12} /> Archive</Button>}
+            {canDelete && c.isActive === false && <Button variant="secondary" onClick={() => handleRestore(c.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 h-auto text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-white border-emerald-200/50 shadow-sm text-xs">Restore</Button>}
           </div>
         </td>
       </tr>
@@ -312,7 +313,7 @@ export default function ConsignorMaster() {
           <DenseInput label="Consignor Name *" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="lg:col-span-2 [&>input]:font-bold [&>input]:text-indigo-900" />
           <div className="flex items-end gap-2">
             <DenseInput label="GSTIN" value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})} className="flex-1 [&>input]:uppercase" />
-            <button type="button" onClick={handleVerifyGST} disabled={loading} className="h-12 md:h-9 px-4 md:px-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors border border-indigo-200 whitespace-nowrap">Verify</button>
+            <Button variant="secondary" type="button" onClick={handleVerifyGST} disabled={loading} className="h-12 md:h-9 px-4 md:px-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 border-indigo-200 whitespace-nowrap text-sm md:text-xs">Verify</Button>
           </div>
           
           <DenseTextarea label="Full Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="lg:col-span-3" rows={2} />
@@ -330,12 +331,12 @@ export default function ConsignorMaster() {
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-          <button onClick={() => setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] })} className="h-12 md:h-9 px-6 md:px-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-lg font-bold text-sm md:text-xs hover:bg-slate-50 transition-colors">
+          <Button variant="secondary" onClick={() => setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] })} className="h-12 md:h-9 px-6 md:px-4 text-sm md:text-xs">
             Clear
-          </button>
-          <button onClick={handleSave} disabled={loading || (formData.id && !canEdit)} className="h-12 md:h-9 px-8 md:px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl md:rounded-lg font-bold text-sm md:text-xs transition-colors flex items-center gap-2 disabled:opacity-70">
+          </Button>
+          <Button variant="primary" onClick={handleSave} disabled={loading || (formData.id && !canEdit)} className="h-12 md:h-9 px-8 md:px-5 flex items-center gap-2 text-sm md:text-xs">
             <Save size={16} className="md:w-3.5 md:h-3.5" /> {formData.id ? 'Update Consignor' : 'Save Consignor'}
-          </button>
+          </Button>
         </div>
       </GlassCard>
 
@@ -411,9 +412,9 @@ export default function ConsignorMaster() {
                   )}
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  {canEdit && <button onClick={() => handleEdit(c)} className="flex items-center gap-1 px-2 py-1.5 text-blue-600 bg-blue-50 border border-blue-200 active:bg-blue-100 rounded-lg font-medium"><Edit2 size={14} /><span className="text-xs">Edit</span></button>}
-                  {canDelete && c.isActive !== false && <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1 px-2 py-1.5 text-amber-600 bg-amber-50 border border-amber-200 active:bg-amber-100 rounded-lg font-medium"><Trash2 size={14} /><span className="text-xs">Archive</span></button>}
-                  {canDelete && c.isActive === false && <button onClick={() => handleRestore(c.id)} className="flex items-center gap-1 px-2 py-1.5 text-emerald-600 bg-emerald-50 border border-emerald-200 active:bg-emerald-100 rounded-lg font-medium"><span className="text-xs">Restore</span></button>}
+                  {canEdit && <Button variant="secondary" onClick={() => handleEdit(c)} className="flex items-center gap-1 px-2 py-1.5 h-auto text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-200 shadow-none"><Edit2 size={14} /><span className="text-xs">Edit</span></Button>}
+                  {canDelete && c.isActive !== false && <Button variant="secondary" onClick={() => handleDelete(c.id)} className="flex items-center gap-1 px-2 py-1.5 h-auto text-amber-600 bg-amber-50 hover:bg-amber-100 border-amber-200 shadow-none"><Trash2 size={14} /><span className="text-xs">Archive</span></Button>}
+                  {canDelete && c.isActive === false && <Button variant="secondary" onClick={() => handleRestore(c.id)} className="flex items-center gap-1 px-2 py-1.5 h-auto text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 shadow-none"><span className="text-xs">Restore</span></Button>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm font-medium text-slate-600 mt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
