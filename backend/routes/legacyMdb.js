@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const MDBReader = require('mdb-reader').default;
 
 const MS_ACCESS_BASE_PATH = path.join(__dirname, '..', '..', 'JellyAccounts');
 
@@ -20,7 +19,8 @@ router.get('/companies', (req, res) => {
 });
 
 // Helper to open MDB file based on company and file type
-const getReader = (companyName, fileName) => {
+const getReader = async (companyName, fileName) => {
+  const { default: MDBReader } = await import('mdb-reader');
   const filePath = path.join(MS_ACCESS_BASE_PATH, companyName, 'data', fileName);
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
@@ -30,9 +30,9 @@ const getReader = (companyName, fileName) => {
 };
 
 // Route to get unique financial years from Transactions.mdb
-router.get('/:company/financial-years', (req, res) => {
+router.get('/:company/financial-years', async (req, res) => {
   try {
-    const reader = getReader(req.params.company, 'Transactions.mdb');
+    const reader = await getReader(req.params.company, 'Transactions.mdb');
     const table = reader.getTable('ConsignmentDB');
     const data = table.getData();
     const years = [...new Set(data.map(r => r.DispatchYear || r.Financeyear).filter(Boolean))].sort().reverse();
@@ -44,9 +44,9 @@ router.get('/:company/financial-years', (req, res) => {
 });
 
 // Route to get Consignors
-router.get('/:company/consignors', (req, res) => {
+router.get('/:company/consignors', async (req, res) => {
   try {
-    const reader = getReader(req.params.company, 'Masters.mdb');
+    const reader = await getReader(req.params.company, 'Masters.mdb');
     const table = reader.getTable('ConsignorDB');
     const data = table.getData();
     // Sort or filter if needed, just return top 100 for preview
@@ -58,9 +58,9 @@ router.get('/:company/consignors', (req, res) => {
 });
 
 // Route to get Consignees
-router.get('/:company/consignees', (req, res) => {
+router.get('/:company/consignees', async (req, res) => {
   try {
-    const reader = getReader(req.params.company, 'Masters.mdb');
+    const reader = await getReader(req.params.company, 'Masters.mdb');
     const table = reader.getTable('ConsigneeDB');
     const data = table.getData();
     res.json({ data: data });
@@ -71,16 +71,16 @@ router.get('/:company/consignees', (req, res) => {
 });
 
 // Route to get Consignments (GCs)
-router.get('/:company/transactions', (req, res) => {
+router.get('/:company/transactions', async (req, res) => {
   try {
-    const transReader = getReader(req.params.company, 'Transactions.mdb');
+    const transReader = await getReader(req.params.company, 'Transactions.mdb');
     const table = transReader.getTable('ConsignmentDB');
     let data = table.getData();
     
     // Read Masters.mdb to get Consignor names
     let consignorMap = {};
     try {
-      const mastersReader = getReader(req.params.company, 'Masters.mdb');
+      const mastersReader = await getReader(req.params.company, 'Masters.mdb');
       const consignorTable = mastersReader.getTable('ConsignorDB');
       consignorTable.getData().forEach(c => {
         if (c.ConsignorID) {
@@ -112,9 +112,9 @@ router.get('/:company/transactions', (req, res) => {
 });
 
 // Route to get GDMs (Despatches)
-router.get('/:company/gdms', (req, res) => {
+router.get('/:company/gdms', async (req, res) => {
   try {
-    const reader = getReader(req.params.company, 'Transactions.mdb');
+    const reader = await getReader(req.params.company, 'Transactions.mdb');
     const table = reader.getTable('DespatchDB');
     let data = table.getData();
     
@@ -132,9 +132,9 @@ router.get('/:company/gdms', (req, res) => {
 });
 
 // Route to get Virtual Vehicles (extracted from GDMs)
-router.get('/:company/vehicles', (req, res) => {
+router.get('/:company/vehicles', async (req, res) => {
   try {
-    const reader = getReader(req.params.company, 'Transactions.mdb');
+    const reader = await getReader(req.params.company, 'Transactions.mdb');
     const table = reader.getTable('DespatchDB');
     let data = table.getData();
     
