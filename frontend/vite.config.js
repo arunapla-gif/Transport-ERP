@@ -34,6 +34,9 @@ export default defineConfig({
             purpose: 'any maskable'
           }
         ]
+      },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5000000 // 5MB limit to allow vfs_fonts_times.js (3.92 MB)
       }
     })
   ],
