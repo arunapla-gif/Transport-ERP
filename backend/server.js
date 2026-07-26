@@ -1676,7 +1676,8 @@ app.get('/api/gdms', async (req, res) => {
   }
 });
 
-app.get('/api/gdms/:gdmNumber', async (req, res) => {
+app.get('/api/gdms/:gdmNumber', async (req, res, next) => {
+  if (req.params.gdmNumber === 'pending-cewb') return next();
   try {
     const gdmNumberParam = req.params.gdmNumber;
     
