@@ -154,8 +154,8 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     const { pin } = req.body;
     
     // Fallback/Bootstrap Admin PIN from .env (in case DB is locked out)
-    const adminPin = process.env.OWNER_PIN || '1234';
-    if (pin === adminPin) {
+    const adminPin = process.env.OWNER_PIN;
+    if (adminPin && pin === adminPin) {
       const token = jwt.sign({ role: 'admin', branch: 'ALL' }, JWT_SECRET, { expiresIn: '7d' });
       return res.json({ token, role: 'admin', branch: 'ALL', username: 'Super Admin' });
     }
@@ -1233,7 +1233,8 @@ app.get('/api/gcs/next-number', async (req, res) => {
 });
 app.get('/api/gcs', async (req, res) => {
   try {
-    const branch = req.query.branch || 'MAIN';
+    let branch = req.query.branch || 'MAIN';
+    if (req.user && req.user.role !== 'admin') branch = req.user.branch;
     const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
     const page = req.query.page ? parseInt(req.query.page) : undefined;
     
@@ -1396,8 +1397,9 @@ app.put('/api/gcs/:id/ewb', async (req, res) => {
 
 app.post('/api/gcs', async (req, res) => {
   try {
-    const { goods, consignorGstin, consigneeGstin, consignorAddressPreview, consigneeAddressPreview, branch = 'MAIN', ...gcData } = req.body;
-    
+    let { goods, consignorGstin, consigneeGstin, consignorAddressPreview, consigneeAddressPreview, branch = 'MAIN', ...gcData } = req.body;
+    if (req.user && req.user.role !== 'admin') branch = req.user.branch;
+
     // Parse numeric fields properly before saving
     if (gcData.freightRate) gcData.freightRate = parseFloat(gcData.freightRate);
     if (gcData.freightTotal) gcData.freightTotal = parseFloat(gcData.freightTotal);
@@ -1605,7 +1607,8 @@ app.get('/api/gdms/next-number', async (req, res) => {
 
 app.get('/api/gdms', async (req, res) => {
   try {
-    const branch = req.query.branch || 'MAIN';
+    let branch = req.query.branch || 'MAIN';
+    if (req.user && req.user.role !== 'admin') branch = req.user.branch;
     const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
     const page = req.query.page ? parseInt(req.query.page) : undefined;
 
@@ -1720,10 +1723,11 @@ app.get('/api/gdms/:gdmNumber', async (req, res) => {
 
 app.post('/api/gdms', async (req, res) => {
   try {
-    const { 
+    let {
       gdmNumber, date, time, vehicleId, driverName, driverPhone, startKm, 
       destination, fromLocation, toName, deliveryAt, memoAmount, advanceAmount, balanceAmount, gcIds, branch = 'MAIN', dlData, status
     } = req.body;
+    if (req.user && req.user.role !== 'admin') branch = req.user.branch;
 
     // Auto-Build Driver Profile
     if (dlData && dlData.licenseNumber) {
@@ -1921,7 +1925,6 @@ app.get('/api/ewaybill/:ewaybillno', paidApiLimiter, async (req, res) => {
       }
 
       // 2. Fetch E-Way Bill
-      logApiUsage('WhiteBooks', 'Fetch E-Way Bill (NIC)', 'Success', 0.10); // ₹15,000 for 1,50,000 requests = 10 Paisa per call
       const ewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=${ewaybillno}`;
       const response = await fetch(ewbUrl, {
         method: "GET",
@@ -1932,6 +1935,7 @@ app.get('/api/ewaybill/:ewaybillno', paidApiLimiter, async (req, res) => {
       if (!response.ok || data.status_cd === "0") {
         throw new Error(`EWB Fetch Failed for ${isBell ? 'BELL' : 'AP'}`);
       }
+      logApiUsage('WhiteBooks', 'Fetch E-Way Bill (NIC)', 'Success', 0.10); // Log only on success
       return { ewb: data.data || data, detectedCompany: isBell ? 'B' : 'A' };
     }
 
@@ -2582,6 +2586,60 @@ app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
 // TRIPS & UNASSIGNED GDMS API
 // ==========================================
 
+// Get GDMs pending CEWB generation
+app.get('/api/gdms/pending-cewb', async (req, res) => {
+  try {
+    const branch = req.query.branch || 'MAIN';
+    // We want GDMs that do NOT have a cewbNumber, but have a vehicleId (meaning they are assigned to a lorry)
+    const gdms = await prisma.gDM.findMany({
+      where: { 
+        branch,
+        OR: [
+          { cewbNumber: null },
+          { cewbNumber: '' }
+        ],
+        vehicleId: { not: null }
+      },
+      include: {
+        vehicle: true,
+        gcs: {
+          include: {
+            consignee: true,
+            goods: true,
+            consignor: true
+          }
+        }
+      },
+      orderBy: { id: 'desc' }
+    });
+    res.json(gdms);
+  } catch (error) {
+    console.error('Pending CEWB Error:', error);
+    res.status(500).json({ error: 'Failed to fetch pending GDMs' });
+  }
+});
+
+// Attach Master CEWB to multiple GDMs
+app.post('/api/gdms/attach-master-cewb', async (req, res) => {
+  try {
+    const { gdmIds, cewbNumber } = req.body;
+    
+    if (!gdmIds || !Array.isArray(gdmIds) || gdmIds.length === 0 || !cewbNumber) {
+      return res.status(400).json({ error: 'Missing gdmIds or cewbNumber' });
+    }
+
+    await prisma.gDM.updateMany({
+      where: { id: { in: gdmIds } },
+      data: { cewbNumber }
+    });
+
+    res.json({ success: true, message: 'Master CEWB attached to selected GDMs' });
+  } catch (error) {
+    console.error('Attach Master CEWB Error:', error);
+    res.status(500).json({ error: 'Failed to attach Master CEWB' });
+  }
+});
+
 // Get all unassigned GDMs (GDMs without a Trip)
 app.get('/api/gdms-unassigned', async (req, res) => {
   try {
@@ -2678,37 +2736,48 @@ app.post('/api/trips/:id/settle', async (req, res) => {
     const tripId = parseInt(req.params.id);
     const { gdmIds, allocations, crossingAmount, returnAmount } = req.body;
 
+    const transactionOps = [];
+
     // 1. Attach GDMs to the Trip if not already attached
     if (gdmIds && gdmIds.length > 0) {
-      await prisma.gDM.updateMany({
-        where: { id: { in: gdmIds } },
-        data: { tripId }
-      });
+      transactionOps.push(
+        prisma.gDM.updateMany({
+          where: { id: { in: gdmIds } },
+          data: { tripId }
+        })
+      );
     }
 
     // 2. Update GC allocations (paidToDriver, paidToTransport)
     if (allocations && Array.isArray(allocations)) {
       for (const alloc of allocations) {
-        await prisma.gC.update({
-          where: { id: alloc.gcId },
-          data: {
-            paidToDriver: alloc.paidToDriver || 0,
-            paidToTransport: alloc.paidToTransport || 0
-          }
-        });
+        transactionOps.push(
+          prisma.gC.update({
+            where: { id: alloc.gcId },
+            data: {
+              paidToDriver: alloc.paidToDriver || 0,
+              paidToTransport: alloc.paidToTransport || 0
+            }
+          })
+        );
       }
     }
 
     // 3. Mark Trip as Settled and store Crossing/Return amounts
-    const updatedTrip = await prisma.trip.update({
-      where: { id: tripId },
-      data: {
-        status: 'Settled',
-        crossingAmount: crossingAmount || 0,
-        returnAmount: returnAmount || 0,
-        settledDate: new Date()
-      }
-    });
+    transactionOps.push(
+      prisma.trip.update({
+        where: { id: tripId },
+        data: {
+          status: 'Settled',
+          crossingAmount: crossingAmount || 0,
+          returnAmount: returnAmount || 0,
+          settledDate: new Date()
+        }
+      })
+    );
+
+    const results = await prisma.$transaction(transactionOps);
+    const updatedTrip = results[results.length - 1];
 
     res.json({ message: 'Trip settled successfully', trip: updatedTrip });
   } catch (error) {
@@ -2764,17 +2833,23 @@ app.get('/api/party-ledger/:partyType/:partyId', async (req, res) => {
     const ledgerEntries = [];
 
     gcs.forEach(gc => {
-      // Create a Debit entry for the Freight
+      // Create a Debit entry for the Freight (Only for applicable Freight Types)
       const freight = parseFloat(gc.freightTotal) || 0;
       if (freight > 0) {
-        ledgerEntries.push({
-          id: `gc-debit-${gc.id}`,
-          date: gc.date || new Date(),
-          type: 'DEBIT',
-          amount: freight,
-          reference: `GC: ${gc.gcNumber}`,
-          remarks: 'Freight Charges'
-        });
+        let shouldDebit = false;
+        if (partyType === 'Consignor' && gc.freightType === 'T.B.B.') shouldDebit = true;
+        if (partyType === 'Consignee' && gc.freightType === 'To Pay') shouldDebit = true;
+        
+        if (shouldDebit) {
+          ledgerEntries.push({
+            id: `gc-debit-${gc.id}`,
+            date: gc.date || new Date(),
+            type: 'DEBIT',
+            amount: freight,
+            reference: `GC: ${gc.gcNumber}`,
+            remarks: 'Freight Charges'
+          });
+        }
       }
 
       // Create a Credit entry if paid to Driver during Trip Settlement
