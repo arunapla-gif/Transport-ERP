@@ -43,16 +43,6 @@ export default function CewbPrint() {
               style={{ boxSizing: 'border-box', fontFamily: 'Arial, Helvetica, sans-serif' }}
             >
               
-              {/* NIC URL Header */}
-              <div className="flex justify-between items-end mb-4 px-2">
-                 <div className="text-[9px] text-gray-500 font-bold ml-4">
-                   e-Way Bill System
-                 </div>
-                 <div className="flex items-center gap-2">
-                   <div className="text-[12px] font-bold text-gray-600 uppercase">PRINT CONSOLIDATED E-WAY BILL</div>
-                   <div className="text-[9px] text-gray-500">https://ewaybillgst.gov.in/TripSheet/TripSheetPrint.aspx</div>
-                 </div>
-              </div>
 
               {/* CEWB Title Box */}
               <div className="text-center font-bold text-[13px] bg-gray-200 border border-black py-2 mb-4">
