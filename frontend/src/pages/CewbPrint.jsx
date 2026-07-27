@@ -27,21 +27,37 @@ export default function CewbPrint() {
   if (error) return <div className="p-10 text-rose-500 font-bold">{error}</div>;
   if (gdms.length === 0) return <div className="p-10 text-slate-500">Loading document...</div>;
 
+  // Helper to chunk arrays into groups of size
+  const chunkArray = (array, size) => {
+    if (!array || array.length === 0) return [[]];
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  };
+
   return (
     <div className="bg-slate-200 min-h-screen flex flex-col items-center justify-start print:bg-white print:min-h-0">
-      {gdms.map((gdm, index) => {
+      {gdms.flatMap((gdm, gdmIndex) => {
         // Find the transporter GSTIN. Assuming all GCs have same transporter, use first one or fallback
         const firstGc = gdm.gcs?.[0];
         const transporterGstin = firstGc?.ewbRawData?.transporterId || firstGc?.companyString === 'BELL' ? '33AGKPK2374D1ZN' : '33AADHP9192F1Z0'; // Default fallback
         const formattedDate = gdm.date ? new Date(gdm.date).toLocaleDateString('en-GB') : '-';
         
-        return (
-          <div key={gdm.id} className={`w-full flex justify-center p-4 print:p-0 ${index !== gdms.length - 1 ? 'print:break-after-page mb-8 print:mb-0' : ''}`}>
-            {/* Portrait A4 Layout */}
-            <div 
-              className="w-[210mm] bg-white text-black shadow-lg print:shadow-none p-8 flex flex-col justify-start relative"
-              style={{ boxSizing: 'border-box', fontFamily: 'Arial, Helvetica, sans-serif' }}
-            >
+        const gcChunks = chunkArray(gdm.gcs, 10);
+        
+        return gcChunks.map((chunk, chunkIndex) => {
+          const isLastPage = (gdmIndex === gdms.length - 1) && (chunkIndex === gcChunks.length - 1);
+          const startIndex = chunkIndex * 10;
+          
+          return (
+            <div key={`${gdm.id}-page-${chunkIndex}`} className={`w-full flex justify-center p-4 print:p-0 ${!isLastPage ? 'print:break-after-page mb-8 print:mb-0' : ''}`}>
+              {/* Portrait A4 Layout */}
+              <div 
+                className="w-[210mm] bg-white text-black shadow-lg print:shadow-none p-8 flex flex-col justify-start relative"
+                style={{ boxSizing: 'border-box', fontFamily: 'Arial, Helvetica, sans-serif' }}
+              >
               <style>
                 {`
                   @media print {
@@ -122,7 +138,7 @@ export default function CewbPrint() {
                   </tr>
                 </thead>
                 <tbody>
-                  {gdm.gcs?.map((gc, i) => {
+                  {chunk.map((gc, i) => {
                     // Extract EWB details
                     const ewbNo = gc.ewbNumber || gc.privateMark || '-';
                     const ewbDate = gc.ewbRawData?.ewayBillDate || (gc.date ? new Date(gc.date).toLocaleDateString('en-GB') : '-');
@@ -143,7 +159,7 @@ export default function CewbPrint() {
 
                     return (
                       <tr key={gc.id} className="align-top">
-                        <td className="border border-black p-2 text-center">{i + 1}</td>
+                        <td className="border border-black p-2 text-center">{startIndex + i + 1}</td>
                         <td className="border border-black p-2">
                           <div className="font-bold">{ewbNo}</div>
                           <div className="mt-1 text-gray-700">{ewbDate}</div>
@@ -164,7 +180,7 @@ export default function CewbPrint() {
                       </tr>
                     );
                   })}
-                  {(!gdm.gcs || gdm.gcs.length === 0) && (
+                  {chunk.length === 0 && (
                     <tr>
                       <td colSpan="7" className="border border-black p-4 text-center text-gray-500 font-bold">
                         No E-Way Bills Attached to this CEWB.
@@ -176,7 +192,8 @@ export default function CewbPrint() {
 
             </div>
           </div>
-        );
+          );
+        });
       })}
 
       {/* Action buttons (hidden on print) */}
