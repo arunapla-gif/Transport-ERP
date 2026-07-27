@@ -37,11 +37,19 @@ export default function CewbPrint() {
         
         return (
           <div key={gdm.id} className={`w-full flex justify-center p-4 print:p-0 ${index !== gdms.length - 1 ? 'print:break-after-page mb-8 print:mb-0' : ''}`}>
-            {/* Portrait A4 Layout: 210mm x 297mm */}
+            {/* Portrait A4 Layout */}
             <div 
-              className="w-[210mm] min-h-[297mm] bg-white text-black shadow-lg print:shadow-none p-8 flex flex-col justify-start relative"
+              className="w-[210mm] bg-white text-black shadow-lg print:shadow-none p-8 print:p-0 flex flex-col justify-start relative print:w-full"
               style={{ boxSizing: 'border-box', fontFamily: 'Arial, Helvetica, sans-serif' }}
             >
+              <style>
+                {`
+                  @media print {
+                    @page { margin: 5mm; size: A4 portrait; }
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  }
+                `}
+              </style>
               
 
               {/* CEWB Title Box */}
