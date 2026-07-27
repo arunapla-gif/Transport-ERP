@@ -38,7 +38,7 @@ export default function CewbPrint() {
   };
 
   return (
-    <div className="bg-slate-200 min-h-screen flex flex-col items-center justify-start print:bg-white print:min-h-0">
+    <div className="bg-slate-200 min-h-screen flex flex-col items-center justify-start print:bg-white print:min-h-0 print:block">
       {gdms.flatMap((gdm, gdmIndex) => {
         // Find the transporter GSTIN. Assuming all GCs have same transporter, use first one or fallback
         const firstGc = gdm.gcs?.[0];
@@ -52,10 +52,10 @@ export default function CewbPrint() {
           const startIndex = chunkIndex * 10;
           
           return (
-            <div key={`${gdm.id}-page-${chunkIndex}`} className={`w-full flex justify-center p-4 print:p-0 ${!isLastPage ? 'print:break-after-page mb-8 print:mb-0' : ''}`}>
+            <div key={`${gdm.id}-page-${chunkIndex}`} className={`w-full flex justify-center p-4 print:p-0 print:block ${!isLastPage ? 'print:break-after-page mb-8 print:mb-0' : ''}`}>
               {/* Portrait A4 Layout */}
               <div 
-                className="w-[210mm] bg-white text-black shadow-lg print:shadow-none p-8 flex flex-col justify-start relative"
+                className="w-[210mm] print:w-full print:max-w-full bg-white text-black shadow-lg print:shadow-none p-8 flex flex-col justify-start relative mx-auto"
                 style={{ boxSizing: 'border-box', fontFamily: 'Arial, Helvetica, sans-serif' }}
               >
               <style>
