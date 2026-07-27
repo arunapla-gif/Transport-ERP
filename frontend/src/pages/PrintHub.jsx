@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Printer, FileText, PackageCheck, Search, CheckSquare, Download } from 'lucide-react';
 import { api } from '../api';
 
 export default function PrintHub() {
+  const navigate = useNavigate();
   const [gcNumber, setGcNumber] = useState('');
   const [gcPrefix, setGcPrefix] = useState('BELL');
   const [gcSearchMode, setGcSearchMode] = useState('gc'); // 'gc' or 'gdm'
@@ -75,7 +76,7 @@ export default function PrintHub() {
   const confirmPrint = () => {
     if (selectedCopies.length === 0) return;
     const copiesQuery = selectedCopies.join(',');
-    window.open(`/print/gc/${pendingPrintIds}?copies=${copiesQuery}`, '_blank');
+    navigate(`/print/gc/${pendingPrintIds}?copies=${copiesQuery}`);
     setShowCopiesModal(false);
   };
 
@@ -87,7 +88,7 @@ export default function PrintHub() {
   };
 
   const confirmGdmPrint = () => {
-    window.open(`/print/${gdmPrintType}/${gdmPendingPrintIds}`, '_blank');
+    navigate(`/print/${gdmPrintType}/${gdmPendingPrintIds}`);
     setShowGdmFormatModal(false);
   };
 
