@@ -59,7 +59,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       { text: (index + 1).toString(), fontSize: 10, bold: true, alignment: 'center', margin: [2, 4, 2, 4] },
       {
         stack: [
-          { text: gc.gcNumber.replace('BELL-', '').replace('AP-', ''), fontSize: 11, bold: true, alignment: 'center' }
+          { text: gc.gcNumber, fontSize: 11, bold: true, alignment: 'center' }
         ],
         margin: [2, 4, 2, 4]
       },
@@ -155,7 +155,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       {
         table: {
           headerRows: 2,
-          widths: ['5%', '10%', '19%', '19%', '15%', '6%', '6%', '6%', '14%'],
+          widths: ['6%', '14%', '18%', '18%', '14%', '5%', '5%', '5%', '15%'],
           body: rows
         },
         layout: {
