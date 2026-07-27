@@ -2027,10 +2027,7 @@ async function getWhitebooksAuth(companyStr) {
 
 app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
   try {
-    const { company, gcData, taxInfo, vehicleNo, testMode } = req.body;
-    if (testMode) {
-      return res.json({ success: true, ewayBillNo: 'TEST_EWB_' + Date.now().toString().slice(-6), status: 'Generated (Sandbox)', rawPayload: {} });
-    }
+    const { company, gcData, taxInfo, vehicleNo } = req.body;
     const companyStr = req.query.company || company || 'AP';
     const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
     
@@ -2134,10 +2131,7 @@ app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
 
 app.post('/api/ewaybill/regenerate', paidApiLimiter, async (req, res) => {
   try {
-    const { company, ewbRawData, vehicleNo, testMode } = req.body;
-    if (testMode) {
-      return res.json({ success: true, ewayBillNo: 'TEST_REG_' + Date.now().toString().slice(-6), status: 'Regenerated (Sandbox)', rawPayload: {} });
-    }
+    const { company, ewbRawData, vehicleNo } = req.body;
     const companyStr = req.query.company || company || 'AP';
     const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
     
@@ -2234,13 +2228,7 @@ app.post('/api/ewaybill/regenerate', paidApiLimiter, async (req, res) => {
 // BULK VERIFY EWBs FOR GDM / GATE CHECK
 app.post('/api/ewaybill/bulk-verify', paidApiLimiter, async (req, res) => {
   try {
-    const { ewbs, testMode } = req.body; // Array of { ewbNo, company }
-    if (testMode) {
-      const results = (ewbs || []).map(item => ({
-        ewbNo: item.ewbNo, status: 'ACT', rejectStatus: 'N', rejectDate: null, rejectReason: null
-      }));
-      return res.json({ results });
-    }
+    const { ewbs } = req.body; // Array of { ewbNo, company }
     if (!ewbs || !Array.isArray(ewbs) || ewbs.length === 0) {
       return res.json({ results: [] });
     }
@@ -2294,7 +2282,7 @@ app.post('/api/ewaybill/bulk-verify', paidApiLimiter, async (req, res) => {
 // BULK HEAL EWBs (Phase 1 of GDM) - Moves the heavy frontend loop to the backend
 app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
   try {
-    const { gcs, vehicleNo, testMode } = req.body;
+    const { gcs, vehicleNo } = req.body;
     if (!gcs || !Array.isArray(gcs)) return res.json({ healedGcs: [] });
     
     const healedGcs = [];
@@ -2344,7 +2332,7 @@ app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
            const genRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/generate?company=${companyStr}`, {
              method: 'POST',
              headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
-             body: JSON.stringify({ company: companyStr, gcData: gc, taxInfo, vehicleNo: vNo, testMode })
+             body: JSON.stringify({ company: companyStr, gcData: gc, taxInfo, vehicleNo: vNo })
            });
            const genData = await genRes.json();
            if (!genRes.ok) throw new Error(genData.error || 'Generate Failed');
@@ -2357,7 +2345,7 @@ app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
            const regRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/regenerate?company=${companyStr}`, {
              method: 'POST',
              headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
-             body: JSON.stringify({ company: companyStr, ewbRawData: gc.ewbRawData, vehicleNo: vNo, testMode })
+             body: JSON.stringify({ company: companyStr, ewbRawData: gc.ewbRawData, vehicleNo: vNo })
            });
            const regData = await regRes.json();
            if (!regRes.ok) throw new Error(regData.error || 'Regenerate Failed');
@@ -2370,7 +2358,7 @@ app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
            const updRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/update-part-b?company=${companyStr}`, {
              method: 'POST',
              headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
-             body: JSON.stringify({ company: companyStr, ewbNo: currentEwb, vehicleNo: vNo, testMode })
+             body: JSON.stringify({ company: companyStr, ewbNo: currentEwb, vehicleNo: vNo })
            });
            const updData = await updRes.json();
            
@@ -2381,7 +2369,7 @@ app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
                  const regRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/regenerate?company=${companyStr}`, {
                    method: 'POST',
                    headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
-                   body: JSON.stringify({ company: companyStr, ewbRawData: gc.ewbRawData, vehicleNo: vNo, testMode })
+                   body: JSON.stringify({ company: companyStr, ewbRawData: gc.ewbRawData, vehicleNo: vNo })
                  });
                  const regData = await regRes.json();
                  if (!regRes.ok) throw new Error(regData.error || 'Regenerate Fallback Failed');
@@ -2410,10 +2398,7 @@ app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
 
 app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
   try {
-    const { company, ewbNo, vehicleNo, testMode } = req.body;
-    if (testMode) {
-      return res.json({ success: true, ewayBillNo: ewbNo, data: { vehUpdDate: new Date().toLocaleDateString('en-GB') }, status: 'Updated (Sandbox)' });
-    }
+    const { company, ewbNo, vehicleNo } = req.body;
     const companyStr = req.query.company || company || 'AP';
     const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
 
@@ -2523,10 +2508,7 @@ app.post('/api/ewaybill/reassign', paidApiLimiter, async (req, res) => {
 
 app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
   try {
-    const { vehicleNo, fromPlace, transDocNo, transDocDate, ewbNos, testMode } = req.body;
-    if (testMode) {
-      return res.json({ cEwbNo: 'TEST_CEWB_' + Date.now().toString().slice(-6) });
-    }
+    const { vehicleNo, fromPlace, transDocNo, transDocDate, ewbNos } = req.body;
     const isBell = req.query.company === 'BELL';
     
     // Select credentials

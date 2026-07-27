@@ -12,7 +12,6 @@ export default function GovtCompliance() {
   const [isHealing, setIsHealing] = useState(false);
   const [isGeneratingCewb, setIsGeneratingCewb] = useState(false);
   const [activeVehicleNo, setActiveVehicleNo] = useState(null);
-  const [testMode, setTestMode] = useState(false);
 
   // Fetch pending GDMs
   const fetchPendingGdms = async () => {
@@ -77,8 +76,7 @@ export default function GovtCompliance() {
          toast.error("No E-Way Bills found to verify.");
          return;
       }
-      
-      const res = await api.post('/ewaybill/bulk-verify', { ewbs: ewbsToVerify, testMode });
+      const res = await api.post('/ewaybill/bulk-verify', { ewbs: ewbsToVerify });
       toast.success(`Verification complete. Statuses updated.`);
       // Re-fetch to see updated DB statuses if we saved them, but here we just show toast for now.
     } catch (err) {
@@ -95,7 +93,7 @@ export default function GovtCompliance() {
     const toastId = toast.loading('Initiating Auto-Healing...');
     try {
       const vNo = activeVehicleNo.replace(/[^A-Z0-9]/gi, '');
-      const res = await api.post('/ewaybill/bulk-heal', { gcs: allSelectedGcs, vehicleNo: vNo, testMode });
+      const res = await api.post('/ewaybill/bulk-heal', { gcs: allSelectedGcs, vehicleNo: vNo });
       toast.success('Successfully healed all E-Way Bills!', { id: toastId });
       fetchPendingGdms(); // Refresh data to show private marks/EWB numbers generated
     } catch (err) {
@@ -134,13 +132,13 @@ export default function GovtCompliance() {
       
       // AP CEWB
       if (validEwbsAP.length > 0) {
-        const resAP = await api.post(`/ewaybill/cewb?company=AP`, { ...basePayload, ewbNos: validEwbsAP, testMode });
+        const resAP = await api.post(`/ewaybill/cewb?company=AP`, { ...basePayload, ewbNos: validEwbsAP });
         if (resAP && resAP.cEwbNo) generatedCewbs.push(`AP: ${resAP.cEwbNo}`);
       }
       
       // BELL CEWB
       if (validEwbsBELL.length > 0) {
-        const resBELL = await api.post(`/ewaybill/cewb?company=BELL`, { ...basePayload, ewbNos: validEwbsBELL, testMode });
+        const resBELL = await api.post(`/ewaybill/cewb?company=BELL`, { ...basePayload, ewbNos: validEwbsBELL });
         if (resBELL && resBELL.cEwbNo) generatedCewbs.push(`BELL: ${resBELL.cEwbNo}`);
       }
       
@@ -175,13 +173,6 @@ export default function GovtCompliance() {
           <p className="text-xs font-bold text-slate-500 mt-0.5">Manage E-Way Bills and Generate Master CEWBs for Dispatches</p>
         </div>
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors shadow-sm">
-            <span className={`text-[10px] uppercase tracking-wider font-black ${testMode ? 'text-amber-600' : 'text-slate-500'}`}>Sandbox Mode</span>
-            <div className={`relative w-9 h-5 rounded-full transition-colors ${testMode ? 'bg-amber-500' : 'bg-slate-300'}`}>
-              <div className={`absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${testMode ? 'translate-x-4' : 'translate-x-0'}`}></div>
-            </div>
-            <input type="checkbox" className="sr-only" checked={testMode} onChange={(e) => setTestMode(e.target.checked)} />
-          </label>
           <button onClick={fetchPendingGdms} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors">
             <RefreshCw size={16} className={`text-slate-600 ${loading ? 'animate-spin' : ''}`} />
           </button>
