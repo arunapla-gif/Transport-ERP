@@ -160,7 +160,7 @@ export default function PrintHub() {
           <div className="w-full flex gap-2">
             <input 
               type="text" 
-              placeholder={gcSearchMode === 'gc' ? "e.g. BELL-1001" : "e.g. 1001 (GDM No.)"} 
+              placeholder={gcSearchMode === 'gc' ? "e.g. BELL-1001" : "e.g. AP-1001 (GDM No.)"} 
               value={gcNumber}
               onChange={(e) => setGcNumber(e.target.value.toUpperCase())}
               className="flex-1 h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all uppercase"
@@ -192,9 +192,9 @@ export default function PrintHub() {
           <div className="w-full flex flex-col gap-2">
             <input 
               type="text" 
-              placeholder="e.g. 1001" 
+              placeholder="e.g. AP-1001" 
               value={gdmNumber}
-              onChange={(e) => setGdmNumber(e.target.value)}
+              onChange={(e) => setGdmNumber(e.target.value.toUpperCase())}
               className="w-full h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all uppercase"
             />
             <div className="flex gap-2">

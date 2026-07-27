@@ -1702,7 +1702,7 @@ app.get('/api/gdms/:gdmNumber', async (req, res, next) => {
     }
     
     // Single fetching
-    const gdm = await prisma.gDM.findFirst({
+    let gdm = await prisma.gDM.findFirst({
       where: { gdmNumber: gdmNumberParam },
       include: {
         vehicle: true,
@@ -1715,6 +1715,19 @@ app.get('/api/gdms/:gdmNumber', async (req, res, next) => {
         }
       }
     });
+
+    if (!gdm && !isNaN(gdmNumberParam)) {
+      gdm = await prisma.gDM.findFirst({
+        where: { OR: [{ gdmNumber: `AP-${gdmNumberParam}` }, { gdmNumber: `BELL-${gdmNumberParam}` }] },
+        include: {
+          vehicle: true,
+          gcs: {
+            include: { consignor: true, consignee: true, goods: true }
+          }
+        }
+      });
+    }
+
     if (!gdm) return res.status(404).json({ error: 'GDM not found' });
     res.json(gdm);
   } catch (error) {
