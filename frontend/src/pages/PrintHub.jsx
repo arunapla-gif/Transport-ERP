@@ -256,8 +256,8 @@ export default function PrintHub() {
       
       {/* Selection Modal */}
       {showCopiesModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center print:hidden">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 m-4 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center print:hidden p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
             <h2 className="text-xl font-black text-slate-800 mb-4 text-center">Print GC Copies</h2>
             <p className="text-sm font-semibold text-slate-500 mb-6 text-center">Select which copies you want to print.</p>
             
@@ -275,7 +275,7 @@ export default function PrintHub() {
               ))}
             </div>
             
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex flex-wrap justify-end gap-2 mt-6">
               <button 
                 onClick={() => setShowCopiesModal(false)}
                 className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold"
@@ -303,7 +303,7 @@ export default function PrintHub() {
                 className="px-4 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isPrinting ? <div className="animate-spin h-5 w-5 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={18} />}
-                ⚡ Silent Print
+                ⚡ Print
               </button>
             </div>
           </div>
@@ -312,8 +312,8 @@ export default function PrintHub() {
 
       {/* GDM Format Modal */}
       {showGdmFormatModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center print:hidden">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 m-4 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center print:hidden p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
             <h2 className="text-xl font-black text-slate-800 mb-4 text-center">Select Print Format</h2>
             <p className="text-sm font-semibold text-slate-500 mb-6 text-center">Choose the format for your Delivery Memo.</p>
             
@@ -336,7 +336,7 @@ export default function PrintHub() {
               ))}
             </div>
             
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex flex-wrap justify-end gap-2 mt-6">
               <button 
                 onClick={() => setShowGdmFormatModal(false)}
                 className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold"
@@ -365,7 +365,7 @@ export default function PrintHub() {
                 title={gdmPrintType !== 'gdm' ? "Silent Print only supports Standard GDM format" : ""}
               >
                 {isPrinting ? <div className="animate-spin h-5 w-5 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={18} />}
-                ⚡ Silent Print
+                ⚡ Print
               </button>
             </div>
           </div>
