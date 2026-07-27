@@ -25,7 +25,6 @@ export default function PrintHub() {
   
   const [showGdmFormatModal, setShowGdmFormatModal] = useState(false);
   const [gdmPendingPrintIds, setGdmPendingPrintIds] = useState('');
-  const [selectedCopies, setSelectedCopies] = useState(['CONSIGNOR COPY']);
   
   const [loading, setLoading] = useState(true);
 
