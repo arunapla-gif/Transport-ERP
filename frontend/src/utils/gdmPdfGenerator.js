@@ -15,9 +15,10 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   const rows = [];
   // Header Row 1
   rows.push([
-    { text: 'GC.NO / EWB', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
+    { text: 'GC.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
     { text: 'CONSIGNOR', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
     { text: 'CONSIGNEE', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
+    { text: 'DESTINATION', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
     { text: 'ARTICLES', colSpan: 3, fontSize: 10, bold: true, alignment: 'center', margin: [2, 2, 2, 2] },
     {},
     {},
@@ -25,7 +26,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   ]);
   // Header Row 2
   rows.push([
-    {}, {}, {},
+    {}, {}, {}, {},
     { text: 'C/S', fontSize: 9, bold: true, alignment: 'center' },
     { text: 'C/N', fontSize: 9, bold: true, alignment: 'center' },
     { text: 'BDL/S', fontSize: 9, bold: true, alignment: 'center' },
@@ -56,13 +57,13 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
     rows.push([
       {
         stack: [
-          { text: gc.gcNumber.replace('BELL-', '').replace('AP-', ''), fontSize: 11, bold: true, alignment: 'center' },
-          ...(gc.privateMark ? [{ text: gc.privateMark, fontSize: 8, alignment: 'center', margin: [0, 2, 0, 0] }] : [])
+          { text: gc.gcNumber.replace('BELL-', '').replace('AP-', ''), fontSize: 11, bold: true, alignment: 'center' }
         ],
         margin: [2, 4, 2, 4]
       },
       { text: (gc.consignor?.name || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 4, 2, 4] },
       { text: (gc.consignee?.name || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 4, 2, 4] },
+      { text: (gc.consignee?.city || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 4, 2, 4] },
       { text: rowCases > 0 ? rowCases : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 4, 2, 4] },
       { text: rowCartons > 0 ? rowCartons : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 4, 2, 4] },
       { text: rowBundles > 0 ? rowBundles : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 4, 2, 4] },
@@ -73,8 +74,8 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   // Totals Row
   const totalFreight = gdm.gcs?.reduce((sum, gc) => sum + (parseFloat(gc.freightTotal) || 0), 0) || '-';
   rows.push([
-    { text: 'TOTAL', colSpan: 3, fontSize: 11, bold: true, alignment: 'right', margin: [4, 6, 4, 6] },
-    {}, {},
+    { text: 'TOTAL', colSpan: 4, fontSize: 11, bold: true, alignment: 'right', margin: [4, 6, 4, 6] },
+    {}, {}, {},
     { text: globalCases > 0 ? globalCases : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
     { text: globalCartons > 0 ? globalCartons : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
     { text: globalBundles > 0 ? globalBundles : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
@@ -98,7 +99,6 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
           {
             width: '55%',
             stack: [
-              { text: companyTamil, fontSize: 10, bold: true, margin: [0, 0, 0, 2] },
               { text: companyName, fontSize: 24, bold: true, margin: [0, 0, 0, 2] },
               { text: address, fontSize: 10, bold: true }
             ]
@@ -119,7 +119,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       // Meta Info
       {
         table: {
-          widths: ['33%', '34%', '33%'],
+          widths: ['50%', '50%'],
           body: [
             [
               {
@@ -129,13 +129,6 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
                   { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 12, bold: true }
                 ],
                 margin: [4, 4, 4, 4]
-              },
-              {
-                stack: [
-                  { text: 'MASTER CEWB NUMBER', fontSize: 9, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
-                  { text: gdm.cewbNumber || 'PENDING', fontSize: 16, bold: true, alignment: 'center' }
-                ],
-                margin: [4, 8, 4, 4]
               },
               {
                 stack: [
@@ -153,7 +146,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       {
         table: {
           headerRows: 2,
-          widths: ['15%', '27.5%', '27.5%', '6%', '6%', '6%', '12%'],
+          widths: ['12%', '20%', '20%', '16%', '6%', '6%', '6%', '14%'],
           body: rows
         },
         layout: {
