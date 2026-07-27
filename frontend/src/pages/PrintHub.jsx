@@ -122,6 +122,33 @@ export default function PrintHub() {
     }
   };
 
+  const handleDownloadPdfGc = async () => {
+    if (selectedCopies.length === 0) return;
+    setIsPrinting(true);
+    const toastId = toast.loading('Generating GC PDF...');
+    try {
+      let gcsToPrint = [];
+      const ids = pendingPrintIds.split(',');
+      for (const id of ids) {
+        let gc = recentGcs.find(g => g.gcNumber === id);
+        if (!gc) gc = await api.get(`/gcs/${id}`);
+        if (gc) gcsToPrint.push(gc);
+      }
+      const blobUrl = await generateGcPdfBlob(gcsToPrint, selectedCopies);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `GC_${gcsToPrint[0]?.gcNumber || 'Print'}.pdf`;
+      link.click();
+      toast.success('PDF downloaded!', { id: toastId });
+      setShowCopiesModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate PDF.', { id: toastId });
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   const handleOpenGdmFormatModal = (e, ids) => {
     e.preventDefault();
     if (!ids) return;
@@ -180,6 +207,41 @@ export default function PrintHub() {
     }
   };
 
+  const handleDownloadPdfGdm = async () => {
+    if (gdmPrintType === 'cewb' || gdmPrintType === 'combined') {
+       toast.error("Direct PDF download only supports Standard GDM format. Use Preview for CEWB.");
+       return;
+    }
+    setIsPrinting(true);
+    const toastId = toast.loading('Generating GDM PDF...');
+    try {
+      let gdmsToPrint = [];
+      const ids = gdmPendingPrintIds.split(',');
+      for (const id of ids) {
+        let gdm = recentGdms.find(g => g.gdmNumber === id || g.id === id);
+        const fullGdm = await api.get(`/gdms/${gdm ? gdm.id : id}`);
+        if (fullGdm) gdmsToPrint.push(fullGdm);
+      }
+      const unitsRes = await api.get('/units').catch(() => []);
+      let allUnitOptions = [];
+      if (unitsRes && unitsRes.length > 0) {
+        allUnitOptions = unitsRes.map(u => ({ label: u.description, code: u.code, category: u.category }));
+      }
+      const blobUrl = await generateGdmPdfBlob(gdmsToPrint, allUnitOptions);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `GDM_${gdmsToPrint[0]?.gdmNumber || 'Print'}.pdf`;
+      link.click();
+      toast.success('PDF downloaded!', { id: toastId });
+      setShowGdmFormatModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate PDF.', { id: toastId });
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   // GDM Selection logic
   const toggleGdmSelection = (gdmId) => {
     setSelectedGdms(prev => prev.includes(gdmId) ? prev.filter(id => id !== gdmId) : [...prev, gdmId]);
@@ -221,11 +283,19 @@ export default function PrintHub() {
                 Cancel
               </button>
               <button 
+                onClick={handleDownloadPdfGc}
+                disabled={selectedCopies.length === 0 || isPrinting}
+                className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download size={18} />
+                PDF
+              </button>
+              <button 
                 onClick={confirmPrint}
                 className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold flex items-center gap-2"
               >
                 <FileText size={18} />
-                Preview PDF
+                Preview
               </button>
               <button 
                 onClick={handleSilentPrintGc}
@@ -272,6 +342,14 @@ export default function PrintHub() {
                 className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold"
               >
                 Cancel
+              </button>
+              <button 
+                onClick={handleDownloadPdfGdm}
+                disabled={isPrinting || gdmPrintType === 'cewb' || gdmPrintType === 'gdm-combined'}
+                className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download size={18} />
+                PDF
               </button>
               <button 
                 onClick={confirmGdmPrint}
