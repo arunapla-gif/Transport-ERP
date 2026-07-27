@@ -12,6 +12,9 @@ const chunkArray = (array, size) => {
 const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   let globalCases = 0, globalCartons = 0, globalBundles = 0;
   
+  const uniqueConsignees = new Set((gdm.gcs || []).map(gc => gc.consignee?.name || '').filter(name => name));
+  const toName = uniqueConsignees.size === 1 ? Array.from(uniqueConsignees)[0].toUpperCase() : 'AS PER BILLS';
+
   const rows = [];
   // Header Row 1
   rows.push([
@@ -134,9 +137,10 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
               {
                 stack: [
                   { text: 'TO', fontSize: 11, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
-                  { text: (gdm.destination || 'N/A').toUpperCase(), fontSize: 16, bold: true, alignment: 'center' }
+                  { text: toName, fontSize: 14, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
+                  { text: `DELIVERY AT ${(gdm.destination || 'N/A')}`.toUpperCase(), fontSize: 11, bold: true, alignment: 'center' }
                 ],
-                margin: [4, 8, 4, 4]
+                margin: [4, 4, 4, 4]
               },
               {
                 stack: [
