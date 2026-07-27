@@ -162,16 +162,16 @@ export default function PrintHub() {
           <div className="w-full flex gap-2">
             <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 shrink-0 h-12">
               <button 
-                onClick={() => setGcPrefix('BELL')}
-                className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gcPrefix === 'BELL' ? 'bg-white shadow text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                BELL
-              </button>
-              <button 
                 onClick={() => setGcPrefix('AP')}
                 className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gcPrefix === 'AP' ? 'bg-white shadow text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 AP
+              </button>
+              <button 
+                onClick={() => setGcPrefix('BELL')}
+                className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gcPrefix === 'BELL' ? 'bg-white shadow text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                BELL
               </button>
             </div>
             <input 
