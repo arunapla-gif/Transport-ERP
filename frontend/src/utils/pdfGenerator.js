@@ -492,8 +492,8 @@ export const generateGcPdf = (gcs, copies) => {
 
   return {
     content,
-    pageSize: 'A5',
-    pageOrientation: 'landscape',
+    pageSize: 'A4',
+    pageOrientation: 'portrait',
     pageMargins: [10, 10, 10, 10],
     defaultStyle: {
       font: 'Times',
