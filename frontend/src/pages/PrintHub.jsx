@@ -5,8 +5,10 @@ import { api } from '../api';
 
 export default function PrintHub() {
   const [gcNumber, setGcNumber] = useState('');
+  const [gcPrefix, setGcPrefix] = useState('BELL');
   const [gcSearchMode, setGcSearchMode] = useState('gc'); // 'gc' or 'gdm'
   const [gdmNumber, setGdmNumber] = useState('');
+  const [gdmPrefix, setGdmPrefix] = useState('AP');
   const [gdmPrintType, setGdmPrintType] = useState('gdm');
   
   const [activeTab, setActiveTab] = useState('GC'); // 'GC' or 'GDM'
@@ -158,19 +160,34 @@ export default function PrintHub() {
           </div>
           
           <div className="w-full flex gap-2">
+            <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 shrink-0 h-12">
+              <button 
+                onClick={() => setGcPrefix('BELL')}
+                className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gcPrefix === 'BELL' ? 'bg-white shadow text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                BELL
+              </button>
+              <button 
+                onClick={() => setGcPrefix('AP')}
+                className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gcPrefix === 'AP' ? 'bg-white shadow text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                AP
+              </button>
+            </div>
             <input 
               type="text" 
-              placeholder={gcSearchMode === 'gc' ? "e.g. BELL-1001" : "e.g. AP-1001 (GDM No.)"} 
+              placeholder={gcSearchMode === 'gc' ? "1001" : "1001"} 
               value={gcNumber}
-              onChange={(e) => setGcNumber(e.target.value.toUpperCase())}
+              onChange={(e) => setGcNumber(e.target.value.replace(/[^0-9]/g, ''))}
               className="flex-1 h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all uppercase"
             />
             <button 
               onClick={(e) => {
+                const fullNumber = `${gcPrefix}-${gcNumber}`;
                 if (gcSearchMode === 'gdm') {
-                  window.open(`/print/gc/${gcNumber}?mode=gdm&copies=LORRY COPY`, '_blank');
+                  window.open(`/print/gc/${fullNumber}?mode=gdm&copies=LORRY COPY`, '_blank');
                 } else {
-                  handleOpenCopiesModal(e, gcNumber);
+                  handleOpenCopiesModal(e, fullNumber);
                 }
               }}
               disabled={!gcNumber}
@@ -190,13 +207,29 @@ export default function PrintHub() {
           <p className="text-sm font-medium text-slate-500 mb-6">Print an A4 size Goods Despatch Memo.</p>
           
           <div className="w-full flex flex-col gap-2">
-            <input 
-              type="text" 
-              placeholder="e.g. AP-1001" 
-              value={gdmNumber}
-              onChange={(e) => setGdmNumber(e.target.value.toUpperCase())}
-              className="w-full h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all uppercase"
-            />
+            <div className="flex gap-2">
+              <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 shrink-0 h-12">
+                <button 
+                  onClick={() => setGdmPrefix('AP')}
+                  className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gdmPrefix === 'AP' ? 'bg-white shadow text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  AP
+                </button>
+                <button 
+                  onClick={() => setGdmPrefix('BELL')}
+                  className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gdmPrefix === 'BELL' ? 'bg-white shadow text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  BELL
+                </button>
+              </div>
+              <input 
+                type="text" 
+                placeholder="1001" 
+                value={gdmNumber}
+                onChange={(e) => setGdmNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                className="w-full h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all uppercase"
+              />
+            </div>
             <div className="flex gap-2">
               <select
                 value={gdmPrintType}
@@ -208,7 +241,7 @@ export default function PrintHub() {
                 <option value="gdm-combined">Combined (Both)</option>
               </select>
               <Link 
-                to={gdmNumber ? `/print/${gdmPrintType}/${gdmNumber}` : '#'}
+                to={gdmNumber ? `/print/${gdmPrintType}/${gdmPrefix}-${gdmNumber}` : '#'}
                 target={gdmNumber ? "_blank" : undefined}
                 className={`h-12 px-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-sm hover:shadow-md ${!gdmNumber ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
