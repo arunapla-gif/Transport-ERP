@@ -15,6 +15,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   const rows = [];
   // Header Row 1
   rows.push([
+    { text: 'S.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
     { text: 'GC.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
     { text: 'CONSIGNOR', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
     { text: 'CONSIGNEE', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
@@ -26,14 +27,14 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   ]);
   // Header Row 2
   rows.push([
-    {}, {}, {}, {},
+    {}, {}, {}, {}, {},
     { text: 'C/S', fontSize: 9, bold: true, alignment: 'center' },
     { text: 'C/N', fontSize: 9, bold: true, alignment: 'center' },
     { text: 'BDL/S', fontSize: 9, bold: true, alignment: 'center' },
     {}
   ]);
 
-  gdm.gcs?.forEach(gc => {
+  gdm.gcs?.forEach((gc, index) => {
     let rowCases = 0, rowCartons = 0, rowBundles = 0;
     gc.goods?.forEach(g => {
        const c = parseInt(g.articleCount) || 0;
@@ -55,6 +56,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
     globalBundles += rowBundles;
 
     rows.push([
+      { text: (index + 1).toString(), fontSize: 10, bold: true, alignment: 'center', margin: [2, 4, 2, 4] },
       {
         stack: [
           { text: gc.gcNumber.replace('BELL-', '').replace('AP-', ''), fontSize: 11, bold: true, alignment: 'center' }
@@ -74,8 +76,8 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   // Totals Row
   const totalFreight = gdm.gcs?.reduce((sum, gc) => sum + (parseFloat(gc.freightTotal) || 0), 0) || '-';
   rows.push([
-    { text: 'TOTAL', colSpan: 4, fontSize: 11, bold: true, alignment: 'right', margin: [4, 6, 4, 6] },
-    {}, {}, {},
+    { text: 'TOTAL', colSpan: 5, fontSize: 11, bold: true, alignment: 'right', margin: [4, 6, 4, 6] },
+    {}, {}, {}, {},
     { text: globalCases > 0 ? globalCases : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
     { text: globalCartons > 0 ? globalCartons : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
     { text: globalBundles > 0 ? globalBundles : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
@@ -119,20 +121,27 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       // Meta Info
       {
         table: {
-          widths: ['50%', '50%'],
+          widths: ['33%', '34%', '33%'],
           body: [
             [
               {
                 stack: [
                   { text: 'GDM No: ' + (gdm.gdmNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Date: ' + new Date(gdm.date).toLocaleDateString('en-GB') + ' - ' + (gdm.time || ''), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 12, bold: true }
+                  { text: 'Date: ' + new Date(gdm.date).toLocaleDateString('en-GB') + ' - ' + (gdm.time || ''), fontSize: 10, bold: true }
                 ],
                 margin: [4, 4, 4, 4]
               },
               {
                 stack: [
-                  { text: 'Destination: ' + (gdm.destination || 'N/A'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'TO', fontSize: 11, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
+                  { text: (gdm.destination || 'N/A').toUpperCase(), fontSize: 16, bold: true, alignment: 'center' }
+                ],
+                margin: [4, 8, 4, 4]
+              },
+              {
+                stack: [
+                  { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' (' + (gdm.vehicle?.ownerPhone || '-') + ')', fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
                   { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' (' + (gdm.vehicle?.driverPhone || '-') + ')', fontSize: 10, bold: true }
                 ],
                 margin: [4, 4, 4, 4]
@@ -146,7 +155,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       {
         table: {
           headerRows: 2,
-          widths: ['12%', '20%', '20%', '16%', '6%', '6%', '6%', '14%'],
+          widths: ['5%', '10%', '19%', '19%', '15%', '6%', '6%', '6%', '14%'],
           body: rows
         },
         layout: {
