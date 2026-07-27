@@ -185,7 +185,7 @@ export default function PrintHub() {
         allUnitOptions = unitsRes.map(u => ({ label: u.description, code: u.code, category: u.category }));
       }
       
-      const blobUrl = await generateGdmPdfBlob(gdmsToPrint, allUnitOptions);
+      const blobUrl = await generateGdmPdfBlob(gdmsToPrint, allUnitOptions, gdmPrintType);
       const res = await fetch(blobUrl);
       const blob = await res.blob();
       const formData = new FormData();
@@ -208,10 +208,6 @@ export default function PrintHub() {
   };
 
   const handleDownloadPdfGdm = async () => {
-    if (gdmPrintType === 'cewb' || gdmPrintType === 'combined') {
-       toast.error("Direct PDF download only supports Standard GDM format. Use Preview for CEWB.");
-       return;
-    }
     setIsPrinting(true);
     const toastId = toast.loading('Generating GDM PDF...');
     try {
@@ -227,7 +223,7 @@ export default function PrintHub() {
       if (unitsRes && unitsRes.length > 0) {
         allUnitOptions = unitsRes.map(u => ({ label: u.description, code: u.code, category: u.category }));
       }
-      const blobUrl = await generateGdmPdfBlob(gdmsToPrint, allUnitOptions);
+      const blobUrl = await generateGdmPdfBlob(gdmsToPrint, allUnitOptions, gdmPrintType);
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = `GDM_${gdmsToPrint[0]?.gdmNumber || 'Print'}.pdf`;
@@ -345,7 +341,7 @@ export default function PrintHub() {
               </button>
               <button 
                 onClick={handleDownloadPdfGdm}
-                disabled={isPrinting || gdmPrintType === 'cewb' || gdmPrintType === 'gdm-combined'}
+                disabled={isPrinting}
                 className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 font-bold text-sm flex justify-center items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download size={16} />
@@ -360,9 +356,8 @@ export default function PrintHub() {
               </button>
               <button 
                 onClick={handleSilentPrintGdm}
-                disabled={isPrinting || gdmPrintType === 'cewb' || gdmPrintType === 'gdm-combined'}
+                disabled={isPrinting}
                 className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
-                title={gdmPrintType !== 'gdm' ? "Silent Print only supports Standard GDM format" : ""}
               >
                 {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
                 Print
