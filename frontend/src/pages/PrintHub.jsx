@@ -275,6 +275,24 @@ export default function PrintHub() {
               </button>
               <button 
                 onClick={confirmGdmPrint}
+                className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold flex items-center gap-2"
+              >
+                <FileText size={18} />
+                Preview
+              </button>
+              <button 
+                onClick={handleSilentPrintGdm}
+                disabled={isPrinting || gdmPrintType === 'cewb' || gdmPrintType === 'gdm-combined'}
+                className="px-4 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                title={gdmPrintType !== 'gdm' ? "Silent Print only supports Standard GDM format" : ""}
+              >
+                {isPrinting ? <div className="animate-spin h-5 w-5 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={18} />}
+                ⚡ Silent Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 mb-8">
         <div className="bg-indigo-100 text-indigo-700 p-2.5 rounded-xl shadow-sm">
