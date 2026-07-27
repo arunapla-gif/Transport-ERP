@@ -275,35 +275,35 @@ export default function PrintHub() {
               ))}
             </div>
             
-            <div className="flex flex-wrap justify-end gap-2 mt-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-6">
               <button 
                 onClick={() => setShowCopiesModal(false)}
-                className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold"
+                className="px-3 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold text-sm flex justify-center items-center"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleDownloadPdfGc}
                 disabled={selectedCopies.length === 0 || isPrinting}
-                className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-bold text-sm flex justify-center items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download size={18} />
+                <Download size={16} />
                 PDF
               </button>
               <button 
                 onClick={confirmPrint}
-                className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold flex items-center gap-2"
+                className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold text-sm flex justify-center items-center gap-1.5"
               >
-                <FileText size={18} />
+                <FileText size={16} />
                 Preview
               </button>
               <button 
                 onClick={handleSilentPrintGc}
                 disabled={selectedCopies.length === 0 || isPrinting}
-                className="px-4 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
               >
-                {isPrinting ? <div className="animate-spin h-5 w-5 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={18} />}
-                ⚡ Print
+                {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
+                Print
               </button>
             </div>
           </div>
@@ -336,36 +336,36 @@ export default function PrintHub() {
               ))}
             </div>
             
-            <div className="flex flex-wrap justify-end gap-2 mt-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-6">
               <button 
                 onClick={() => setShowGdmFormatModal(false)}
-                className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold"
+                className="px-3 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold text-sm flex justify-center items-center"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleDownloadPdfGdm}
                 disabled={isPrinting || gdmPrintType === 'cewb' || gdmPrintType === 'gdm-combined'}
-                className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 font-bold text-sm flex justify-center items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download size={18} />
+                <Download size={16} />
                 PDF
               </button>
               <button 
                 onClick={confirmGdmPrint}
-                className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold flex items-center gap-2"
+                className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold text-sm flex justify-center items-center gap-1.5"
               >
-                <FileText size={18} />
+                <FileText size={16} />
                 Preview
               </button>
               <button 
                 onClick={handleSilentPrintGdm}
                 disabled={isPrinting || gdmPrintType === 'cewb' || gdmPrintType === 'gdm-combined'}
-                className="px-4 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
                 title={gdmPrintType !== 'gdm' ? "Silent Print only supports Standard GDM format" : ""}
               >
-                {isPrinting ? <div className="animate-spin h-5 w-5 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={18} />}
-                ⚡ Print
+                {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
+                Print
               </button>
             </div>
           </div>
