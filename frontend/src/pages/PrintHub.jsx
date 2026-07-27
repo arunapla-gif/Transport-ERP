@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Printer, FileText, PackageCheck, Search, CheckSquare, Download } from 'lucide-react';
+import { Printer, FileText, PackageCheck, Search, CheckSquare, Download, Zap } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { api } from '../api';
+import { generateGcPdfBlob } from '../utils/pdfGenerator';
+import { generateGdmPdfBlob } from '../utils/gdmPdfGenerator';
 
 export default function PrintHub() {
   const navigate = useNavigate();
@@ -28,6 +31,7 @@ export default function PrintHub() {
   const [gdmPendingPrintIds, setGdmPendingPrintIds] = useState('');
   
   const [loading, setLoading] = useState(true);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -80,6 +84,44 @@ export default function PrintHub() {
     setShowCopiesModal(false);
   };
 
+  const handleSilentPrintGc = async () => {
+    if (selectedCopies.length === 0) return;
+    setIsPrinting(true);
+    const toastId = toast.loading('Generating GC PDF for silent print...');
+    try {
+      // Find the GC objects from recentGcs or fetch if not present
+      let gcsToPrint = [];
+      const ids = pendingPrintIds.split(',');
+      for (const id of ids) {
+        let gc = recentGcs.find(g => g.gcNumber === id);
+        if (!gc) {
+           gc = await api.get(`/gcs/${id}`);
+        }
+        if (gc) gcsToPrint.push(gc);
+      }
+      
+      const blobUrl = await generateGcPdfBlob(gcsToPrint, selectedCopies);
+      const res = await fetch(blobUrl);
+      const blob = await res.blob();
+      const formData = new FormData();
+      formData.append('pdf', blob, 'document.pdf');
+      
+      toast.loading('Sending to physical printer...', { id: toastId });
+      const printRes = await fetch('http://localhost:8181/print', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!printRes.ok) throw new Error('Print Agent rejected request');
+      toast.success('Successfully sent to printer!', { id: toastId });
+      setShowCopiesModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Silent print failed. Is the Local Print Agent running?', { id: toastId });
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   const handleOpenGdmFormatModal = (e, ids) => {
     e.preventDefault();
     if (!ids) return;
@@ -90,6 +132,52 @@ export default function PrintHub() {
   const confirmGdmPrint = () => {
     navigate(`/print/${gdmPrintType}/${gdmPendingPrintIds}`);
     setShowGdmFormatModal(false);
+  };
+
+  const handleSilentPrintGdm = async () => {
+    if (gdmPrintType === 'cewb' || gdmPrintType === 'combined') {
+       toast.error("Silent Print only supports Standard GDM format. Use Preview for CEWB.");
+       return;
+    }
+    
+    setIsPrinting(true);
+    const toastId = toast.loading('Generating GDM PDF for silent print...');
+    try {
+      let gdmsToPrint = [];
+      const ids = gdmPendingPrintIds.split(',');
+      for (const id of ids) {
+        let gdm = recentGdms.find(g => g.gdmNumber === id || g.id === id);
+        // GDM data for printing needs the full payload (with GCs)
+        const fullGdm = await api.get(`/gdms/${gdm ? gdm.id : id}`);
+        if (fullGdm) gdmsToPrint.push(fullGdm);
+      }
+      
+      const unitsRes = await api.get('/units').catch(() => []);
+      let allUnitOptions = [];
+      if (unitsRes && unitsRes.length > 0) {
+        allUnitOptions = unitsRes.map(u => ({ label: u.description, code: u.code, category: u.category }));
+      }
+      
+      const blobUrl = await generateGdmPdfBlob(gdmsToPrint, allUnitOptions);
+      const res = await fetch(blobUrl);
+      const blob = await res.blob();
+      const formData = new FormData();
+      formData.append('pdf', blob, 'gdm_document.pdf');
+      
+      toast.loading('Sending to physical printer...', { id: toastId });
+      const printRes = await fetch('http://localhost:8181/print', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!printRes.ok) throw new Error('Print Agent rejected request');
+      toast.success('Successfully sent to printer!', { id: toastId });
+      setShowGdmFormatModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Silent print failed. Is the Local Print Agent running?', { id: toastId });
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   // GDM Selection logic
@@ -125,19 +213,27 @@ export default function PrintHub() {
               ))}
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex justify-end gap-3 mt-6">
               <button 
                 onClick={() => setShowCopiesModal(false)}
-                className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold"
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmPrint}
-                disabled={selectedCopies.length === 0}
-                className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold flex items-center gap-2"
               >
-                🖨️ Print
+                <FileText size={18} />
+                Preview PDF
+              </button>
+              <button 
+                onClick={handleSilentPrintGc}
+                disabled={selectedCopies.length === 0 || isPrinting}
+                className="px-4 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isPrinting ? <div className="animate-spin h-5 w-5 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={18} />}
+                ⚡ Silent Print
               </button>
             </div>
           </div>
@@ -170,23 +266,15 @@ export default function PrintHub() {
               ))}
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex justify-end gap-3 mt-6">
               <button 
                 onClick={() => setShowGdmFormatModal(false)}
-                className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold"
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmGdmPrint}
-                className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex justify-center items-center gap-2"
-              >
-                🖨️ Print
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="flex items-center gap-3 mb-8">
         <div className="bg-indigo-100 text-indigo-700 p-2.5 rounded-xl shadow-sm">
