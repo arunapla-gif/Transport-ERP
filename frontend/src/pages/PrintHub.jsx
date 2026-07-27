@@ -23,6 +23,10 @@ export default function PrintHub() {
   const [pendingPrintIds, setPendingPrintIds] = useState('');
   const [selectedCopies, setSelectedCopies] = useState(['CONSIGNOR COPY']);
   
+  const [showGdmFormatModal, setShowGdmFormatModal] = useState(false);
+  const [gdmPendingPrintIds, setGdmPendingPrintIds] = useState('');
+  const [selectedCopies, setSelectedCopies] = useState(['CONSIGNOR COPY']);
+  
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -76,6 +80,18 @@ export default function PrintHub() {
     setShowCopiesModal(false);
   };
 
+  const handleOpenGdmFormatModal = (e, ids) => {
+    e.preventDefault();
+    if (!ids) return;
+    setGdmPendingPrintIds(ids);
+    setShowGdmFormatModal(true);
+  };
+
+  const confirmGdmPrint = () => {
+    window.open(`/print/${gdmPrintType}/${gdmPendingPrintIds}`, '_blank');
+    setShowGdmFormatModal(false);
+  };
+
   // GDM Selection logic
   const toggleGdmSelection = (gdmId) => {
     setSelectedGdms(prev => prev.includes(gdmId) ? prev.filter(id => id !== gdmId) : [...prev, gdmId]);
@@ -120,6 +136,50 @@ export default function PrintHub() {
                 onClick={confirmPrint}
                 disabled={selectedCopies.length === 0}
                 className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+              >
+                🖨️ Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GDM Format Modal */}
+      {showGdmFormatModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center print:hidden">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 m-4 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-xl font-black text-slate-800 mb-4 text-center">Select Print Format</h2>
+            <p className="text-sm font-semibold text-slate-500 mb-6 text-center">Choose the format for your Delivery Memo.</p>
+            
+            <div className="space-y-3 mb-8">
+              {[
+                { id: 'gdm', label: 'Standard GDM' },
+                { id: 'cewb', label: 'CEWB Format' },
+                { id: 'gdm-combined', label: 'Combined (Both)' }
+              ].map(format => (
+                <label key={format.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${gdmPrintType === format.id ? 'border-emerald-600 bg-emerald-50/50' : 'border-slate-200 hover:border-emerald-300'}`}>
+                  <input 
+                    type="radio" 
+                    name="gdmFormat"
+                    className="w-5 h-5 text-emerald-600 border-slate-300 focus:ring-emerald-500"
+                    checked={gdmPrintType === format.id}
+                    onChange={() => setGdmPrintType(format.id)}
+                  />
+                  <span className={`font-bold ${gdmPrintType === format.id ? 'text-emerald-900' : 'text-slate-600'}`}>{format.label}</span>
+                </label>
+              ))}
+            </div>
+            
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowGdmFormatModal(false)}
+                className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmGdmPrint}
+                className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex justify-center items-center gap-2"
               >
                 🖨️ Print
               </button>
@@ -230,24 +290,13 @@ export default function PrintHub() {
                 className="w-full h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all uppercase"
               />
             </div>
-            <div className="flex gap-2">
-              <select
-                value={gdmPrintType}
-                onChange={(e) => setGdmPrintType(e.target.value)}
-                className="flex-1 h-12 px-3 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-              >
-                <option value="gdm">Standard GDM</option>
-                <option value="cewb">CEWB Format</option>
-                <option value="gdm-combined">Combined (Both)</option>
-              </select>
-              <Link 
-                to={gdmNumber ? `/print/${gdmPrintType}/${gdmPrefix}-${gdmNumber}` : '#'}
-                target={gdmNumber ? "_blank" : undefined}
-                className={`h-12 px-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-sm hover:shadow-md ${!gdmNumber ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Printer size={18} /> Print
-              </Link>
-            </div>
+            <button 
+              onClick={(e) => handleOpenGdmFormatModal(e, `${gdmPrefix}-${gdmNumber}`)}
+              disabled={!gdmNumber}
+              className={`w-full h-12 px-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-sm hover:shadow-md ${!gdmNumber ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <Printer size={18} /> Choose Format & Print
+            </button>
           </div>
         </div>
 
@@ -292,13 +341,13 @@ export default function PrintHub() {
               <Printer size={16} /> Print Selected ({selectedGcs.length})
             </button>
           ) : (
-            <Link 
-              to={selectedGdms.length > 0 ? `/print/gdm/${selectedGdms.join(',')}` : '#'}
-              target={selectedGdms.length > 0 ? "_blank" : undefined}
+            <button 
+              onClick={(e) => handleOpenGdmFormatModal(e, selectedGdms.join(','))}
+              disabled={selectedGdms.length === 0}
               className={`h-10 px-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition-all shadow-sm ${selectedGdms.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Printer size={16} /> Print Selected ({selectedGdms.length})
-            </Link>
+            </button>
           )}
         </div>
 
