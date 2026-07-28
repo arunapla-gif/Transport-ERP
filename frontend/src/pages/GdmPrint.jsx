@@ -8,6 +8,7 @@ export default function GdmPrint() {
   const navigate = useNavigate();
   const [pdfUrl, setPdfUrl] = useState('');
   const [error, setError] = useState('');
+  const [hardwareStatus, setHardwareStatus] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,17 +46,69 @@ export default function GdmPrint() {
     </div>
   );
 
+  const handleNativeDownload = () => {
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `GDM_${id || 'Print'}.pdf`;
+    link.click();
+  };
+
+  const handleSilentHardwarePrint = async () => {
+    setHardwareStatus('Generating PDF...');
+    try {
+      const res = await fetch(pdfUrl);
+      const blob = await res.blob();
+      
+      setHardwareStatus('Connecting to Agent...');
+      const formData = new FormData();
+      formData.append('pdf', blob, `GDM_${id || 'Print'}.pdf`);
+
+      const response = await fetch('http://localhost:8181/print', {
+        method: 'POST',
+        body: formData,
+      });
+
+      setHardwareStatus('Waiting for Printer...');
+      if (!response.ok) {
+        throw new Error('Local Print Agent is not running or failed to print.');
+      }
+
+      setHardwareStatus('Done!');
+      alert('Successfully sent to physical printer!');
+    } catch (e) {
+      console.error(e);
+      alert(`Hardware Print Error: Ensure the Local Print Agent is running on this computer! (${e.message})`);
+    } finally {
+      setTimeout(() => setHardwareStatus(''), 2000);
+    }
+  };
+
   return (
     <div className="h-screen w-full flex flex-col bg-slate-800">
-      <div className="flex justify-between items-center p-4 bg-slate-900 text-white shadow-xl z-10">
+      <div className="flex justify-between items-center p-4 bg-slate-900 text-white shadow-xl z-10 shrink-0">
         <button 
           onClick={() => navigate(-1)}
-          className="bg-slate-700 px-4 py-2 rounded-lg font-bold hover:bg-slate-600 transition-colors shadow-lg"
+          className="bg-slate-700 px-5 py-2.5 rounded-lg font-bold hover:bg-slate-600 transition-colors shadow-lg"
         >
           ← Back
         </button>
-        <h1 className="text-xl font-bold tracking-widest text-slate-300 font-serif">GDM PRINT HUB</h1>
-        <div className="w-20"></div>
+        
+        <div className="flex gap-3">
+          <button 
+            onClick={handleSilentHardwarePrint}
+            disabled={!!hardwareStatus || !pdfUrl}
+            className={`${hardwareStatus ? 'bg-amber-400' : 'bg-amber-500 hover:bg-amber-400'} text-slate-900 px-5 py-2.5 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2`}
+          >
+            {hardwareStatus ? hardwareStatus : '⚡ Silent Hardware Print'}
+          </button>
+          <button 
+            onClick={handleNativeDownload}
+            disabled={!pdfUrl}
+            className="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg hover:bg-emerald-500 transition-colors flex items-center gap-2"
+          >
+            ⬇️ Download PDF
+          </button>
+        </div>
       </div>
       <div className="flex-1 w-full p-2 lg:p-6 overflow-hidden">
         <iframe 
