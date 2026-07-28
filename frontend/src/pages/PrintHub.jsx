@@ -299,7 +299,7 @@ export default function PrintHub() {
                 className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
               >
                 {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
-                Print
+                Silent Print
               </button>
             </div>
           </div>
@@ -360,7 +360,7 @@ export default function PrintHub() {
                 className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
               >
                 {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
-                Print
+                Silent Print
               </button>
             </div>
           </div>
