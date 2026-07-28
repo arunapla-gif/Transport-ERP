@@ -140,8 +140,10 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
               {
                 stack: [
                   { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' PH: ' + (gdm.vehicle?.ownerPhone || '-'), fontSize: 9, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' PH: ' + (gdm.vehicle?.driverPhone || '-'), fontSize: 9, bold: true }
+                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-'), fontSize: 9, bold: true },
+                  { text: 'PH: ' + (gdm.vehicle?.ownerPhone || '-'), fontSize: 9, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-'), fontSize: 9, bold: true },
+                  { text: 'PH: ' + (gdm.vehicle?.driverPhone || '-'), fontSize: 9, bold: true }
                 ],
                 margin: [4, 4, 4, 4]
               },
