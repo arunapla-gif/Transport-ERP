@@ -33,6 +33,8 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
     {}
   ]);
 
+  const formatDocNumber = (numStr) => numStr ? numStr.replace('-', ' - ') : '-';
+
   gdm.gcs?.forEach((gc, index) => {
     let rowCases = 0, rowCartons = 0, rowBundles = 0;
     gc.goods?.forEach(g => {
@@ -58,7 +60,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       { text: (index + 1).toString(), fontSize: 10, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
       {
         stack: [
-          { text: gc.gcNumber, fontSize: 11, bold: true, alignment: 'center' }
+          { text: formatDocNumber(gc.gcNumber), fontSize: 11, bold: true, alignment: 'center' }
         ],
         margin: [2, 6, 2, 6]
       },
@@ -153,7 +155,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
               },
               {
                 stack: [
-                  { text: 'GDM No: ' + (gdm.gdmNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'GDM No: ' + formatDocNumber(gdm.gdmNumber), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
                   { text: 'Date: ' + new Date(gdm.date).toLocaleDateString('en-GB'), fontSize: 10, bold: true }
                 ],
                 alignment: 'right',
