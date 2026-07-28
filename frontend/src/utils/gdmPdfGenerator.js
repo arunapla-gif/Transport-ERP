@@ -15,15 +15,15 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   const rows = [];
   // Header Row 1
   rows.push([
-    { text: 'S.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
-    { text: 'GC.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
-    { text: 'CONSIGNOR', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
-    { text: 'CONSIGNEE', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
-    { text: 'DESTINATION', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
-    { text: 'ARTICLES', colSpan: 3, fontSize: 10, bold: true, alignment: 'center', margin: [0, 2, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'S.NO', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'GC.NO', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'CONSIGNOR', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'CONSIGNEE', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'DESTINATION', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'ARTICLES', colSpan: 3, fontSize: 9, bold: true, alignment: 'center', margin: [0, 2, 0, 2], fillColor: '#e2e8f0' },
     {},
     {},
-    { text: 'FREIGHT', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' }
+    { text: 'FREIGHT', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' }
   ]);
   // Header Row 2
   rows.push([
@@ -87,7 +87,6 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   const firstGc = gdm.gcs?.[0];
   const isAp = firstGc?.gcNumber?.startsWith('AP-');
   const companyName = isAp ? 'A.P. ROADLINES' : 'THE BELL LORRY AGENCIES';
-  const companyTamil = isAp ? 'ஸ்ரீ அய்யனார் துணை' : 'ஸ்ரீ திருச்செந்தூர் முருகன் துணை';
   const address = '359, THIRUTHAGAL ROAD, SIVAKASI-626123';
   const phone = isAp ? '9876543210' : '04562-221253';
   const gstin = isAp ? '33AADHP9192F1Z0' : '33AGKPK2374D1ZN';
@@ -100,92 +99,81 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
           { 
             text: isAp ? 'AP' : 'BL', 
             width: '15%', 
-            fontSize: 32, 
+            fontSize: 24, 
             bold: true, 
             alignment: 'center', 
-            margin: [0, 15, 0, 0],
-            color: '#1e293b'
+            margin: [0, 10, 0, 0],
+            color: 'black'
           },
           {
-            width: '70%',
+            width: '65%',
             stack: [
-              { text: companyTamil, fontSize: 14, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
-              { text: companyName, fontSize: 26, bold: true, alignment: 'center', margin: [0, 0, 0, 4], color: '#0f172a' },
-              { text: address, fontSize: 11, bold: true, alignment: 'center', color: '#475569' }
+              { text: companyName, fontSize: 22, bold: true, alignment: 'center', margin: [0, 0, 0, 2], color: 'black' },
+              { text: address, fontSize: 10, bold: true, alignment: 'center', color: 'black' }
             ]
           },
           {
-            width: '15%',
+            width: '20%',
             stack: [
-              { text: `GSTIN:`, fontSize: 9, bold: true, alignment: 'right', color: '#64748b' },
-              { text: gstin, fontSize: 10, bold: true, alignment: 'right', margin: [0, 0, 0, 6] },
-              { text: `CELL:`, fontSize: 9, bold: true, alignment: 'right', color: '#64748b' },
-              { text: phone, fontSize: 10, bold: true, alignment: 'right' }
+              { text: `GSTIN: ${gstin}`, fontSize: 9, bold: true, alignment: 'right', color: 'black', margin: [0, 0, 0, 4] },
+              { text: `CELL: ${phone}`, fontSize: 9, bold: true, alignment: 'right', color: 'black' }
             ],
             margin: [0, 10, 0, 0]
           }
         ],
-        margin: [0, 0, 0, 15]
+        margin: [0, 0, 0, 10]
       },
       // Divider
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, color: '#94a3b8' }], margin: [0, 0, 0, 12] },
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, color: 'black' }], margin: [0, 0, 0, 10] },
       // Meta Info
       {
         table: {
-          widths: ['28%', '38%', '34%'],
+          widths: ['28%', '34%', '38%'],
           body: [
             [
               {
-                fillColor: '#f8fafc',
                 stack: [
-                  { text: 'GDM No: ' + (gdm.gdmNumber || '-'), fontSize: 11, bold: true, margin: [0, 0, 0, 6] },
-                  { text: 'Date: ' + new Date(gdm.date).toLocaleDateString('en-GB') + ' - ' + (gdm.time || ''), fontSize: 11, bold: true }
+                  { text: 'GDM No: ' + (gdm.gdmNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Date: ' + new Date(gdm.date).toLocaleDateString('en-GB') + ' - ' + (gdm.time || ''), fontSize: 10, bold: true }
                 ],
-                margin: [6, 8, 6, 8]
+                margin: [4, 4, 4, 4]
               },
               {
-                fillColor: '#f8fafc',
                 stack: [
-                  { text: 'TO', fontSize: 11, bold: true, alignment: 'center', margin: [0, 0, 0, 4], color: '#475569' },
+                  { text: 'TO', fontSize: 11, bold: true, alignment: 'center', margin: [0, 0, 0, 4], color: 'black' },
                   { text: (gdm.toName || 'AS PER BILLS').toUpperCase(), fontSize: 14, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
-                  { text: `DELIVERY AT ${(gdm.deliveryAt || gdm.destination || 'N/A')}`.toUpperCase(), fontSize: 12, bold: true, alignment: 'center' }
+                  { text: `DELIVERY AT ${(gdm.deliveryAt || gdm.destination || 'N/A')}`.toUpperCase(), fontSize: 11, bold: true, alignment: 'center' }
                 ],
-                margin: [6, 8, 6, 8]
+                margin: [4, 4, 4, 4]
               },
               {
-                fillColor: '#f8fafc',
                 stack: [
-                  { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 11, bold: true, margin: [0, 0, 0, 6] },
-                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' (' + (gdm.vehicle?.ownerPhone || '-') + ')', fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' (' + (gdm.vehicle?.driverPhone || '-') + ')', fontSize: 10, bold: true }
+                  { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' (' + (gdm.vehicle?.ownerPhone || '-') + ')', fontSize: 9, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' (' + (gdm.vehicle?.driverPhone || '-') + ')', fontSize: 9, bold: true }
                 ],
-                margin: [6, 8, 6, 8]
+                margin: [4, 4, 4, 4]
               }
             ]
           ]
         },
-        layout: {
-          hLineWidth: function(i, node) { return 1; },
-          vLineWidth: function(i, node) { return 1; },
-          hLineColor: function(i, node) { return '#cbd5e1'; },
-          vLineColor: function(i, node) { return '#cbd5e1'; },
-        },
-        margin: [0, 0, 0, 15]
+        layout: 'noBorders',
+        margin: [0, 0, 0, 10]
       },
       // Table
       {
         table: {
           headerRows: 2,
-          widths: ['6%', '15%', '17%', '17%', '15%', '6%', '6%', '6%', '12%'],
+          widths: ['6%', '14%', '15%', '15%', '15%', '7%', '7%', '7%', '14%'],
           body: rows
         },
         layout: {
           hLineWidth: function(i, node) { return 1; },
           vLineWidth: function(i, node) { return 1; },
-          hLineColor: function(i, node) { return '#94a3b8'; },
-          vLineColor: function(i, node) { return '#94a3b8'; },
+          hLineColor: function(i, node) { return 'black'; },
+          vLineColor: function(i, node) { return 'black'; },
         },
-        margin: [0, 0, 0, 40]
+        margin: [0, 0, 0, 30]
       },
       // Signatures
       {
@@ -193,15 +181,15 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
           {
             width: '50%',
             stack: [
-              { text: '____________________', alignment: 'center', margin: [0, 0, 0, 6] },
-              { text: 'Driver Signature', fontSize: 11, bold: true, alignment: 'center', color: '#475569' }
+              { text: '____________________', alignment: 'center', margin: [0, 0, 0, 4] },
+              { text: 'Driver Signature', fontSize: 10, bold: true, alignment: 'center', color: 'black' }
             ]
           },
           {
             width: '50%',
             stack: [
-              { text: '____________________', alignment: 'center', margin: [0, 0, 0, 6] },
-              { text: 'For BELL LOGISTICS', fontSize: 11, bold: true, alignment: 'center', color: '#475569' }
+              { text: '____________________', alignment: 'center', margin: [0, 0, 0, 4] },
+              { text: 'For BELL LOGISTICS', fontSize: 10, bold: true, alignment: 'center', color: 'black' }
             ]
           }
         ]
