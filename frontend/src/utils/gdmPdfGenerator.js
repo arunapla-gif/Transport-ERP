@@ -97,11 +97,11 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       // Header
       {
         columns: [
-          { text: isAp ? 'AP' : 'BL', width: '15%', fontSize: 24, bold: true, alignment: 'center', margin: [0, 10, 0, 0] },
+          { text: isAp ? 'AP' : 'BL', width: '12%', fontSize: 24, bold: true, alignment: 'center', margin: [0, 10, 0, 0] },
           {
-            width: '55%',
+            width: '58%',
             stack: [
-              { text: companyName, fontSize: 24, bold: true, margin: [0, 0, 0, 2] },
+              { text: companyName, fontSize: 22, bold: true, margin: [0, 0, 0, 2] },
               { text: address, fontSize: 10, bold: true }
             ]
           },
@@ -156,7 +156,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       {
         table: {
           headerRows: 2,
-          widths: ['6%', '14%', '18%', '18%', '14%', '5%', '5%', '5%', '15%'],
+          widths: ['8%', '13%', '18%', '18%', '13%', '5%', '5%', '5%', '15%'],
           body: rows
         },
         layout: {
