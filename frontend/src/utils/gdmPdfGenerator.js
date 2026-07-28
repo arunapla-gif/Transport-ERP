@@ -129,12 +129,10 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
         ],
         margin: [0, 0, 0, 10]
       },
-      // Divider
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, color: 'black' }], margin: [0, 0, 0, 10] },
-      // Meta Info
+      // Meta Info Grid
       {
         table: {
-          widths: ['38%', '34%', '28%'],
+          widths: ['33%', '34%', '33%'],
           body: [
             [
               {
@@ -166,7 +164,12 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
             ]
           ]
         },
-        layout: 'noBorders',
+        layout: {
+          hLineWidth: function(i, node) { return 1; },
+          vLineWidth: function(i, node) { return 1; },
+          hLineColor: function(i, node) { return 'black'; },
+          vLineColor: function(i, node) { return 'black'; },
+        },
         margin: [0, 0, 0, 10]
       },
       // Table
