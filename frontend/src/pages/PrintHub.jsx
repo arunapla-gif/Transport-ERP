@@ -175,7 +175,7 @@ export default function PrintHub() {
       for (const id of ids) {
         let gdm = recentGdms.find(g => g.gdmNumber === id || g.id === id);
         // GDM data for printing needs the full payload (with GCs)
-        const fullGdm = await api.get(`/gdms/${gdm ? gdm.id : id}`);
+        const fullGdm = await api.get(`/gdms/${id}`);
         if (fullGdm) gdmsToPrint.push(fullGdm);
       }
       
@@ -215,7 +215,7 @@ export default function PrintHub() {
       const ids = gdmPendingPrintIds.split(',');
       for (const id of ids) {
         let gdm = recentGdms.find(g => g.gdmNumber === id || g.id === id);
-        const fullGdm = await api.get(`/gdms/${gdm ? gdm.id : id}`);
+        const fullGdm = await api.get(`/gdms/${id}`);
         if (fullGdm) gdmsToPrint.push(fullGdm);
       }
       const unitsRes = await api.get('/units').catch(() => []);
@@ -299,7 +299,7 @@ export default function PrintHub() {
                 className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
               >
                 {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
-                Silent Print
+                Print
               </button>
             </div>
           </div>
@@ -360,7 +360,7 @@ export default function PrintHub() {
                 className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
               >
                 {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
-                Silent Print
+                Print
               </button>
             </div>
           </div>
