@@ -187,8 +187,11 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
         },
         margin: [0, 0, 0, 30]
       },
-      // Signatures
+      // Spacer to prevent table from overlapping absolute signature
+      { text: '', margin: [0, 0, 0, 80] },
+      // Signatures at absolute bottom
       {
+        absolutePosition: { x: 20, y: 760 },
         columns: [
           {
             width: '50%',
