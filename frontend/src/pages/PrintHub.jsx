@@ -162,13 +162,12 @@ export default function PrintHub() {
   };
 
   const handleSilentPrintGdm = async () => {
-    if (gdmPrintType === 'cewb' || gdmPrintType === 'combined') {
-       toast.error("Silent Print only supports Standard GDM format. Use Preview for CEWB.");
-       return;
-    }
-    
     setIsPrinting(true);
-    const toastId = toast.loading('Generating GDM PDF for silent print...');
+    const toastMessage = gdmPrintType === 'cewb' ? 'Generating CEWB PDF for silent print...' : 
+                         gdmPrintType === 'combined' ? 'Generating Combined PDF for silent print...' :
+                         'Generating GDM PDF for silent print...';
+    
+    const toastId = toast.loading(toastMessage);
     try {
       let gdmsToPrint = [];
       const ids = gdmPendingPrintIds.split(',');
@@ -185,7 +184,8 @@ export default function PrintHub() {
         allUnitOptions = unitsRes.map(u => ({ label: u.description, code: u.code, category: u.category }));
       }
       
-      const blobUrl = await generateGdmPdfBlob(gdmsToPrint, allUnitOptions, gdmPrintType);
+      const pdfFormat = gdmPrintType === 'combined' ? 'gdm-combined' : gdmPrintType;
+      const blobUrl = await generateGdmPdfBlob(gdmsToPrint, allUnitOptions, pdfFormat);
       const res = await fetch(blobUrl);
       const blob = await res.blob();
       const formData = new FormData();
