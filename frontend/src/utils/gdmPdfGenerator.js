@@ -15,22 +15,22 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   const rows = [];
   // Header Row 1
   rows.push([
-    { text: 'S.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
-    { text: 'GC.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
-    { text: 'CONSIGNOR', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
-    { text: 'CONSIGNEE', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
-    { text: 'DESTINATION', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
-    { text: 'ARTICLES', colSpan: 3, fontSize: 10, bold: true, alignment: 'center', margin: [0, 2, 0, 2] },
+    { text: 'S.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'GC.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'CONSIGNOR', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'CONSIGNEE', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'DESTINATION', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
+    { text: 'ARTICLES', colSpan: 3, fontSize: 10, bold: true, alignment: 'center', margin: [0, 2, 0, 2], fillColor: '#e2e8f0' },
     {},
     {},
-    { text: 'FREIGHT', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] }
+    { text: 'FREIGHT', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' }
   ]);
   // Header Row 2
   rows.push([
     {}, {}, {}, {}, {},
-    { text: 'C/S', fontSize: 9, bold: true, alignment: 'center' },
-    { text: 'C/N', fontSize: 9, bold: true, alignment: 'center' },
-    { text: 'BDL/S', fontSize: 9, bold: true, alignment: 'center' },
+    { text: 'C/S', fontSize: 9, bold: true, alignment: 'center', fillColor: '#e2e8f0' },
+    { text: 'C/N', fontSize: 9, bold: true, alignment: 'center', fillColor: '#e2e8f0' },
+    { text: 'BDL/S', fontSize: 9, bold: true, alignment: 'center', fillColor: '#e2e8f0' },
     {}
   ]);
 
@@ -56,32 +56,32 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
     globalBundles += rowBundles;
 
     rows.push([
-      { text: (index + 1).toString(), fontSize: 10, bold: true, alignment: 'center', margin: [2, 4, 2, 4] },
+      { text: (index + 1).toString(), fontSize: 10, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
       {
         stack: [
           { text: gc.gcNumber, fontSize: 11, bold: true, alignment: 'center' }
         ],
-        margin: [2, 4, 2, 4]
+        margin: [2, 6, 2, 6]
       },
-      { text: (gc.consignor?.name || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 4, 2, 4] },
-      { text: (gc.consignee?.name || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 4, 2, 4] },
-      { text: (gc.consignee?.city || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 4, 2, 4] },
-      { text: rowCases > 0 ? rowCases : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 4, 2, 4] },
-      { text: rowCartons > 0 ? rowCartons : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 4, 2, 4] },
-      { text: rowBundles > 0 ? rowBundles : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 4, 2, 4] },
-      { text: gc.freightTotal || '-', fontSize: 11, bold: true, alignment: 'right', margin: [2, 4, 2, 4] }
+      { text: (gc.consignor?.name || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 6, 2, 6] },
+      { text: (gc.consignee?.name || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 6, 2, 6] },
+      { text: (gc.consignee?.city || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 6, 2, 6] },
+      { text: rowCases > 0 ? rowCases : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
+      { text: rowCartons > 0 ? rowCartons : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
+      { text: rowBundles > 0 ? rowBundles : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
+      { text: gc.freightTotal || '-', fontSize: 11, bold: true, alignment: 'right', margin: [2, 6, 2, 6] }
     ]);
   });
 
   // Totals Row
   const totalFreight = gdm.gcs?.reduce((sum, gc) => sum + (parseFloat(gc.freightTotal) || 0), 0) || '-';
   rows.push([
-    { text: 'TOTAL', colSpan: 5, fontSize: 11, bold: true, alignment: 'right', margin: [4, 6, 4, 6] },
+    { text: 'TOTAL', colSpan: 5, fontSize: 11, bold: true, alignment: 'right', margin: [4, 8, 4, 8], fillColor: '#f8fafc' },
     {}, {}, {}, {},
-    { text: globalCases > 0 ? globalCases : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
-    { text: globalCartons > 0 ? globalCartons : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
-    { text: globalBundles > 0 ? globalBundles : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
-    { text: totalFreight, fontSize: 12, bold: true, alignment: 'right', margin: [4, 6, 4, 6] }
+    { text: globalCases > 0 ? globalCases : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 8, 2, 8], fillColor: '#f8fafc' },
+    { text: globalCartons > 0 ? globalCartons : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 8, 2, 8], fillColor: '#f8fafc' },
+    { text: globalBundles > 0 ? globalBundles : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 8, 2, 8], fillColor: '#f8fafc' },
+    { text: totalFreight, fontSize: 12, bold: true, alignment: 'right', margin: [4, 8, 4, 8], fillColor: '#f8fafc' }
   ]);
 
   const firstGc = gdm.gcs?.[0];
@@ -97,60 +97,80 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       // Header
       {
         columns: [
-          { text: isAp ? 'AP' : 'BL', width: '12%', fontSize: 24, bold: true, alignment: 'center', margin: [0, 10, 0, 0] },
+          { 
+            text: isAp ? 'AP' : 'BL', 
+            width: '15%', 
+            fontSize: 32, 
+            bold: true, 
+            alignment: 'center', 
+            margin: [0, 15, 0, 0],
+            color: '#1e293b'
+          },
           {
-            width: '58%',
+            width: '70%',
             stack: [
-              { text: companyName, fontSize: 22, bold: true, margin: [0, 0, 0, 2] },
-              { text: address, fontSize: 10, bold: true }
+              { text: companyTamil, fontSize: 14, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
+              { text: companyName, fontSize: 26, bold: true, alignment: 'center', margin: [0, 0, 0, 4], color: '#0f172a' },
+              { text: address, fontSize: 11, bold: true, alignment: 'center', color: '#475569' }
             ]
           },
           {
-            width: '30%',
+            width: '15%',
             stack: [
-              { text: `GSTIN: ${gstin}`, fontSize: 10, bold: true, alignment: 'right', margin: [0, 0, 0, 4] },
-              { text: `CELL: ${phone}`, fontSize: 10, bold: true, alignment: 'right' }
+              { text: `GSTIN:`, fontSize: 9, bold: true, alignment: 'right', color: '#64748b' },
+              { text: gstin, fontSize: 10, bold: true, alignment: 'right', margin: [0, 0, 0, 6] },
+              { text: `CELL:`, fontSize: 9, bold: true, alignment: 'right', color: '#64748b' },
+              { text: phone, fontSize: 10, bold: true, alignment: 'right' }
             ],
             margin: [0, 10, 0, 0]
           }
         ],
-        margin: [0, 0, 0, 10]
+        margin: [0, 0, 0, 15]
       },
       // Divider
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2 }], margin: [0, 0, 0, 10] },
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, color: '#94a3b8' }], margin: [0, 0, 0, 12] },
       // Meta Info
       {
         table: {
-          widths: ['28%', '34%', '38%'],
+          widths: ['28%', '38%', '34%'],
           body: [
             [
               {
+                fillColor: '#f8fafc',
                 stack: [
-                  { text: 'GDM No: ' + (gdm.gdmNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Date: ' + new Date(gdm.date).toLocaleDateString('en-GB') + ' - ' + (gdm.time || ''), fontSize: 10, bold: true }
+                  { text: 'GDM No: ' + (gdm.gdmNumber || '-'), fontSize: 11, bold: true, margin: [0, 0, 0, 6] },
+                  { text: 'Date: ' + new Date(gdm.date).toLocaleDateString('en-GB') + ' - ' + (gdm.time || ''), fontSize: 11, bold: true }
                 ],
-                margin: [4, 4, 4, 4]
+                margin: [6, 8, 6, 8]
               },
               {
+                fillColor: '#f8fafc',
                 stack: [
-                  { text: 'TO', fontSize: 11, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
+                  { text: 'TO', fontSize: 11, bold: true, alignment: 'center', margin: [0, 0, 0, 4], color: '#475569' },
                   { text: (gdm.toName || 'AS PER BILLS').toUpperCase(), fontSize: 14, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
-                  { text: `DELIVERY AT ${(gdm.deliveryAt || gdm.destination || 'N/A')}`.toUpperCase(), fontSize: 11, bold: true, alignment: 'center' }
+                  { text: `DELIVERY AT ${(gdm.deliveryAt || gdm.destination || 'N/A')}`.toUpperCase(), fontSize: 12, bold: true, alignment: 'center' }
                 ],
-                margin: [4, 4, 4, 4]
+                margin: [6, 8, 6, 8]
               },
               {
+                fillColor: '#f8fafc',
                 stack: [
-                  { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' (' + (gdm.vehicle?.ownerPhone || '-') + ')', fontSize: 9, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' (' + (gdm.vehicle?.driverPhone || '-') + ')', fontSize: 9, bold: true }
+                  { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 11, bold: true, margin: [0, 0, 0, 6] },
+                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' (' + (gdm.vehicle?.ownerPhone || '-') + ')', fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' (' + (gdm.vehicle?.driverPhone || '-') + ')', fontSize: 10, bold: true }
                 ],
-                margin: [4, 4, 4, 4]
+                margin: [6, 8, 6, 8]
               }
             ]
           ]
         },
-        margin: [0, 0, 0, 10]
+        layout: {
+          hLineWidth: function(i, node) { return 1; },
+          vLineWidth: function(i, node) { return 1; },
+          hLineColor: function(i, node) { return '#cbd5e1'; },
+          vLineColor: function(i, node) { return '#cbd5e1'; },
+        },
+        margin: [0, 0, 0, 15]
       },
       // Table
       {
@@ -161,9 +181,11 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
         },
         layout: {
           hLineWidth: function(i, node) { return 1; },
-          vLineWidth: function(i, node) { return 1; }
+          vLineWidth: function(i, node) { return 1; },
+          hLineColor: function(i, node) { return '#94a3b8'; },
+          vLineColor: function(i, node) { return '#94a3b8'; },
         },
-        margin: [0, 0, 0, 30]
+        margin: [0, 0, 0, 40]
       },
       // Signatures
       {
@@ -171,15 +193,15 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
           {
             width: '50%',
             stack: [
-              { text: '____________________', alignment: 'center', margin: [0, 0, 0, 4] },
-              { text: 'Driver Signature', fontSize: 10, bold: true, alignment: 'center' }
+              { text: '____________________', alignment: 'center', margin: [0, 0, 0, 6] },
+              { text: 'Driver Signature', fontSize: 11, bold: true, alignment: 'center', color: '#475569' }
             ]
           },
           {
             width: '50%',
             stack: [
-              { text: '____________________', alignment: 'center', margin: [0, 0, 0, 4] },
-              { text: 'For BELL LOGISTICS', fontSize: 10, bold: true, alignment: 'center' }
+              { text: '____________________', alignment: 'center', margin: [0, 0, 0, 6] },
+              { text: 'For BELL LOGISTICS', fontSize: 11, bold: true, alignment: 'center', color: '#475569' }
             ]
           }
         ]
