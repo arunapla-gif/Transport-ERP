@@ -132,13 +132,14 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       // Meta Info
       {
         table: {
-          widths: ['28%', '34%', '38%'],
+          widths: ['38%', '34%', '28%'],
           body: [
             [
               {
                 stack: [
-                  { text: 'GDM No: ' + (gdm.gdmNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Date: ' + new Date(gdm.date).toLocaleDateString('en-GB') + ' - ' + (gdm.time || ''), fontSize: 10, bold: true }
+                  { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' (' + (gdm.vehicle?.ownerPhone || '-') + ')', fontSize: 9, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' (' + (gdm.vehicle?.driverPhone || '-') + ')', fontSize: 9, bold: true }
                 ],
                 margin: [4, 4, 4, 4]
               },
@@ -152,10 +153,10 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
               },
               {
                 stack: [
-                  { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' (' + (gdm.vehicle?.ownerPhone || '-') + ')', fontSize: 9, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' (' + (gdm.vehicle?.driverPhone || '-') + ')', fontSize: 9, bold: true }
+                  { text: 'GDM No: ' + (gdm.gdmNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Date: ' + new Date(gdm.date).toLocaleDateString('en-GB'), fontSize: 10, bold: true }
                 ],
+                alignment: 'right',
                 margin: [4, 4, 4, 4]
               }
             ]
