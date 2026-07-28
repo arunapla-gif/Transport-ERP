@@ -240,11 +240,20 @@ const buildCewbPage = (gdm, forcePageBreakAtEnd) => {
 
     chunk.forEach((gc, i) => {
       const ewbNo = gc.ewbNumber || gc.privateMark || '-';
-      const ewbDate = gc.ewbRawData?.ewayBillDate || (gc.date ? new Date(gc.date).toLocaleDateString('en-GB') : '-');
+      let ewbDateRaw = gc.ewbRawData?.ewayBillDate || (gc.date ? new Date(gc.date).toLocaleDateString('en-GB') : '-');
+      const ewbDate = ewbDateRaw.split(' ')[0]; // Remove time portion
+      
       const ewbBy = gc.ewbRawData?.genGstin || gc.consignor?.gstin || '-';
       const docNo = gc.invoiceNumber || gc.gcNumber || '-';
       const docDate = gc.invoiceDate ? new Date(gc.invoiceDate).toLocaleDateString('en-GB') : (gc.date ? new Date(gc.date).toLocaleDateString('en-GB') : '-');
-      const validTill = gc.ewbRawData?.validUpto || '-';
+      const validTill = gc.ewbRawData?.validUpto ? gc.ewbRawData.validUpto.split(' ')[0] : '-'; // Remove time if present
+
+      // Format To Column: CITY - STATE \n PINCODE
+      const toCity = gc.consignee?.city || '';
+      const toState = gc.consignee?.state || '';
+      const toPincode = gc.consignee?.pincode || '';
+      const toPlaceString = [toCity, toState].filter(Boolean).join(' - ').toUpperCase();
+      const toColumnText = toPlaceString ? `${toPlaceString}\n${toPincode}` : '-';
 
       itemRows.push([
         { text: (chunkIndex * 10 + i + 1).toString(), fontSize: 8, alignment: 'center', margin: [0, 4, 0, 4] },
@@ -252,7 +261,7 @@ const buildCewbPage = (gdm, forcePageBreakAtEnd) => {
         { text: ewbBy, fontSize: 8, margin: [0, 4, 0, 4] },
         { text: `${docNo}\n${docDate}`, fontSize: 8, margin: [0, 4, 0, 4] },
         { text: gc.invoiceValue ? parseFloat(gc.invoiceValue).toFixed(2) : '-', fontSize: 8, alignment: 'right', margin: [0, 4, 0, 4] },
-        { text: `${gc.consignee?.name || ''}\n${gc.consignee?.city || ''}\nGST: ${gc.consignee?.gstin || ''}`, fontSize: 8, margin: [0, 4, 0, 4] },
+        { text: toColumnText, fontSize: 8, margin: [0, 4, 0, 4] },
         { text: validTill, fontSize: 8, margin: [0, 4, 0, 4] }
       ]);
     });
