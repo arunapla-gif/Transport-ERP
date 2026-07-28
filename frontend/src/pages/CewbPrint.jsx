@@ -1,215 +1,123 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { generateGdmPdfBlob } from '../utils/gdmPdfGenerator';
 
 export default function CewbPrint() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [gdms, setGdms] = useState([]);
+  const [pdfUrl, setPdfUrl] = useState('');
   const [error, setError] = useState('');
+  const [hardwareStatus, setHardwareStatus] = useState('');
 
   useEffect(() => {
-    const fetchGdm = async () => {
+    const fetchData = async () => {
       try {
-        const data = await api.get(`/gdms/${id}`); 
-        const gdmArray = Array.isArray(data) ? data : [data];
-        setGdms(gdmArray);
-        setTimeout(() => {
-          window.print();
-        }, 800); // Give time for QR code image to load
+        const [gdmData, unitsRes] = await Promise.all([
+          api.get(`/gdms/${id}`),
+          api.get('/units').catch(() => [])
+        ]);
+        
+        let allUnitOptions = [];
+        if (unitsRes && unitsRes.length > 0) {
+          allUnitOptions = unitsRes.map(u => ({
+            label: u.description,
+            code: u.code,
+            category: u.category
+          }));
+        }
+
+        const gdmArray = Array.isArray(gdmData) ? gdmData : [gdmData];
+        
+        const dataUrl = await generateGdmPdfBlob(gdmArray, allUnitOptions, 'cewb');
+        setPdfUrl(dataUrl);
       } catch (err) {
-        setError('Failed to load CEWB for printing.');
+        setError('Failed to generate CEWB PDF.');
       }
     };
-    fetchGdm();
+    fetchData();
   }, [id]);
 
   if (error) return <div className="p-10 text-rose-500 font-bold">{error}</div>;
-  if (gdms.length === 0) return <div className="p-10 text-slate-500">Loading document...</div>;
+  if (!pdfUrl) return (
+    <div className="h-screen w-full flex items-center justify-center bg-slate-800 flex-col gap-4">
+      <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-500"></div>
+      <div className="text-slate-400 font-bold tracking-widest animate-pulse">GENERATING CEWB PDF...</div>
+    </div>
+  );
 
-  // Helper to chunk arrays into groups of size
-  const chunkArray = (array, size) => {
-    if (!array || array.length === 0) return [[]];
-    const chunks = [];
-    for (let i = 0; i < array.length; i += size) {
-      chunks.push(array.slice(i, i + size));
+  const handleNativeDownload = () => {
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `CEWB_${id || 'Print'}.pdf`;
+    link.click();
+  };
+
+  const handleSilentHardwarePrint = async () => {
+    setHardwareStatus('Generating PDF...');
+    try {
+      const res = await fetch(pdfUrl);
+      const blob = await res.blob();
+      
+      setHardwareStatus('Connecting to Agent...');
+      const formData = new FormData();
+      formData.append('pdf', blob, `CEWB_${id || 'Print'}.pdf`);
+
+      const response = await fetch('http://localhost:8181/print', {
+        method: 'POST',
+        body: formData,
+      });
+
+      setHardwareStatus('Waiting for Printer...');
+      if (!response.ok) {
+        throw new Error('Local Print Agent is not running or failed to print.');
+      }
+
+      setHardwareStatus('Done!');
+      alert('Successfully sent to physical printer!');
+    } catch (e) {
+      console.error(e);
+      alert(`Hardware Print Error: Ensure the Local Print Agent is running on this computer! (${e.message})`);
+    } finally {
+      setTimeout(() => setHardwareStatus(''), 2000);
     }
-    return chunks;
   };
 
   return (
-    <div className="bg-slate-200 min-h-screen flex flex-col items-center justify-start print:bg-white print:min-h-0 print:block">
-      {gdms.flatMap((gdm, gdmIndex) => {
-        // Find the transporter GSTIN. Assuming all GCs have same transporter, use first one or fallback
-        const firstGc = gdm.gcs?.[0];
-        const transporterGstin = firstGc?.ewbRawData?.transporterId || firstGc?.companyString === 'BELL' ? '33AGKPK2374D1ZN' : '33AADHP9192F1Z0'; // Default fallback
-        const formattedDate = gdm.date ? new Date(gdm.date).toLocaleDateString('en-GB') : '-';
+    <div className="h-screen w-full flex flex-col bg-slate-800">
+      <div className="flex justify-between items-center p-4 bg-slate-900 text-white shadow-xl z-10 shrink-0">
+        <button 
+          onClick={() => navigate(-1)}
+          className="bg-slate-700 px-5 py-2.5 rounded-lg font-bold hover:bg-slate-600 transition-colors shadow-lg"
+        >
+          ← Back
+        </button>
         
-        const gcChunks = chunkArray(gdm.gcs, 10);
-        
-        return gcChunks.map((chunk, chunkIndex) => {
-          const isLastPage = (gdmIndex === gdms.length - 1) && (chunkIndex === gcChunks.length - 1);
-          const startIndex = chunkIndex * 10;
+        <div className="flex gap-3">
+          <button 
+            onClick={handleSilentHardwarePrint}
+            disabled={!!hardwareStatus || !pdfUrl}
+            className={`${hardwareStatus ? 'bg-amber-400' : 'bg-amber-500 hover:bg-amber-400'} text-slate-900 px-5 py-2.5 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2`}
+          >
+            {hardwareStatus || '🖨️ Hardware Print'}
+          </button>
           
-          return (
-            <div key={`${gdm.id}-page-${chunkIndex}`} className={`w-full flex justify-center p-4 print:p-0 print:block ${!isLastPage ? 'print:break-after-page mb-8 print:mb-0' : ''}`}>
-              {/* Portrait A4 Layout */}
-              <div 
-                className="w-[210mm] print:w-full print:max-w-full bg-white text-black shadow-lg print:shadow-none p-8 flex flex-col justify-start relative mx-auto"
-                style={{ boxSizing: 'border-box', fontFamily: 'Arial, Helvetica, sans-serif' }}
-              >
-              <style>
-                {`
-                  @media print {
-                    @page { margin: 5mm; size: A4 portrait; }
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                  }
-                `}
-              </style>
-              
-
-              {/* CEWB Title Box */}
-              <div className="text-center font-bold text-[13px] bg-gray-200 border border-black py-2 mb-4">
-                Consolidated E-Way Bill
-              </div>
-
-              {/* Section 1 */}
-              <div className="font-bold text-[11px] mb-2 px-1">1. Consolidated E-Way Bill Details</div>
-              
-              <div className="border border-black flex mb-6">
-                <div className="w-3/4 border-r border-black">
-                  <div className="flex border-b border-black">
-                    <div className="w-1/2 p-2 bg-gray-50 text-[10px] border-r border-black">Consolidated E-Way Bill No</div>
-                    <div className="w-1/2 p-2 font-bold text-[10px]">{gdm.cewbNumber || 'PENDING'}</div>
-                  </div>
-                  <div className="flex border-b border-black">
-                    <div className="w-1/2 p-2 bg-gray-50 text-[10px] border-r border-black">Date:</div>
-                    <div className="w-1/2 p-2 font-bold text-[10px]">{formattedDate}</div>
-                  </div>
-                  <div className="flex border-b border-black">
-                    <div className="w-1/2 p-2 bg-gray-50 text-[10px] border-r border-black">Generated By</div>
-                    <div className="w-1/2 p-2 font-bold text-[10px] uppercase">{transporterGstin}</div>
-                  </div>
-                  <div className="flex border-b border-black">
-                    <div className="w-1/2 p-2 bg-gray-50 text-[10px] border-r border-black">Transporter ID</div>
-                    <div className="w-1/2 p-2 font-bold text-[10px] uppercase">{transporterGstin}</div>
-                  </div>
-                  <div className="flex border-b border-black">
-                    <div className="w-1/2 p-2 bg-gray-50 text-[10px] border-r border-black">Vehicle No</div>
-                    <div className="w-1/2 p-2 font-bold text-[10px] uppercase">{gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'}</div>
-                  </div>
-                  <div className="flex border-b border-black">
-                    <div className="w-1/2 p-2 bg-gray-50 text-[10px] border-r border-black">From</div>
-                    <div className="w-1/2 p-2 font-bold text-[10px] uppercase">SIVAKASI-TAMIL NADU</div>
-                  </div>
-                  <div className="flex">
-                    <div className="w-1/2 p-2 bg-gray-50 text-[10px] border-r border-black">Mode</div>
-                    <div className="w-1/2 p-2 font-bold text-[10px]">Road</div>
-                  </div>
-                </div>
-                <div className="w-1/4 flex items-center justify-center p-4 bg-white">
-                  {gdm.cewbNumber ? (
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${gdm.cewbNumber}`} 
-                      alt="CEWB QR"
-                      className="w-24 h-24 mix-blend-multiply" 
-                    />
-                  ) : (
-                    <div className="w-24 h-24 border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400 text-center">
-                      PENDING<br/>CEWB
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Section 2 */}
-              <div className="font-bold text-[11px] mb-2 px-1">2. Item Details</div>
-              
-              <table className="w-full border-collapse border border-black text-[9px]">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-black p-2 text-left w-8">S.No.</th>
-                    <th className="border border-black p-2 text-left w-24">E-WayBill No. & Date</th>
-                    <th className="border border-black p-2 text-left w-32">E-WayBill By</th>
-                    <th className="border border-black p-2 text-left w-32">Document No. & Date</th>
-                    <th className="border border-black p-2 text-left w-20">Value</th>
-                    <th className="border border-black p-2 text-left">To</th>
-                    <th className="border border-black p-2 text-left w-20">Valid Till<br/>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {chunk.map((gc, i) => {
-                    // Extract EWB details
-                    const ewbNo = gc.ewbNumber || gc.privateMark || '-';
-                    const ewbDate = gc.ewbRawData?.ewayBillDate || (gc.date ? new Date(gc.date).toLocaleDateString('en-GB') : '-');
-                    
-                    // The generator is whomever generated the EWB. Try to get it from raw data, fallback to Consignor GSTIN
-                    const ewbBy = gc.ewbRawData?.genGstin || gc.consignor?.gstin || '-';
-                    
-                    const docNo = gc.invoiceNumber || gc.gcNumber || '-';
-                    const docDate = gc.invoiceDate ? new Date(gc.invoiceDate).toLocaleDateString('en-GB') : (gc.date ? new Date(gc.date).toLocaleDateString('en-GB') : '-');
-                    
-                    const value = gc.invoiceValue ? gc.invoiceValue.toFixed(2) : '-';
-                    
-                    const toCity = gc.consignee?.city || '-';
-                    const toState = gc.consignee?.state || '-';
-                    const toPincode = gc.consignee?.pincode || gc.ewbRawData?.toPincode || '-';
-                    
-                    const validTill = gc.ewbRawData?.validUpto ? gc.ewbRawData.validUpto.split(' ')[0] : '-';
-
-                    return (
-                      <tr key={gc.id} className="align-top">
-                        <td className="border border-black p-2 text-center">{startIndex + i + 1}</td>
-                        <td className="border border-black p-2">
-                          <div className="font-bold">{ewbNo}</div>
-                          <div className="mt-1 text-gray-700">{ewbDate}</div>
-                        </td>
-                        <td className="border border-black p-2 uppercase">{ewbBy}</td>
-                        <td className="border border-black p-2">
-                          <div className="font-bold uppercase">{docNo} -</div>
-                          <div className="mt-1 text-gray-700">{docDate}</div>
-                        </td>
-                        <td className="border border-black p-2 text-right">{value}</td>
-                        <td className="border border-black p-2 uppercase">
-                          <div>{toCity} - {toState} -</div>
-                          <div className="mt-1">{toPincode}</div>
-                        </td>
-                        <td className="border border-black p-2">
-                          <div className="text-gray-700">{validTill}</div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {chunk.length === 0 && (
-                    <tr>
-                      <td colSpan="7" className="border border-black p-4 text-center text-gray-500 font-bold">
-                        No E-Way Bills Attached to this CEWB.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-            </div>
-          </div>
-          );
-        });
-      })}
-
-      {/* Action buttons (hidden on print) */}
-      <button 
-        onClick={() => navigate(-1)}
-        className="fixed top-4 left-4 bg-slate-800 text-white px-4 py-2 rounded-lg font-bold shadow-lg print:hidden hover:bg-slate-700"
-      >
-        ← Back
-      </button>
-
-      <button 
-        onClick={() => window.print()}
-        className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg print:hidden hover:bg-blue-500"
-      >
-        🖨️ Print CEWB
-      </button>
+          <button 
+            onClick={handleNativeDownload}
+            disabled={!pdfUrl}
+            className="bg-indigo-500 hover:bg-indigo-400 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2"
+          >
+            📥 Download PDF
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 w-full bg-slate-800 p-8 overflow-hidden flex justify-center">
+        <iframe 
+          src={pdfUrl} 
+          className="w-full max-w-5xl h-full shadow-2xl rounded-lg bg-white"
+          title="CEWB PDF Preview"
+        />
+      </div>
     </div>
   );
 }
