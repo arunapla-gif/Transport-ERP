@@ -15,15 +15,15 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   const rows = [];
   // Header Row 1
   rows.push([
-    { text: 'S.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
-    { text: 'GC.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
-    { text: 'CONSIGNOR', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
-    { text: 'CONSIGNEE', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
-    { text: 'DESTINATION', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] },
-    { text: 'ARTICLES', colSpan: 3, fontSize: 10, bold: true, alignment: 'center', margin: [2, 2, 2, 2] },
+    { text: 'S.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
+    { text: 'GC.NO', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
+    { text: 'CONSIGNOR', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
+    { text: 'CONSIGNEE', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
+    { text: 'DESTINATION', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] },
+    { text: 'ARTICLES', colSpan: 3, fontSize: 10, bold: true, alignment: 'center', margin: [0, 2, 0, 2] },
     {},
     {},
-    { text: 'FREIGHT', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [2, 10, 2, 2] }
+    { text: 'FREIGHT', rowSpan: 2, fontSize: 10, bold: true, alignment: 'center', margin: [0, 10, 0, 2] }
   ]);
   // Header Row 2
   rows.push([
@@ -121,7 +121,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       // Meta Info
       {
         table: {
-          widths: ['33%', '34%', '33%'],
+          widths: ['28%', '34%', '38%'],
           body: [
             [
               {
@@ -142,8 +142,8 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
               {
                 stack: [
                   { text: 'Lorry No: ' + (gdm.vehicle?.vehicleNumber || gdm.vehicleNumber || '-'), fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' (' + (gdm.vehicle?.ownerPhone || '-') + ')', fontSize: 10, bold: true, margin: [0, 0, 0, 4] },
-                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' (' + (gdm.vehicle?.driverPhone || '-') + ')', fontSize: 10, bold: true }
+                  { text: 'Owner: ' + (gdm.vehicle?.ownerName || '-') + ' (' + (gdm.vehicle?.ownerPhone || '-') + ')', fontSize: 9, bold: true, margin: [0, 0, 0, 4] },
+                  { text: 'Driver: ' + (gdm.vehicle?.driverName || '-') + ' (' + (gdm.vehicle?.driverPhone || '-') + ')', fontSize: 9, bold: true }
                 ],
                 margin: [4, 4, 4, 4]
               }
@@ -156,7 +156,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       {
         table: {
           headerRows: 2,
-          widths: ['8%', '13%', '18%', '18%', '13%', '5%', '5%', '5%', '15%'],
+          widths: ['6%', '15%', '17%', '17%', '15%', '6%', '6%', '6%', '12%'],
           body: rows
         },
         layout: {
