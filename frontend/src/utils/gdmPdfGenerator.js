@@ -19,7 +19,6 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
     { text: 'GC.NO', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
     { text: 'CONSIGNOR', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
     { text: 'CONSIGNEE', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
-    { text: 'DESTINATION', rowSpan: 2, fontSize: 9, bold: true, alignment: 'center', margin: [0, 10, 0, 2], fillColor: '#e2e8f0' },
     { text: 'ARTICLES', colSpan: 3, fontSize: 9, bold: true, alignment: 'center', margin: [0, 2, 0, 2], fillColor: '#e2e8f0' },
     {},
     {},
@@ -27,7 +26,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   ]);
   // Header Row 2
   rows.push([
-    {}, {}, {}, {}, {},
+    {}, {}, {}, {},
     { text: 'C/S', fontSize: 9, bold: true, alignment: 'center', fillColor: '#e2e8f0' },
     { text: 'C/N', fontSize: 9, bold: true, alignment: 'center', fillColor: '#e2e8f0' },
     { text: 'BDL/S', fontSize: 9, bold: true, alignment: 'center', fillColor: '#e2e8f0' },
@@ -64,8 +63,13 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
         margin: [2, 6, 2, 6]
       },
       { text: (gc.consignor?.name || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 6, 2, 6] },
-      { text: (gc.consignee?.name || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 6, 2, 6] },
-      { text: (gc.consignee?.city || '').toUpperCase(), fontSize: 9, bold: true, margin: [2, 6, 2, 6] },
+      { 
+        stack: [
+          { text: (gc.consignee?.name || '').toUpperCase(), fontSize: 9, bold: true, margin: [0, 0, 0, 2] },
+          { text: `(${(gc.consignee?.city || '').toUpperCase()})`, fontSize: 9, bold: false }
+        ],
+        margin: [2, 6, 2, 6] 
+      },
       { text: rowCases > 0 ? rowCases : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
       { text: rowCartons > 0 ? rowCartons : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
       { text: rowBundles > 0 ? rowBundles : '-', fontSize: 11, bold: true, alignment: 'center', margin: [2, 6, 2, 6] },
@@ -76,8 +80,8 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
   // Totals Row
   const totalFreight = gdm.gcs?.reduce((sum, gc) => sum + (parseFloat(gc.freightTotal) || 0), 0) || '-';
   rows.push([
-    { text: 'TOTAL', colSpan: 5, fontSize: 11, bold: true, alignment: 'right', margin: [4, 8, 4, 8], fillColor: '#f8fafc' },
-    {}, {}, {}, {},
+    { text: 'TOTAL', colSpan: 4, fontSize: 11, bold: true, alignment: 'right', margin: [4, 8, 4, 8], fillColor: '#f8fafc' },
+    {}, {}, {},
     { text: globalCases > 0 ? globalCases : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 8, 2, 8], fillColor: '#f8fafc' },
     { text: globalCartons > 0 ? globalCartons : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 8, 2, 8], fillColor: '#f8fafc' },
     { text: globalBundles > 0 ? globalBundles : '-', fontSize: 12, bold: true, alignment: 'center', margin: [2, 8, 2, 8], fillColor: '#f8fafc' },
@@ -164,7 +168,7 @@ const buildGdmPage = (gdm, allUnitOptions, forcePageBreak) => {
       {
         table: {
           headerRows: 2,
-          widths: ['6%', '14%', '15%', '15%', '15%', '7%', '7%', '7%', '14%'],
+          widths: ['6%', '14%', '22%', '23%', '7%', '7%', '7%', '14%'],
           body: rows
         },
         layout: {
