@@ -362,7 +362,7 @@ export const generateGdmPdfBlob = async (gdms, allUnitOptions, format = 'gdm') =
         content,
         pageSize: 'A4',
         pageOrientation: 'portrait',
-        pageMargins: [40, 40, 40, 40],
+        pageMargins: [20, 40, 20, 40], // Reduced left and right margins from 40 to 20
         defaultStyle: {
           font: 'Times',
           color: 'black'
