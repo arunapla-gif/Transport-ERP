@@ -3,9 +3,9 @@ require('dotenv').config();
 async function run() {
   try {
     const email = process.env.WHITEBOOKS_EMAIL?.trim();
-    const username = process.env.WHITEBOOKS_USERNAME?.trim();
-    const password = process.env.WHITEBOOKS_PASSWORD?.trim();
-    const gstin = process.env.WHITEBOOKS_GSTIN?.trim();
+    const username = process.env.BELL_WHITEBOOKS_USERNAME?.trim();
+    const password = process.env.BELL_WHITEBOOKS_PASSWORD?.trim();
+    const gstin = process.env.BELL_WHITEBOOKS_GSTIN?.trim();
     const clientId = process.env.WHITEBOOKS_CLIENT_ID?.trim();
     const clientSecret = process.env.WHITEBOOKS_CLIENT_SECRET?.trim();
 
@@ -26,7 +26,7 @@ async function run() {
 
     const token = authData.authtoken || authData.data?.authtoken || authData.AuthToken || '';
     
-    const ewaybillno = "211516086691";
+    const ewaybillno = "552028120315";
     const ewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=${ewaybillno}`;
     
     console.log("Fetching EWB...");

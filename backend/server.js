@@ -349,6 +349,140 @@ app.use((req, res, next) => {
   next();
 });
 
+app.post('/api/usage/sandbox-test', async (req, res) => {
+  // Set long timeout for multi-step test
+  req.setTimeout(60000);
+  
+  try {
+    const results = [];
+    const pushResult = (step, success, ping, message, data = null) => {
+      results.push({ step, success, ping, message, data });
+    };
+
+    // Shared Sandbox Credentials
+    const email = process.env.WHITEBOOKS_EMAIL?.trim() || "admin@example.com"; 
+    const username = "BVMGSP";
+    const password = "Wbooks@0142";
+    const gstin = "29AAGCB1286Q000";
+    const clientId = "EWBS670d1a72-ce2e-4c8d-9839-73b5ebc30539";
+    const clientSecret = "EWBSafc52ae4-adc7-455e-b458-7539b8321d36";
+    const headers = { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" };
+
+    // --- STEP 1: AUTH ---
+    let authStart = Date.now();
+    let authRes, authData;
+    try {
+      authRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`, { method: "GET", headers });
+      authData = await authRes.json();
+      const ping = Date.now() - authStart;
+      if (!authRes.ok || authData.status_cd === "0") throw new Error(authData.error?.message || authData.status_desc || 'Auth Failed');
+      headers["AuthToken"] = authData.authtoken || authData.data?.authtoken || authData.AuthToken || '';
+      pushResult("Authenticate", true, ping, "Successfully retrieved token.");
+    } catch (e) {
+      pushResult("Authenticate", false, Date.now() - authStart, e.message);
+      return res.json({ success: false, results }); // Abort if auth fails
+    }
+
+    // --- STEP 2: GENERATE EWB 1 ---
+    let gen1Start = Date.now();
+    let ewb1 = null;
+    try {
+      const docNo = `TEST-${Math.floor(Date.now() / 1000)}`;
+      const docDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+      const genPayload = {
+        supplyType: "O", subSupplyType: "1", docType: "INV", docNo, docDate,
+        fromGstin: "URP", fromTrdName: "TEST CONSIGNOR", fromAddr1: "Sivakasi", fromPlace: "Sivakasi", fromPincode: 626123, fromStateCode: 33, actualFromStateCode: 33,
+        toGstin: "URP", toTrdName: "TEST CONSIGNEE", toAddr1: "Destination", toPlace: "Destination", toPincode: 626123, toStateCode: 33, actualToStateCode: 33,
+        totalValue: 100, cgstValue: 9, sgstValue: 9, igstValue: 0, cessValue: 0, totInvValue: 118,
+        transporterId: gstin, transporterName: "TEST TRANSPORTER", transMode: "1", transDistance: "100", vehicleNo: "TN67A9999", vehicleType: "R",
+        itemList: [{ productName: "Goods", productDesc: "Goods", hsnCode: 3604, quantity: 1, qtyUnit: "NOS", taxableAmount: 100, sgstRate: 9, cgstRate: 9, igstRate: 0, cessRate: 0 }]
+      };
+      
+      const genRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`, { method: "POST", headers, body: JSON.stringify(genPayload) });
+      const genData = await genRes.json();
+      const ping = Date.now() - gen1Start;
+      if (!genRes.ok || genData.status_cd === "0") throw new Error(genData.error?.message || genData.error?.errorDesc || genData.status_desc || 'Generate Failed');
+      ewb1 = genData.data?.ewayBillNo || genData.ewayBillNo;
+      pushResult("Generate", true, ping, `Success! EWB: ${ewb1}`);
+    } catch (e) {
+      pushResult("Generate", false, Date.now() - gen1Start, e.message);
+    }
+
+    // --- STEP 3: FETCH EWB ---
+    let fetchStart = Date.now();
+    try {
+      if (!ewb1) throw new Error('Skipped because Generation failed.');
+      const fetchRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=${ewb1}`, { method: "GET", headers });
+      const fetchData = await fetchRes.json();
+      const ping = Date.now() - fetchStart;
+      if (!fetchRes.ok || fetchData.status_cd === "0") throw new Error(fetchData.error?.message || 'Fetch Failed');
+      pushResult("Fetch", true, ping, `Successfully fetched mapping for ${ewb1}`);
+    } catch (e) {
+      pushResult("Fetch", false, Date.now() - fetchStart, e.message);
+    }
+
+    // --- STEP 4: REGENERATE (GENERATE EWB 2) ---
+    let regStart = Date.now();
+    let ewb2 = null;
+    try {
+      const docNo = `REG-${Math.floor(Date.now() / 1000)}`;
+      const docDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+      const regPayload = {
+        supplyType: "O", subSupplyType: "1", docType: "INV", docNo, docDate,
+        fromGstin: "URP", fromTrdName: "TEST CONSIGNOR", fromAddr1: "Sivakasi", fromPlace: "Sivakasi", fromPincode: 626123, fromStateCode: 33, actualFromStateCode: 33,
+        toGstin: "URP", toTrdName: "TEST CONSIGNEE", toAddr1: "Destination", toPlace: "Destination", toPincode: 626123, toStateCode: 33, actualToStateCode: 33,
+        totalValue: 100, cgstValue: 9, sgstValue: 9, igstValue: 0, cessValue: 0, totInvValue: 118,
+        transporterId: gstin, transporterName: "TEST TRANSPORTER", transMode: "1", transDistance: "100", vehicleNo: "TN67A9999", vehicleType: "R",
+        itemList: [{ productName: "Goods", productDesc: "Goods", hsnCode: 3604, quantity: 1, qtyUnit: "NOS", taxableAmount: 100, sgstRate: 9, cgstRate: 9, igstRate: 0, cessRate: 0 }]
+      };
+      
+      const regRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`, { method: "POST", headers, body: JSON.stringify(regPayload) });
+      const regData = await regRes.json();
+      const ping = Date.now() - regStart;
+      if (!regRes.ok || regData.status_cd === "0") throw new Error(regData.error?.message || regData.error?.errorDesc || 'Regenerate Failed');
+      ewb2 = regData.data?.ewayBillNo || regData.ewayBillNo;
+      pushResult("Regenerate", true, ping, `Success! EWB: ${ewb2}`);
+    } catch (e) {
+      pushResult("Regenerate", false, Date.now() - regStart, e.message);
+    }
+
+    // --- STEP 5: CONSOLIDATE (CEWB) ---
+    let cewbStart = Date.now();
+    try {
+      if (!ewb1 || !ewb2) throw new Error('Skipped because we need 2 active EWBs.');
+      const cewbPayload = {
+        vehicleNo: "TN67A9999", fromPlace: "Sivakasi", fromState: 33, transMode: "1", 
+        transDocNo: `TR-${Math.floor(Date.now() / 1000)}`,
+        transDocDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/'),
+        tripSheetEwbBills: [{ ewbNo: Number(ewb1) }, { ewbNo: Number(ewb2) }]
+      };
+      
+      const cewbRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/ewayapi/generatecewb?email=${encodeURIComponent(email)}`, { method: "POST", headers, body: JSON.stringify(cewbPayload) });
+      const cewbData = await cewbRes.json();
+      const ping = Date.now() - cewbStart;
+      
+      if (!cewbRes.ok || cewbData.status_cd === "0") throw new Error(cewbData.error?.message || cewbData.error?.errorDesc || 'CEWB Failed');
+      const cewbNo = cewbData.data?.cEwbNo || cewbData.cEwbNo;
+      pushResult("CEWB", true, ping, `Success! CEWB: ${cewbNo}`);
+    } catch (e) {
+      pushResult("CEWB", false, Date.now() - cewbStart, e.message);
+    }
+
+    const allSuccess = results.every(r => r.success);
+    
+    // Log overall ping
+    try {
+       await prisma.apiUsageLog.create({
+         data: { provider: 'WhiteBooks (Sandbox)', apiName: 'Full Lifecycle Test', status: allSuccess ? 'Success' : 'Failed', cost: 0.00 }
+       });
+    } catch(e) {}
+
+    res.json({ success: allSuccess, results });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/usage/stats', async (req, res) => {
   try {
     // 1. Raw SQL for fast Database Aggregation (Daily)

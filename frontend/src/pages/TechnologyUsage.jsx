@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { Server, Database, Activity, Cpu, Cloud, Smartphone, Zap } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Server, Database, Activity, Cpu, Cloud, Smartphone, Zap, X, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 
 const TechCard = ({ icon: Icon, title, description, status, type, link }) => (
@@ -41,6 +42,9 @@ const TechCard = ({ icon: Icon, title, description, status, type, link }) => (
 export default function TechnologyUsage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isTestingSandbox, setIsTestingSandbox] = useState(false);
+  const [sandboxModalOpen, setSandboxModalOpen] = useState(false);
+  const [sandboxResults, setSandboxResults] = useState(null);
   
   useEffect(() => {
     fetchStats();
@@ -54,6 +58,21 @@ export default function TechnologyUsage() {
       console.error('Failed to fetch API stats:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSandboxTest = async () => {
+    setIsTestingSandbox(true);
+    setSandboxModalOpen(true);
+    setSandboxResults(null);
+    try {
+      const res = await api.post('/usage/sandbox-test');
+      setSandboxResults(res.results || []);
+      fetchStats(); // refresh logs
+    } catch (err) {
+      setSandboxResults([{ step: 'Network', success: false, message: err.message, ping: 0 }]);
+    } finally {
+      setIsTestingSandbox(false);
     }
   };
 
@@ -83,6 +102,14 @@ export default function TechnologyUsage() {
             <p className="text-sm font-medium text-slate-500">Monitor your cloud infrastructure, databases, and prepaid API costs.</p>
           </div>
         </div>
+        <button
+          onClick={handleSandboxTest}
+          disabled={isTestingSandbox}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+        >
+          {isTestingSandbox ? <Activity className="animate-spin" size={18} /> : <Activity size={18} />}
+          {isTestingSandbox ? 'Pinging NIC...' : 'Run Sandbox Test'}
+        </button>
       </div>
 
       {/* METRICS ROW */}
@@ -217,6 +244,62 @@ export default function TechnologyUsage() {
         </div>
       </Card>
       
+      {/* SANDBOX MODAL */}
+      {sandboxModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
+              <div>
+                <h3 className="font-black text-lg text-slate-800 tracking-tight">Sandbox Lifecycle Test</h3>
+                <p className="text-xs font-medium text-slate-500">Executing sequence on NIC testing environment</p>
+              </div>
+              <button onClick={() => setSandboxModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-1.5 rounded-full border border-slate-200">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {isTestingSandbox && !sandboxResults && (
+                <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                  <Activity size={32} className="animate-spin text-indigo-500" />
+                  <p className="font-bold text-slate-600 text-sm">Running test sequence (Auth ➔ Generate ➔ Fetch ➔ CEWB)...</p>
+                </div>
+              )}
+
+              {sandboxResults && (
+                <div className="space-y-4">
+                  {sandboxResults.map((r, i) => (
+                    <div key={i} className={`p-4 rounded-xl border ${r.success ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100'}`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          {r.success ? <CheckCircle className="text-emerald-500 shrink-0 mt-0.5" size={18} /> : <XCircle className="text-rose-500 shrink-0 mt-0.5" size={18} />}
+                          <div>
+                            <p className="font-bold text-sm text-slate-800">{r.step}</p>
+                            <p className={`text-xs font-medium mt-1 ${r.success ? 'text-emerald-700' : 'text-rose-600'}`}>{r.message}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-slate-400 text-xs font-bold shrink-0">
+                          <Clock size={12} /> {r.ping}ms
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+               <button 
+                onClick={() => setSandboxModalOpen(false)}
+                className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-bold text-sm transition-all"
+               >
+                 Close
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
