@@ -388,13 +388,13 @@ app.post('/api/usage/sandbox-test', async (req, res) => {
     let ewb1 = null;
     try {
       const docNo = `TEST-${Math.floor(Date.now() / 1000)}`;
-      const docDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+      
       const genPayload = {
-        supplyType: "O", subSupplyType: "1", docType: "INV", docNo, docDate,
-        fromGstin: "URP", fromTrdName: "TEST CONSIGNOR", fromAddr1: "Sivakasi", fromPlace: "Sivakasi", fromPincode: 626123, fromStateCode: 33, actualFromStateCode: 33,
-        toGstin: "URP", toTrdName: "TEST CONSIGNEE", toAddr1: "Destination", toPlace: "Destination", toPincode: 626123, toStateCode: 33, actualToStateCode: 33,
+        supplyType: "O", subSupplyType: "1", docType: "INV", docNo, docDate: "29/07/2026",
+        fromGstin: gstin, fromTrdName: "TEST CONSIGNOR", fromAddr1: "Bangalore", fromPlace: "Bangalore", fromPincode: 560001, fromStateCode: 29, actualFromStateCode: 29,
+        toGstin: "URP", toTrdName: "TEST CONSIGNEE", toAddr1: "Sivakasi", toPlace: "Sivakasi", toPincode: 626123, toStateCode: 33, actualToStateCode: 33,
         totalValue: 100, cgstValue: 9, sgstValue: 9, igstValue: 0, cessValue: 0, totInvValue: 118,
-        transporterId: gstin, transporterName: "TEST TRANSPORTER", transMode: "1", transDistance: "100", vehicleNo: "TN67A9999", vehicleType: "R",
+        transporterId: "", transporterName: "", transMode: "1", transDistance: "100", vehicleNo: "KA01AB1234", vehicleType: "R",
         itemList: [{ productName: "Goods", productDesc: "Goods", hsnCode: 3604, quantity: 1, qtyUnit: "NOS", taxableAmount: 100, sgstRate: 9, cgstRate: 9, igstRate: 0, cessRate: 0 }]
       };
       
@@ -426,13 +426,13 @@ app.post('/api/usage/sandbox-test', async (req, res) => {
     let ewb2 = null;
     try {
       const docNo = `REG-${Math.floor(Date.now() / 1000)}`;
-      const docDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/');
+      
       const regPayload = {
-        supplyType: "O", subSupplyType: "1", docType: "INV", docNo, docDate,
-        fromGstin: "URP", fromTrdName: "TEST CONSIGNOR", fromAddr1: "Sivakasi", fromPlace: "Sivakasi", fromPincode: 626123, fromStateCode: 33, actualFromStateCode: 33,
-        toGstin: "URP", toTrdName: "TEST CONSIGNEE", toAddr1: "Destination", toPlace: "Destination", toPincode: 626123, toStateCode: 33, actualToStateCode: 33,
+        supplyType: "O", subSupplyType: "1", docType: "INV", docNo, docDate: "29/07/2026",
+        fromGstin: gstin, fromTrdName: "TEST CONSIGNOR", fromAddr1: "Bangalore", fromPlace: "Bangalore", fromPincode: 560001, fromStateCode: 29, actualFromStateCode: 29,
+        toGstin: "URP", toTrdName: "TEST CONSIGNEE", toAddr1: "Sivakasi", toPlace: "Sivakasi", toPincode: 626123, toStateCode: 33, actualToStateCode: 33,
         totalValue: 100, cgstValue: 9, sgstValue: 9, igstValue: 0, cessValue: 0, totInvValue: 118,
-        transporterId: gstin, transporterName: "TEST TRANSPORTER", transMode: "1", transDistance: "100", vehicleNo: "TN67A9999", vehicleType: "R",
+        transporterId: "", transporterName: "", transMode: "1", transDistance: "100", vehicleNo: "KA01AB1234", vehicleType: "R",
         itemList: [{ productName: "Goods", productDesc: "Goods", hsnCode: 3604, quantity: 1, qtyUnit: "NOS", taxableAmount: 100, sgstRate: 9, cgstRate: 9, igstRate: 0, cessRate: 0 }]
       };
       
@@ -451,9 +451,9 @@ app.post('/api/usage/sandbox-test', async (req, res) => {
     try {
       if (!ewb1 || !ewb2) throw new Error('Skipped because we need 2 active EWBs.');
       const cewbPayload = {
-        vehicleNo: "TN67A9999", fromPlace: "Sivakasi", fromState: 33, transMode: "1", 
+        vehicleNo: "KA01AB1234", fromPlace: "Bangalore", fromState: 29, transMode: "1", 
         transDocNo: `TR-${Math.floor(Date.now() / 1000)}`,
-        transDocDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/-/g, '/'),
+        transDocDate: "29/07/2026",
         tripSheetEwbBills: [{ ewbNo: Number(ewb1) }, { ewbNo: Number(ewb2) }]
       };
       
