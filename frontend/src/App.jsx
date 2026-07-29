@@ -20,6 +20,7 @@ const LegacyRapidEntry = React.lazy(() => import('./pages/LegacyRapidEntry'));
 const GdmEntry = React.lazy(() => import('./pages/GdmEntry'));
 const Reports = React.lazy(() => import('./pages/Reports'));
 const CompanyMaster = React.lazy(() => import('./pages/CompanyMaster'));
+const DriverMaster = React.lazy(() => import('./pages/DriverMaster'));
 const GodownMaster = React.lazy(() => import('./pages/GodownMaster'));
 const GcPrint = React.lazy(() => import('./pages/GcPrint'));
 const GdmPrint = React.lazy(() => import('./pages/GdmPrint'));
@@ -240,6 +241,14 @@ function Layout({ children, role, onLogout }) {
                    <div>
                      <h4 className="text-xs font-black text-slate-800">Vehicles</h4>
                      <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Lorry Registry & RTO</p>
+                   </div>
+                 </Link>
+
+                 <Link onClick={closeMenu} to="/masters/drivers" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-rose-50 text-rose-600 rounded-lg group-hover:bg-rose-500 group-hover:text-white transition-colors shadow-sm"><Users size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Drivers</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Driver Profiles & Licenses</p>
                    </div>
                  </Link>
                  
@@ -483,6 +492,7 @@ function App() {
               <Route path="/settings/admin" element={<AdminDashboard />} />
               <Route path="/masters/company" element={<CompanyMaster />} />
               <Route path="/masters/vehicles" element={<VehicleMaster />} />
+              <Route path="/masters/drivers" element={<DriverMaster />} />
               <Route path="/masters/godowns" element={<GodownMaster />} />
               <Route path="/masters/units" element={<UnitMaster />} />
               <Route path="/masters/hsn" element={<HSNMaster />} />

@@ -23,6 +23,7 @@ async function run() {
         time: '10:00 AM',
         vehicleId: vehicle.id,
         status: 'Created',
+        branch: 'MAIN',
         gcs: {
           connect: gcs.map(g => ({ id: g.id }))
         }

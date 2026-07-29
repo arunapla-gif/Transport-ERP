@@ -838,6 +838,56 @@ app.delete('/api/vehicles/:id', async (req, res) => {
 });
 
 // ==============================
+// DRIVER MASTER ENDPOINTS
+// ==============================
+app.get('/api/drivers', async (req, res) => {
+  try {
+    const drivers = await prisma.driver.findMany({ orderBy: { updatedAt: 'desc' } });
+    res.json(drivers);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch drivers' });
+  }
+});
+
+app.post('/api/drivers', async (req, res) => {
+  try {
+    const data = { ...req.body };
+    delete data.id;
+    const driver = await prisma.driver.create({ data });
+    res.json(driver);
+  } catch (error) {
+    console.error("Failed to create driver:", error);
+    if (error.code === 'P2002') return res.status(400).json({ error: 'License Number already exists' });
+    res.status(500).json({ error: 'Failed to create driver' });
+  }
+});
+
+app.put('/api/drivers/:id', async (req, res) => {
+  try {
+    const data = { ...req.body };
+    delete data.id;
+    const driver = await prisma.driver.update({
+      where: { id: parseInt(req.params.id) },
+      data,
+    });
+    res.json(driver);
+  } catch (error) {
+    console.error("Failed to update driver:", error);
+    if (error.code === 'P2002') return res.status(400).json({ error: 'License Number already exists' });
+    res.status(500).json({ error: 'Failed to update driver' });
+  }
+});
+
+app.delete('/api/drivers/:id', async (req, res) => {
+  try {
+    await prisma.driver.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete driver' });
+  }
+});
+
+// ==============================
 // HEALTH & BOOT ENDPOINT
 // ==============================
 app.get('/api/health', async (req, res) => {
