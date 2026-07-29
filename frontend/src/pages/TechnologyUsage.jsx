@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
-import { Server, Database, Activity, Cpu, Cloud, Smartphone, Zap, X, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Server, Database, Activity, Cpu, Cloud, Smartphone, Zap, X, CheckCircle, XCircle, Clock, MessageCircle } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 
 const TechCard = ({ icon: Icon, title, description, status, type, link }) => (
@@ -162,19 +162,19 @@ export default function TechnologyUsage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <TechCard 
           icon={Database} 
-          title="Neon PostgreSQL" 
-          description="Serverless Cloud Database holding all your ERP records (Godowns, Consignors, GCs, etc). Highly scalable and blazingly fast."
+          title="Supabase PostgreSQL" 
+          description="Serverless Database holding all your ERP records. Powered by reliable connection pooling and edge caching for instant global access."
           status="Active" 
           type="db"
-          link="https://console.neon.tech"
+          link="https://supabase.com/dashboard"
         />
         <TechCard 
           icon={Server} 
-          title="Render Backend" 
-          description="Node.js Express Server handling all logical processing, security, routing, and API connections for the ERP."
+          title="Railway Backend" 
+          description="Node.js Express Server handling all heavy PDF processing and routing. Runs 24/7 without sleeping for instant generation."
           status="Active" 
           type="cloud"
-          link="https://dashboard.render.com"
+          link="https://railway.app/dashboard"
         />
         <TechCard 
           icon={Cloud} 
@@ -191,6 +191,20 @@ export default function TechnologyUsage() {
           status="Prepaid" 
           type="api"
           link="https://api.whitebooks.in"
+        />
+        <TechCard 
+          icon={CheckCircle} 
+          title="Appyflow API" 
+          description="Used globally across the app for instant GSTIN verification and Postal Pincode routing during master creation."
+          status="Active" 
+          type="api"
+        />
+        <TechCard 
+          icon={MessageCircle} 
+          title="WhatsApp Cloud API" 
+          description="Automated customer notifications sending E-Way Bills directly to drivers and consignees instantly."
+          status="Active" 
+          type="api"
         />
         <TechCard 
           icon={Smartphone} 
