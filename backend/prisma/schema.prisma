@@ -446,3 +446,12 @@ model Session {
   loginTime  DateTime @default(now())
   lastActive DateTime @default(now())
 }
+
+model SystemHealthLog {
+  id        Int      @id @default(autoincrement())
+  memoryMb  Int
+  cpuLoad   Float
+  dbPing    Int
+  uptime    Int
+  createdAt DateTime @default(now())
+}

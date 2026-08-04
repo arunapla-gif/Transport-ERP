@@ -3,6 +3,7 @@ import { api } from '../api';
 import toast from 'react-hot-toast';
 import { Server, Database, Activity, Cpu, Cloud, Smartphone, Zap, X, CheckCircle, XCircle, Clock, MessageCircle, RefreshCw } from 'lucide-react';
 import { Card } from '../components/ui/Card';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const TechCard = ({ icon: Icon, title, description, status, type, link }) => (
   <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 hover:shadow-md transition-all relative overflow-hidden group">
@@ -48,10 +49,12 @@ export default function TechnologyUsage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [health, setHealth] = useState(null);
+  const [healthHistory, setHealthHistory] = useState([]);
 
   useEffect(() => {
     fetchStats();
     fetchHealth();
+    fetchHealthHistory();
     
     // Refresh health every 15 seconds
     const interval = setInterval(fetchHealth, 15000);
@@ -60,8 +63,24 @@ export default function TechnologyUsage() {
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchHealth(), fetchStats()]);
+    await Promise.all([fetchHealth(), fetchStats(), fetchHealthHistory()]);
     setIsRefreshing(false);
+  };
+
+  const fetchHealthHistory = async () => {
+    try {
+      const res = await api.get('/system/health/history');
+      if (res.success) {
+        // Format time for tooltip and axis
+        const formatted = res.data.map(log => ({
+          ...log,
+          time: new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }));
+        setHealthHistory(formatted);
+      }
+    } catch (err) {
+      console.error('Failed to fetch health history:', err);
+    }
   };
 
   const fetchHealth = async () => {
@@ -207,6 +226,41 @@ export default function TechnologyUsage() {
           </div>
         </Card>
       </div>
+
+      {/* 24-HOUR PERFORMANCE TIMELINE */}
+      {healthHistory.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-lg font-black text-slate-800 tracking-tight mb-4 flex items-center gap-2">
+            <Activity className="text-indigo-500" size={20} /> 24-Hour Performance Timeline
+          </h2>
+          <Card className="p-5 bg-white border border-slate-200 shadow-sm overflow-hidden">
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={healthHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} minTickGap={30} />
+                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                    labelStyle={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}
+                  />
+                  <Line yAxisId="left" type="monotone" dataKey="memoryMb" name="Memory (MB)" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }} />
+                  <Line yAxisId="right" type="monotone" dataKey="dbPing" name="DB Ping (ms)" stroke="#f59e0b" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center gap-6 mt-4 justify-center text-xs font-bold text-slate-500">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-500 block"></span> Memory Usage (MB)
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-amber-500 block"></span> Database Ping (ms)
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* METRICS ROW */}
       <h2 className="text-lg font-black text-slate-800 tracking-tight mt-8 mb-4">API Billing & Analytics</h2>

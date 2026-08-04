@@ -21,6 +21,10 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const xlsx = require('xlsx');
 const { resolveStateCode } = require('./utils/stateCodeHelper');
+const { startHealthLogger } = require('./services/healthLogger');
+
+// Start the automated system health background logger
+startHealthLogger();
 
 const app = express();
 const server = http.createServer(app);
@@ -332,6 +336,20 @@ app.get('/api/system/health', async (req, res) => {
     });
   } catch (error) {
     console.error("Health check error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/system/health/history', async (req, res) => {
+  try {
+    const logs = await prisma.systemHealthLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 96 // last 24 hours at 15-min intervals
+    });
+    // Reverse to get chronological order for charts
+    res.json({ success: true, data: logs.reverse() });
+  } catch (error) {
+    console.error("Health history error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
