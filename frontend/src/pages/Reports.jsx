@@ -383,7 +383,7 @@ export default function Reports() {
               </div>
               
               {/* Virtualized Body */}
-              <div className="flex-1">
+              <div className="flex-1 h-full min-h-0 w-full relative">
                 {reportData.length === 0 ? (
                   <div className="p-8 text-center text-slate-400">No data found for the selected filters.</div>
                 ) : (
