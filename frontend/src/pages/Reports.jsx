@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { FileText, Calendar, Download, TrendingUp, Truck, Package, IndianRupee, Users, Building2, X, Clock, CheckCircle2, History } from 'lucide-react';
-import * as ReactWindow from 'react-window';
-import * as ReactVirtualizedAutoSizer from 'react-virtualized-auto-sizer';
-
-const List = ReactWindow.FixedSizeList || (ReactWindow.default && ReactWindow.default.FixedSizeList);
-const AutoSizer = ReactVirtualizedAutoSizer.default || ReactVirtualizedAutoSizer;
+import { FixedSizeList as List } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('gc'); // gc, gdm, ewaybill, consignor, consignee, vehicle
