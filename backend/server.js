@@ -295,12 +295,14 @@ app.get('/api/system/health', async (req, res) => {
 
     const memoryUsage = process.memoryUsage();
     
+    const axios = require('axios');
+    
     // Attempt to ping external APIs to check their availability
     const checkUrl = async (url) => {
       try {
         const fetchStart = Date.now();
-        const response = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
-        return { online: response.ok, latency: Date.now() - fetchStart };
+        const response = await axios.head(url, { timeout: 3000, validateStatus: () => true });
+        return { online: response.status < 500, latency: Date.now() - fetchStart };
       } catch (err) {
         return { online: false, latency: -1 };
       }
