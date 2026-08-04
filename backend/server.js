@@ -285,7 +285,54 @@ app.use('/api/ulip', paidApiLimiter, ulipRoutes);
 const fastagRoutes = require('./routes/fastag');
 app.use('/api/fastag', paidApiLimiter, fastagRoutes);
 
+const os = require('os');
+app.get('/api/system/health', async (req, res) => {
+  try {
+    const start = Date.now();
+    // Execute a simple query to measure DB latency
+    await prisma.$queryRaw`SELECT 1`;
+    const dbLatency = Date.now() - start;
 
+    const memoryUsage = process.memoryUsage();
+    
+    // Attempt to ping external APIs to check their availability
+    const checkUrl = async (url) => {
+      try {
+        const fetchStart = Date.now();
+        const response = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+        return { online: response.ok, latency: Date.now() - fetchStart };
+      } catch (err) {
+        return { online: false, latency: -1 };
+      }
+    };
+    
+    const [appyflowStatus, vahanStatus] = await Promise.all([
+      checkUrl('https://b2b.appyflow.in'),
+      checkUrl('https://vahan.parivahan.gov.in') // just a domain check
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        uptime: process.uptime(),
+        memoryUsage: {
+          rss: memoryUsage.rss,
+          heapTotal: memoryUsage.heapTotal,
+          heapUsed: memoryUsage.heapUsed,
+        },
+        cpuLoad: os.loadavg(),
+        dbLatency,
+        externalServices: {
+          appyflow: appyflowStatus,
+          vahan: vahanStatus
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Health check error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 
 const { logApiUsage } = require('./utils/logger');

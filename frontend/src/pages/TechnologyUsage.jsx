@@ -46,9 +46,27 @@ export default function TechnologyUsage() {
   const [sandboxModalOpen, setSandboxModalOpen] = useState(false);
   const [sandboxResults, setSandboxResults] = useState(null);
   
+  const [health, setHealth] = useState(null);
+
   useEffect(() => {
     fetchStats();
+    fetchHealth();
+    
+    // Refresh health every 15 seconds
+    const interval = setInterval(fetchHealth, 15000);
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchHealth = async () => {
+    try {
+      const res = await api.get('/system/health');
+      if (res.success) {
+        setHealth(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch system health:', err);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -88,6 +106,17 @@ export default function TechnologyUsage() {
     return stats.monthly[month] || { count: 0, cost: 0 };
   };
 
+  const formatMemory = (bytes) => bytes ? (bytes / 1024 / 1024).toFixed(0) : '0';
+  const formatUptime = (seconds) => {
+    if (!seconds) return '0m';
+    const d = Math.floor(seconds / (3600*24));
+    const h = Math.floor(seconds % (3600*24) / 3600);
+    const m = Math.floor(seconds % 3600 / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       
@@ -112,7 +141,58 @@ export default function TechnologyUsage() {
         </button>
       </div>
 
+      {/* SYSTEM HEALTH & VITALS */}
+      <h2 className="text-lg font-black text-slate-800 tracking-tight mt-8 mb-4 flex items-center gap-2">
+        <Server className="text-slate-500" size={20} /> System Health & Vitals
+        {health && <span className="flex h-2 w-2 relative ml-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>}
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4 bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Backend Memory</span>
+            <Activity size={16} className={health?.memoryUsage?.rss > 500 * 1024 * 1024 ? 'text-rose-500' : 'text-emerald-500'} />
+          </div>
+          <div>
+            <span className="text-3xl font-black text-slate-800">{health ? formatMemory(health.memoryUsage.rss) : '--'}</span>
+            <span className="text-xs text-slate-500 font-medium ml-1">MB Used</span>
+          </div>
+        </Card>
+        
+        <Card className="p-4 bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Server Uptime</span>
+            <Clock size={16} className="text-indigo-500" />
+          </div>
+          <div>
+            <span className="text-3xl font-black text-slate-800">{health ? formatUptime(health.uptime) : '--'}</span>
+          </div>
+        </Card>
+
+        <Card className="p-4 bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Database Ping</span>
+            <Database size={16} className={health?.dbLatency > 100 ? 'text-amber-500' : 'text-emerald-500'} />
+          </div>
+          <div>
+            <span className="text-3xl font-black text-slate-800">{health ? health.dbLatency : '--'}</span>
+            <span className="text-xs text-slate-500 font-medium ml-1">ms</span>
+          </div>
+        </Card>
+
+        <Card className="p-4 bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">CPU Load (1m)</span>
+            <Cpu size={16} className="text-sky-500" />
+          </div>
+          <div>
+            <span className="text-3xl font-black text-slate-800">{health?.cpuLoad ? health.cpuLoad[0].toFixed(2) : '--'}</span>
+            <span className="text-xs text-slate-500 font-medium ml-1">avg</span>
+          </div>
+        </Card>
+      </div>
+
       {/* METRICS ROW */}
+      <h2 className="text-lg font-black text-slate-800 tracking-tight mt-8 mb-4">API Billing & Analytics</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-5 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white border-none shadow-lg shadow-indigo-900/20">
           <div className="flex items-center gap-2 text-indigo-200 mb-2 font-bold text-xs uppercase tracking-wider">
