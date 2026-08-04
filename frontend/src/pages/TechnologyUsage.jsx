@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
-import { Server, Database, Activity, Cpu, Cloud, Smartphone, Zap, X, CheckCircle, XCircle, Clock, MessageCircle } from 'lucide-react';
+import { Server, Database, Activity, Cpu, Cloud, Smartphone, Zap, X, CheckCircle, XCircle, Clock, MessageCircle, RefreshCw } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 
 const TechCard = ({ icon: Icon, title, description, status, type, link }) => (
@@ -45,6 +45,7 @@ export default function TechnologyUsage() {
   const [isTestingSandbox, setIsTestingSandbox] = useState(false);
   const [sandboxModalOpen, setSandboxModalOpen] = useState(false);
   const [sandboxResults, setSandboxResults] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [health, setHealth] = useState(null);
 
@@ -56,6 +57,12 @@ export default function TechnologyUsage() {
     const interval = setInterval(fetchHealth, 15000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([fetchHealth(), fetchStats()]);
+    setIsRefreshing(false);
+  };
 
   const fetchHealth = async () => {
     try {
@@ -142,10 +149,20 @@ export default function TechnologyUsage() {
       </div>
 
       {/* SYSTEM HEALTH & VITALS */}
-      <h2 className="text-lg font-black text-slate-800 tracking-tight mt-8 mb-4 flex items-center gap-2">
-        <Server className="text-slate-500" size={20} /> System Health & Vitals
-        {health && <span className="flex h-2 w-2 relative ml-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>}
-      </h2>
+      <div className="flex items-center justify-between mt-8 mb-4">
+        <h2 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
+          <Server className="text-slate-500" size={20} /> System Health & Vitals
+          {health && <span className="flex h-2 w-2 relative ml-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>}
+        </h2>
+        <button 
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-indigo-500' : ''} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh Vitals'}
+        </button>
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
