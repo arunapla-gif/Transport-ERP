@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Consignor {
@@ -61,6 +62,7 @@ model Consignee {
   gcs      GC[]
   
   @@unique([name, branch])
+  @@index([parentId])
 }
 
 model Vehicle {
@@ -169,6 +171,9 @@ model GC {
   trackingLogs   GcTrackingLog[]
   
   @@unique([gcNumber, branch])
+  @@index([consignorId])
+  @@index([consigneeId])
+  @@index([gdmId])
 }
 
 model GCItem {
@@ -183,6 +188,8 @@ model GCItem {
   weight       Float?
   rate         Float?
   amount       Float?
+  
+  @@index([gcId])
 }
 
 model GcTrackingLog {
@@ -193,6 +200,8 @@ model GcTrackingLog {
   actionType  String   // e.g., "EWB_FETCHED", "EWB_REGENERATED", "GDM_LOADED", "DELIVERED"
   description String
   metaData    Json?    // Optional JSON for raw EWB snapshots or vehicle numbers
+  
+  @@index([gcId])
 }
 
 model GDM {
@@ -225,6 +234,8 @@ model GDM {
   trip          Trip?     @relation(fields: [tripId], references: [id])
   
   @@unique([gdmNumber, branch])
+  @@index([vehicleId])
+  @@index([tripId])
 }
 
 model Trip {
@@ -263,6 +274,8 @@ model Trip {
   
   gdms            GDM[]
   branch          String?   @default("MAIN")
+  
+  @@index([vehicleId])
 }
 
 model FreightBill {
@@ -445,6 +458,8 @@ model Session {
   token      String   @unique
   loginTime  DateTime @default(now())
   lastActive DateTime @default(now())
+  
+  @@index([userId])
 }
 
 model SystemHealthLog {
