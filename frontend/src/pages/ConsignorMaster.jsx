@@ -83,7 +83,8 @@ export default function ConsignorMaster() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalRecords, setTotalRecords] = useState(0);
-  const observerRef = useRef(null);
+  const desktopObserverRef = useRef(null);
+  const mobileObserverRef = useRef(null);
 
   // Debounce search term
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -131,13 +132,15 @@ export default function ConsignorMaster() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
+        const isIntersecting = entries.some(entry => entry.isIntersecting);
+        if (isIntersecting && hasMore && !loading) {
           setPage(prev => prev + 1);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: '200px' }
     );
-    if (observerRef.current) observer.observe(observerRef.current);
+    if (desktopObserverRef.current) observer.observe(desktopObserverRef.current);
+    if (mobileObserverRef.current) observer.observe(mobileObserverRef.current);
     return () => observer.disconnect();
   }, [hasMore, loading]);
 
@@ -490,7 +493,7 @@ export default function ConsignorMaster() {
               {desktopTableRows}
               {hasMore && (
                 <tr>
-                  <td colSpan="6" className="py-6 text-center text-slate-500 font-medium" ref={observerRef}>
+                  <td colSpan="6" className="py-6 text-center text-slate-500 font-medium" ref={desktopObserverRef}>
                     {loading ? (
                       <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div> Loading more...</span>
                     ) : 'Scroll for more'}
@@ -502,7 +505,7 @@ export default function ConsignorMaster() {
         </div>
         
         {/* MOBILE OBSERVER DIV (only shown on mobile if desktop hidden) */}
-        <div className="md:hidden p-4 text-center text-slate-500 text-sm font-medium" ref={observerRef}>
+        <div className="md:hidden p-4 text-center text-slate-500 text-sm font-medium" ref={mobileObserverRef}>
            {hasMore && (loading ? 'Loading more...' : 'Scroll for more')}
         </div>
         </>
