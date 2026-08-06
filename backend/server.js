@@ -618,11 +618,50 @@ app.get('/api/usage/stats', async (req, res) => {
 app.get('/api/consignors', async (req, res) => {
   try {
     const branch = req.query.branch || 'MAIN';
-    const consignors = await prisma.consignor.findMany({ 
-      where: { branch },
-      orderBy: { id: 'desc' } 
+    const page = req.query.page ? parseInt(req.query.page) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
+    const q = req.query.q || '';
+    
+    let whereClause = { branch };
+    
+    // Inactive filter is usually handled on frontend, but we should probably apply it if searching
+    if (q) {
+      whereClause.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { gstin: { contains: q, mode: 'insensitive' } },
+        { city: { contains: q, mode: 'insensitive' } }
+      ];
+    }
+
+    // Legacy support: if no page is requested, return simple array
+    if (!page) {
+      const consignors = await prisma.consignor.findMany({ 
+        where: whereClause,
+        orderBy: { id: 'desc' },
+        take: 2000 // Safeguard against OOM
+      });
+      return res.json(consignors);
+    }
+
+    // Pagination support
+    const skip = (page - 1) * limit;
+    
+    const [data, total] = await Promise.all([
+      prisma.consignor.findMany({
+        where: whereClause,
+        orderBy: { id: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.consignor.count({ where: whereClause })
+    ]);
+
+    res.json({
+      data,
+      total,
+      hasMore: (skip + data.length) < total,
+      nextCursor: (skip + data.length) < total ? page + 1 : null
     });
-    res.json(consignors);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch consignors' });
   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
@@ -80,18 +80,66 @@ export default function ConsignorMaster() {
     onSave: (e) => handleSave(e || { preventDefault: () => {} })
   });
 
-  useEffect(() => {
-    fetchConsignors();
-  }, []);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const observerRef = useRef(null);
 
-  const fetchConsignors = async () => {
-    try {
-      const data = await api.get(`/consignors?branch=${branch}`);
-      setConsignors(data);
-    } catch (err) {
-      toast.error('Failed to fetch data.');
-    }
-  };
+  // Debounce search term
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Reset pagination when search changes
+  useEffect(() => {
+    setPage(1);
+    setConsignors([]);
+    setHasMore(true);
+  }, [debouncedSearch, branch]);
+
+  useEffect(() => {
+    const fetchConsignors = async () => {
+      try {
+        setLoading(true);
+        const url = `/consignors?branch=${branch}&page=${page}&limit=50&q=${encodeURIComponent(debouncedSearch)}`;
+        const res = await api.get(url);
+        
+        if (res.data) {
+           setConsignors(prev => {
+              if (page === 1) return res.data;
+              const existingIds = new Set(prev.map(p => p.id));
+              const newItems = res.data.filter(d => !existingIds.has(d.id));
+              return [...prev, ...newItems];
+           });
+           setHasMore(res.hasMore);
+           setTotalRecords(res.total);
+        } else {
+           setConsignors(res); // legacy fallback
+           setHasMore(false);
+        }
+      } catch (err) {
+        toast.error('Failed to fetch data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConsignors();
+  }, [page, debouncedSearch, branch]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (observerRef.current) observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading]);
 
   const handleVerifyGST = async () => {
     if (!formData.gstin) return toast.error('Please enter a GSTIN to verify');
@@ -226,16 +274,14 @@ export default function ConsignorMaster() {
 
   const filteredConsignors = useMemo(() => {
     return consignors.filter(c => {
-      const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()));
-        
-      if (activeTab === 'API_ONLY') return matchesSearch && (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED');
-      if (activeTab === 'OLD_DATA_ONLY') return matchesSearch && c.migrationType === 'OLD_DATA_ONLY';
-      if (activeTab === 'MERGED_NAME') return matchesSearch && c.migrationType === 'MERGED_NAME';
+      // The search query is now handled by the server (debouncedSearch).
+      // We only use this local filter for the TABS (API_ONLY, etc) to avoid refetching on tab switch.
+      if (activeTab === 'API_ONLY') return (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED');
+      if (activeTab === 'OLD_DATA_ONLY') return c.migrationType === 'OLD_DATA_ONLY';
+      if (activeTab === 'MERGED_NAME') return c.migrationType === 'MERGED_NAME';
       return false;
     });
-  }, [consignors, searchTerm, activeTab]);
+  }, [consignors, activeTab]);
 
   // Memoize heavy table row rendering to prevent typing lag
   const desktopTableRows = useMemo(() => {
@@ -442,8 +488,22 @@ export default function ConsignorMaster() {
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {desktopTableRows}
+              {hasMore && (
+                <tr>
+                  <td colSpan="6" className="py-6 text-center text-slate-500 font-medium" ref={observerRef}>
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div> Loading more...</span>
+                    ) : 'Scroll for more'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
+        </div>
+        
+        {/* MOBILE OBSERVER DIV (only shown on mobile if desktop hidden) */}
+        <div className="md:hidden p-4 text-center text-slate-500 text-sm font-medium" ref={observerRef}>
+           {hasMore && (loading ? 'Loading more...' : 'Scroll for more')}
         </div>
         </>
       </GlassCard>
