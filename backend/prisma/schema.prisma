@@ -33,6 +33,9 @@ model Consignor {
   gcs      GC[]
   
   @@unique([name, branch])
+  @@index([name])
+  @@index([gstin])
+  @@index([phone])
 }
 
 model Consignee {
@@ -63,6 +66,9 @@ model Consignee {
   
   @@unique([name, branch])
   @@index([parentId])
+  @@index([name])
+  @@index([gstin])
+  @@index([phone])
 }
 
 model Vehicle {
@@ -174,6 +180,8 @@ model GC {
   @@index([consignorId])
   @@index([consigneeId])
   @@index([gdmId])
+  @@index([date])
+  @@index([status])
 }
 
 model GCItem {
@@ -236,6 +244,8 @@ model GDM {
   @@unique([gdmNumber, branch])
   @@index([vehicleId])
   @@index([tripId])
+  @@index([date])
+  @@index([status])
 }
 
 model Trip {
@@ -276,6 +286,8 @@ model Trip {
   branch          String?   @default("MAIN")
   
   @@index([vehicleId])
+  @@index([date])
+  @@index([status])
 }
 
 model FreightBill {
@@ -300,6 +312,9 @@ model FreightBill {
   remarks         String?
   status          String?   @default("Created")
   branch          String?   @default("MAIN")
+  
+  @@index([date])
+  @@index([status])
 }
 
 model Company {
@@ -373,6 +388,9 @@ model WarehouseInward {
   godownNo       String
   remarks        String?
   branch         String?  @default("MAIN")
+  
+  @@index([ewayBillNo])
+  @@index([createdAt])
 }
 
 model ApiUsageLog {
