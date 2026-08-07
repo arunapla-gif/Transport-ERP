@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Printer, FileText, PackageCheck, Search, CheckSquare, Download, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -33,29 +33,121 @@ export default function PrintHub() {
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const [gcPage, setGcPage] = useState(1);
+  const [hasMoreGcs, setHasMoreGcs] = useState(true);
+  const [gcSearchTerm, setGcSearchTerm] = useState('');
+  const [debouncedGcSearch, setDebouncedGcSearch] = useState('');
+  const gcObserverRef = useRef(null);
 
-  const fetchData = async () => {
+  const [gdmPage, setGdmPage] = useState(1);
+  const [hasMoreGdms, setHasMoreGdms] = useState(true);
+  const [gdmSearchTerm, setGdmSearchTerm] = useState('');
+  const [debouncedGdmSearch, setDebouncedGdmSearch] = useState('');
+  const gdmObserverRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedGcSearch(gcSearchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [gcSearchTerm]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedGdmSearch(gdmSearchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [gdmSearchTerm]);
+
+  useEffect(() => {
+    setGcPage(1);
+    setRecentGcs([]);
+    setHasMoreGcs(true);
+  }, [debouncedGcSearch]);
+
+  useEffect(() => {
+    setGdmPage(1);
+    setRecentGdms([]);
+    setHasMoreGdms(true);
+  }, [debouncedGdmSearch]);
+
+  const fetchGcs = async (pageNum = gcPage) => {
     try {
       setLoading(true);
-      const [gcData, gdmData] = await Promise.all([
-        api.get('/gcs'),
-        api.get('/gdms')
-      ]);
-      
-      const sortedGcs = (gcData || []).sort((a, b) => new Date(b.date) - new Date(a.date));
-      const sortedGdms = (gdmData || []).sort((a, b) => new Date(b.date) - new Date(a.date));
-      
-      setRecentGcs(sortedGcs);
-      setRecentGdms(sortedGdms);
+      const res = await api.get(`/gcs?page=${pageNum}&limit=50&searchQuery=${encodeURIComponent(debouncedGcSearch)}`);
+      if (res.data) {
+        setRecentGcs(prev => {
+          if (pageNum === 1) return res.data;
+          const existingIds = new Set(prev.map(p => p.id));
+          return [...prev, ...res.data.filter(d => !existingIds.has(d.id))];
+        });
+        setHasMoreGcs(res.page < res.totalPages);
+      } else {
+        setRecentGcs(res || []);
+        setHasMoreGcs(false);
+      }
     } catch (err) {
-      console.error("Failed to load recent data for printing", err);
+      console.error(err);
+      toast.error('Failed to load GCs');
     } finally {
       setLoading(false);
     }
   };
+
+  const fetchGdms = async (pageNum = gdmPage) => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/gdms?page=${pageNum}&limit=50&searchQuery=${encodeURIComponent(debouncedGdmSearch)}`);
+      if (res.data) {
+        setRecentGdms(prev => {
+          if (pageNum === 1) return res.data;
+          const existingIds = new Set(prev.map(p => p.id));
+          return [...prev, ...res.data.filter(d => !existingIds.has(d.id))];
+        });
+        setHasMoreGdms(res.page < res.totalPages);
+      } else {
+        setRecentGdms(res || []);
+        setHasMoreGdms(false);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load GDMs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'GC') fetchGcs(gcPage);
+  }, [gcPage, debouncedGcSearch, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'GDM') fetchGdms(gdmPage);
+  }, [gdmPage, debouncedGdmSearch, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'GC') return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMoreGcs && !loading) {
+          setGcPage(prev => prev + 1);
+        }
+      },
+      { rootMargin: '1500px' }
+    );
+    if (gcObserverRef.current) observer.observe(gcObserverRef.current);
+    return () => observer.disconnect();
+  }, [hasMoreGcs, loading, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'GDM') return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMoreGdms && !loading) {
+          setGdmPage(prev => prev + 1);
+        }
+      },
+      { rootMargin: '1500px' }
+    );
+    if (gdmObserverRef.current) observer.observe(gdmObserverRef.current);
+    return () => observer.disconnect();
+  }, [hasMoreGdms, loading, activeTab]);
 
   // GC Selection logic
   const toggleGcSelection = (gcId) => {
@@ -502,7 +594,7 @@ export default function PrintHub() {
         </div>
 
         {/* Tab Content Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white">
+        <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between bg-white gap-4">
           <div>
             <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
               <CheckSquare className={activeTab === 'GC' ? "text-indigo-600" : "text-emerald-600"} size={20} />
@@ -511,23 +603,36 @@ export default function PrintHub() {
             <p className="text-xs font-semibold text-slate-500 mt-0.5">Select multiple documents to print them all in one go.</p>
           </div>
           
-          {activeTab === 'GC' ? (
-            <button 
-              onClick={(e) => handleOpenCopiesModal(e, selectedGcs.join(','))}
-              disabled={selectedGcs.length === 0}
-              className={`h-10 px-6 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all shadow-sm ${selectedGcs.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <Printer size={16} /> Print Selected ({selectedGcs.length})
-            </button>
-          ) : (
-            <button 
-              onClick={(e) => handleOpenGdmFormatModal(e, selectedGdms.join(','))}
-              disabled={selectedGdms.length === 0}
-              className={`h-10 px-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition-all shadow-sm ${selectedGdms.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <Printer size={16} /> Print Selected ({selectedGdms.length})
-            </button>
-          )}
+          <div className="flex gap-4 items-center w-full md:w-auto">
+             <div className="relative flex-1 md:w-64">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder={`Search ${activeTab === 'GC' ? 'GCs...' : 'GDMs...'}`} 
+                  value={activeTab === 'GC' ? gcSearchTerm : gdmSearchTerm}
+                  onChange={(e) => activeTab === 'GC' ? setGcSearchTerm(e.target.value) : setGdmSearchTerm(e.target.value)}
+                  className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-lg bg-slate-50 text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+             </div>
+             
+            {activeTab === 'GC' ? (
+              <button 
+                onClick={(e) => handleOpenCopiesModal(e, selectedGcs.join(','))}
+                disabled={selectedGcs.length === 0}
+                className={`h-10 px-6 shrink-0 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all shadow-sm ${selectedGcs.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Printer size={16} /> Print Selected ({selectedGcs.length})
+              </button>
+            ) : (
+              <button 
+                onClick={(e) => handleOpenGdmFormatModal(e, selectedGdms.join(','))}
+                disabled={selectedGdms.length === 0}
+                className={`h-10 px-6 shrink-0 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition-all shadow-sm ${selectedGdms.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Printer size={16} /> Print Selected ({selectedGdms.length})
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tab Content Table */}
@@ -560,43 +665,61 @@ export default function PrintHub() {
               )}
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {loading ? (
-                <tr><td colSpan="7" className="p-8 text-center text-slate-400 font-semibold animate-pulse">Loading all records...</td></tr>
+              {loading && recentGcs.length === 0 && recentGdms.length === 0 ? (
+                <tr><td colSpan="7" className="p-8 text-center text-slate-400 font-semibold animate-pulse">Loading records...</td></tr>
               ) : activeTab === 'GC' ? (
-                recentGcs.length === 0 ? (
-                  <tr><td colSpan="7" className="p-8 text-center text-slate-400 font-semibold">No GCs found.</td></tr>
-                ) : (
-                  recentGcs.map((gc) => (
-                    <tr key={gc.id} className={`hover:bg-slate-50 transition-colors cursor-pointer ${selectedGcs.includes(gc.gcNumber) ? 'bg-indigo-50/50' : ''}`} onClick={() => toggleGcSelection(gc.gcNumber)}>
-                      <td className="px-4 py-3 text-center">
-                        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked={selectedGcs.includes(gc.gcNumber)} readOnly />
+                <>
+                  {recentGcs.length === 0 ? (
+                    <tr><td colSpan="7" className="p-8 text-center text-slate-400 font-semibold">No GCs found.</td></tr>
+                  ) : (
+                    recentGcs.map((gc) => (
+                      <tr key={gc.id} className={`hover:bg-slate-50 transition-colors cursor-pointer ${selectedGcs.includes(gc.gcNumber) ? 'bg-indigo-50/50' : ''}`} onClick={() => toggleGcSelection(gc.gcNumber)}>
+                        <td className="px-4 py-3 text-center">
+                          <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked={selectedGcs.includes(gc.gcNumber)} readOnly />
+                        </td>
+                        <td className="px-4 py-3"><span className="font-bold text-slate-800">{gc.gcNumber}</span></td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-600">{gc.date ? new Date(gc.date).toLocaleDateString('en-GB') : '-'}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gc.consignor?.name || '-'}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gc.consignee?.name || '-'}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-slate-800 text-center">{gc.goods?.reduce((sum, g) => sum + (g.articleCount || 0), 0) || 0}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-emerald-600 text-right">₹{gc.freightTotal?.toFixed(2) || '0.00'}</td>
+                      </tr>
+                    ))
+                  )}
+                  {hasMoreGcs && (
+                    <tr ref={gcObserverRef}>
+                      <td colSpan="7" className="p-6 text-center text-slate-500 font-medium">
+                        {loading ? <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div> Loading more...</span> : 'Scroll for more'}
                       </td>
-                      <td className="px-4 py-3"><span className="font-bold text-slate-800">{gc.gcNumber}</span></td>
-                      <td className="px-4 py-3 text-sm font-medium text-slate-600">{gc.date ? new Date(gc.date).toLocaleDateString('en-GB') : '-'}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gc.consignor?.name || '-'}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gc.consignee?.name || '-'}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-slate-800 text-center">{gc.goods?.reduce((sum, g) => sum + (g.articleCount || 0), 0) || 0}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-emerald-600 text-right">₹{gc.freightTotal?.toFixed(2) || '0.00'}</td>
                     </tr>
-                  ))
-                )
+                  )}
+                </>
               ) : (
-                recentGdms.length === 0 ? (
-                  <tr><td colSpan="6" className="p-8 text-center text-slate-400 font-semibold">No GDMs found.</td></tr>
-                ) : (
-                  recentGdms.map((gdm) => (
-                    <tr key={gdm.id} className={`hover:bg-slate-50 transition-colors cursor-pointer ${selectedGdms.includes(gdm.gdmNumber) ? 'bg-emerald-50/50' : ''}`} onClick={() => toggleGdmSelection(gdm.gdmNumber)}>
-                      <td className="px-4 py-3 text-center">
-                        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" checked={selectedGdms.includes(gdm.gdmNumber)} readOnly />
+                <>
+                  {recentGdms.length === 0 ? (
+                    <tr><td colSpan="6" className="p-8 text-center text-slate-400 font-semibold">No GDMs found.</td></tr>
+                  ) : (
+                    recentGdms.map((gdm) => (
+                      <tr key={gdm.id} className={`hover:bg-slate-50 transition-colors cursor-pointer ${selectedGdms.includes(gdm.gdmNumber) ? 'bg-emerald-50/50' : ''}`} onClick={() => toggleGdmSelection(gdm.gdmNumber)}>
+                        <td className="px-4 py-3 text-center">
+                          <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" checked={selectedGdms.includes(gdm.gdmNumber)} readOnly />
+                        </td>
+                        <td className="px-4 py-3"><span className="font-bold text-slate-800">{gdm.gdmNumber}</span></td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-600">{gdm.date ? new Date(gdm.date).toLocaleDateString('en-GB') : '-'}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gdm.vehicle?.vehicleNumber || '-'}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gdm.toName || '-'}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-slate-800 text-right">{gdm.gcs?.length || 0}</td>
+                      </tr>
+                    ))
+                  )}
+                  {hasMoreGdms && (
+                    <tr ref={gdmObserverRef}>
+                      <td colSpan="6" className="p-6 text-center text-slate-500 font-medium">
+                        {loading ? <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div> Loading more...</span> : 'Scroll for more'}
                       </td>
-                      <td className="px-4 py-3"><span className="font-bold text-slate-800">{gdm.gdmNumber}</span></td>
-                      <td className="px-4 py-3 text-sm font-medium text-slate-600">{gdm.date ? new Date(gdm.date).toLocaleDateString('en-GB') : '-'}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gdm.vehicle?.vehicleNumber || '-'}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gdm.toName || '-'}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-slate-800 text-right">{gdm.gcs?.length || 0}</td>
                     </tr>
-                  ))
-                )
+                  )}
+                </>
               )}
             </tbody>
           </table>
