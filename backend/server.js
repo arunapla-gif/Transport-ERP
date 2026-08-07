@@ -23,6 +23,8 @@ const helmet = require('helmet');
 const xlsx = require('xlsx');
 const { resolveStateCode } = require('./utils/stateCodeHelper');
 const { startHealthLogger } = require('./services/healthLogger');
+const { cacheMiddleware, invalidateCache, redisConnected, redis } = require('./middleware/cache');
+const { Queue, Worker } = require('bullmq');
 
 // Start the automated system health background logger
 startHealthLogger();
@@ -61,6 +63,21 @@ io.on('connection', (socket) => {
   });
 });
 const prisma = new PrismaClient();
+
+// Auto-invalidate caches on any CUD operation for Master Data
+prisma.$use(async (params, next) => {
+  const result = await next(params);
+  
+  if (['create', 'update', 'delete', 'createMany', 'updateMany', 'deleteMany'].includes(params.action)) {
+    if (params.model === 'Consignor') invalidateCache('/api/consignors*');
+    if (params.model === 'Consignee') invalidateCache('/api/consignees*');
+    if (params.model === 'Vehicle') invalidateCache('/api/vehicles*');
+    if (params.model === 'Godown') invalidateCache('/api/godowns*');
+    if (params.model === 'UnitMaster') invalidateCache('/api/units*');
+  }
+  
+  return result;
+});
 const PORT = process.env.PORT || 5000;
 
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
@@ -617,7 +634,7 @@ app.get('/api/usage/stats', async (req, res) => {
 // ==============================
 // CONSIGNOR ENDPOINTS
 // ==============================
-app.get('/api/consignors', async (req, res) => {
+app.get('/api/consignors', cacheMiddleware(3600), async (req, res) => {
   try {
     const branch = req.query.branch || 'MAIN';
     const page = req.query.page ? parseInt(req.query.page) : null;
@@ -786,7 +803,7 @@ app.post('/api/freight-bills', async (req, res) => {
 // ==============================
 // CONSIGNEE ENDPOINTS
 // ==============================
-app.get('/api/consignees', async (req, res) => {
+app.get('/api/consignees', cacheMiddleware(3600), async (req, res) => {
   try {
     const branch = req.query.branch || 'MAIN';
     const page = req.query.page ? parseInt(req.query.page) : null;
@@ -916,7 +933,7 @@ app.put('/api/consignees/:id/restore', async (req, res) => {
 // ==============================
 // VEHICLE ENDPOINTS
 // ==============================
-app.get('/api/vehicles', async (req, res) => {
+app.get('/api/vehicles', cacheMiddleware(3600), async (req, res) => {
   try {
     const page = req.query.page ? parseInt(req.query.page) : null;
     const limit = req.query.limit ? parseInt(req.query.limit) : 50;
@@ -1168,7 +1185,7 @@ app.delete('/api/companies/:id', async (req, res) => {
 // ==============================
 // UNIT MASTER ENDPOINTS
 // ==============================
-app.get('/api/units', async (req, res) => {
+app.get('/api/units', cacheMiddleware(86400), async (req, res) => {
   try {
     const units = await prisma.unitMaster.findMany({ 
       orderBy: [
@@ -1253,7 +1270,7 @@ app.post('/api/hsn', async (req, res) => {
 // ==============================
 // GODOWN ENDPOINTS
 // ==============================
-app.get('/api/godowns', async (req, res) => {
+app.get('/api/godowns', cacheMiddleware(86400), async (req, res) => {
   try {
     const godowns = await prisma.godown.findMany({ orderBy: { id: 'desc' } });
     res.json(godowns);
@@ -2691,13 +2708,145 @@ app.post('/api/ewaybill/bulk-verify', paidApiLimiter, async (req, res) => {
 });
 
 // BULK HEAL EWBs (Phase 1 of GDM) - Moves the heavy frontend loop to the backend
+// Initialize BullMQ Queue and Worker for E-Way Bills
+let ewaybillQueue = null;
+
+if (redisConnected && redis) {
+  console.log('✅ Initializing BullMQ E-Way Bill Queue...');
+  ewaybillQueue = new Queue('ewaybill-queue', { connection: redis });
+  
+  const ewaybillWorker = new Worker('ewaybill-queue', async (job) => {
+    if (job.name === 'bulk-heal') {
+      const { gcs, vehicleNo, authHeader, serverPort } = job.data;
+      const healedGcs = [];
+      
+      const calculateTaxFromHsn = async (gc) => {
+        let totalIgst = 0, totalCgst = 0, totalSgst = 0, totalTaxable = 0;
+        const totalInvoiceValue = parseFloat(gc.invoiceValue) || 0;
+        
+        for (const item of (gc.goods || [])) {
+          const hsnCode = item.hsn;
+          let taxRate = 18;
+          try {
+            const hsnRec = await prisma.hsn.findFirst({ where: { code: hsnCode } });
+            if (hsnRec && hsnRec.gstRate) taxRate = hsnRec.gstRate;
+          } catch (e) { /* ignore */ }
+          
+          const itemBaseValue = totalInvoiceValue / (1 + (taxRate / 100));
+          const itemTax = totalInvoiceValue - itemBaseValue;
+          totalTaxable += itemBaseValue;
+          
+          const isInterstate = gc.consignor?.state !== gc.consignee?.state;
+          if (isInterstate) {
+            totalIgst += itemTax;
+          } else {
+            totalCgst += itemTax / 2;
+            totalSgst += itemTax / 2;
+          }
+        }
+        return { totalTaxable, totalIgst, totalCgst, totalSgst };
+      };
+
+      for (let i = 0; i < gcs.length; i++) {
+        const gc = gcs[i];
+        let currentEwb = gc.privateMark;
+        const companyStr = gc.gcNumber?.startsWith('B') ? 'BELL' : 'AP';
+        const vNo = (vehicleNo || '').replace(/[^A-Z0-9]/gi, '');
+        
+        try {
+          if (!currentEwb) {
+             const taxInfo = await calculateTaxFromHsn(gc);
+             const genRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/generate?company=${companyStr}`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+               body: JSON.stringify({ company: companyStr, gcData: gc, taxInfo, vehicleNo: vNo })
+             });
+             const genData = await genRes.json();
+             if (!genRes.ok) throw new Error(genData.error || 'Generate Failed');
+             
+             currentEwb = genData.ewayBillNo;
+             await prisma.goodsConsignment.update({ where: { id: gc.id }, data: { privateMark: currentEwb } });
+          } 
+          else if (gc.ewbAge > 15) {
+             const regRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/regenerate?company=${companyStr}`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+               body: JSON.stringify({ company: companyStr, ewbRawData: gc.ewbRawData, vehicleNo: vNo })
+             });
+             const regData = await regRes.json();
+             if (!regRes.ok) throw new Error(regData.error || 'Regenerate Failed');
+             
+             currentEwb = regData.ewayBillNo;
+             await prisma.goodsConsignment.update({ where: { id: gc.id }, data: { privateMark: currentEwb } });
+          }
+          else {
+             const updRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/update-part-b?company=${companyStr}`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+               body: JSON.stringify({ company: companyStr, ewbNo: currentEwb, vehicleNo: vNo })
+             });
+             const updData = await updRes.json();
+             
+             if (!updRes.ok) {
+                const errorMsg = (updData.error || '').toLowerCase();
+                if (errorMsg.includes('expired') || errorMsg.includes('validity') || errorMsg.includes('343')) {
+                   const regRes = await fetch(`http://127.0.0.1:${serverPort}/api/ewaybill/regenerate?company=${companyStr}`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+                     body: JSON.stringify({ company: companyStr, ewbRawData: gc.ewbRawData, vehicleNo: vNo })
+                   });
+                   const regData = await regRes.json();
+                   if (!regRes.ok) throw new Error(regData.error || 'Regenerate Fallback Failed');
+                   
+                   currentEwb = regData.ewayBillNo;
+                   await prisma.goodsConsignment.update({ where: { id: gc.id }, data: { privateMark: currentEwb } });
+                } else {
+                   throw new Error(updData.error || 'Part B Update Failed');
+                }
+             }
+          }
+          
+          healedGcs.push({ ...gc, privateMark: currentEwb, ewbStatus: 'Valid', ewbAge: 0 });
+          // Emit socket update for real-time frontend tracking
+          io.emit('bulk-heal-progress', { total: gcs.length, current: i + 1, gcNumber: gc.gcNumber });
+        } catch (e) {
+          console.error("Internal GC Error:", e);
+          io.emit('bulk-heal-error', { gcNumber: gc.gcNumber, error: e.message });
+        }
+      }
+      return { healedGcs };
+    }
+  }, { connection: redis });
+
+  ewaybillWorker.on('completed', (job, returnvalue) => {
+    console.log(`✅ Job ${job.id} completed successfully`);
+    io.emit('bulk-heal-completed', returnvalue);
+  });
+  ewaybillWorker.on('failed', (job, err) => {
+    console.error(`❌ Job ${job.id} failed with error:`, err.message);
+  });
+}
+
 app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
   try {
     const { gcs, vehicleNo } = req.body;
     if (!gcs || !Array.isArray(gcs)) return res.json({ healedGcs: [] });
     
-    const healedGcs = [];
     const serverPort = process.env.PORT || 5005;
+    const authHeader = req.headers.authorization || '';
+
+    // If Redis is connected, offload to background queue!
+    if (ewaybillQueue) {
+       const job = await ewaybillQueue.add('bulk-heal', { gcs, vehicleNo, authHeader, serverPort });
+       return res.status(202).json({ 
+         status: 'processing', 
+         message: 'Bulk Heal job added to queue. Listening for socket updates...',
+         jobId: job.id 
+       });
+    }
+
+    // GRACEFUL FALLBACK: Synchronous execution if Redis is not available
+    const healedGcs = [];
     
     // Internal helper to calculate tax based on Prisma HSN
     const calculateTaxFromHsn = async (gc) => {
@@ -2728,7 +2877,6 @@ app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
     };
 
     // We use node-fetch to call our OWN internal routes to reuse the exact tested logic safely
-    const authHeader = req.headers.authorization || '';
     
     for (let i = 0; i < gcs.length; i++) {
       const gc = gcs[i];
