@@ -153,7 +153,7 @@ export default function SystemBoot() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-200 mb-4 relative">
             <Server size={32} />
-            <span className="absolute -top-2 -right-12 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-emerald-500/30 animate-pulse border border-emerald-400">v3.0.1 Live</span>
+            <span className="absolute -top-2 -right-12 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-emerald-500/30 animate-pulse border border-emerald-400">v3.0.2 Live</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-800">System Dashboard</h1>
           <p className="text-slate-500 mt-1">Initializing Secure Workspace</p>
