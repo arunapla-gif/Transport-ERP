@@ -182,6 +182,8 @@ model GC {
   @@index([gdmId])
   @@index([date])
   @@index([status])
+  @@index([branch, date, status])
+  @@index([ewbNumber])
 }
 
 model GCItem {
@@ -246,6 +248,8 @@ model GDM {
   @@index([tripId])
   @@index([date])
   @@index([status])
+  @@index([branch, date, status])
+  @@index([cewbNumber])
 }
 
 model Trip {
@@ -288,6 +292,7 @@ model Trip {
   @@index([vehicleId])
   @@index([date])
   @@index([status])
+  @@index([branch, date, status])
 }
 
 model FreightBill {
