@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import ScannerModal from '../components/ui/ScannerModal';
 import { Smartphone, CheckCircle2, QrCode } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 export default function RemoteScanner() {
   const [code, setCode] = useState('');
@@ -79,13 +80,13 @@ export default function RemoteScanner() {
                 autoFocus
               />
             </div>
-            <button 
+            <Button variant="custom" 
               disabled={code.length !== 4}
               type="submit"
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 disabled:text-slate-500 text-white rounded-xl font-black text-lg shadow-[0_4px_12px_rgba(79,70,229,0.3)] transition-all active:scale-95 flex items-center justify-center gap-2"
             >
               <QrCode size={20} /> Link to PC
-            </button>
+            </Button>
           </form>
         ) : (
           <div className="space-y-6 animate-in zoom-in duration-300">
@@ -105,21 +106,21 @@ export default function RemoteScanner() {
                 <h2 className="text-lg font-black text-indigo-600">Linked to PC: #{code}</h2>
                 <p className="text-sm font-bold text-slate-500 mt-2 mb-6">Scanner is opening...</p>
                 
-                <button 
+                <Button variant="custom" 
                   onClick={() => setIsScannerOpen(true)}
                   className="w-full h-14 bg-emerald-600 text-white rounded-xl font-black text-lg shadow-[0_4px_12px_rgba(16,185,129,0.3)] transition-all active:scale-95"
                 >
                   Open Camera Manually
-                </button>
+                </Button>
               </div>
             )}
             
-            <button 
+            <Button variant="custom" 
               onClick={() => { setIsLinked(false); setCode(''); }}
               className="text-sm font-bold text-slate-400 hover:text-slate-600"
             >
               Disconnect
-            </button>
+            </Button>
           </div>
         )}
       </div>

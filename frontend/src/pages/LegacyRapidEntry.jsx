@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
 import { Save, CheckCircle2, Zap, ArrowRight, Database, Trash2 } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 const DenseInput = ({ className = "", ...props }) => (
   <input 
@@ -523,7 +524,7 @@ export default function LegacyRapidEntry() {
                 {reassignSuccess ? (
                   <span className="text-emerald-600 text-[9px] font-bold animate-in fade-in">✅ {reassignSuccess}</span>
                 ) : row.ewbRawData ? (
-                  <button 
+                  <Button variant="custom" 
                     type="button"
                     tabIndex="-1"
                     onClick={handleReassignTransporter}
@@ -531,7 +532,7 @@ export default function LegacyRapidEntry() {
                     className="bg-amber-500 hover:bg-amber-400 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm transition-all"
                   >
                     {isReassigning ? '...' : `Reassign to ${row.companyMode === 'A' ? 'BELL' : 'AP'}`}
-                  </button>
+                  </Button>
                 ) : null}
               </div>
               <DenseInput id="cell-ewb" ref={ewbRef} className="font-mono text-xs border-amber-300 bg-amber-50" value={row.ewbNumber} onChange={e => setRow({...row, ewbNumber: e.target.value})} onBlur={handleEwbBlur} onKeyDown={(e) => handleKeyDown(e, 'rapid-consignor')} placeholder="12 digits..." />
@@ -712,7 +713,7 @@ export default function LegacyRapidEntry() {
                   </div>
                   
                   <div className="flex gap-1 justify-center items-center">
-                    <button type="button" tabIndex="-1" onClick={() => removeRow(item.id)} disabled={row.goods.length === 1} className="h-8 w-8 flex items-center justify-center bg-white hover:bg-rose-50 text-slate-400 disabled:opacity-50 border border-slate-200 rounded shadow-sm"><Trash2 size={14} /></button>
+                    <Button variant="custom" type="button" tabIndex="-1" onClick={() => removeRow(item.id)} disabled={row.goods.length === 1} className="h-8 w-8 flex items-center justify-center bg-white hover:bg-rose-50 text-slate-400 disabled:opacity-50 border border-slate-200 rounded shadow-sm"><Trash2 size={14} /></Button>
                   </div>
                 </div>
               ))}
@@ -720,9 +721,9 @@ export default function LegacyRapidEntry() {
           </div>
           
           <div className="mt-4 flex justify-end">
-            <button onClick={handleSaveRow} disabled={loading || isFetchingEwb} className="w-48 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold flex items-center justify-center shadow-md disabled:opacity-50">
+            <Button variant="custom" onClick={handleSaveRow} disabled={loading || isFetchingEwb} className="w-48 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold flex items-center justify-center shadow-md disabled:opacity-50">
               {loading ? 'Saving...' : <span className="flex items-center gap-2">Save Entry <ArrowRight size={16} /></span>}
-            </button>
+            </Button>
           </div>
 
           
@@ -759,12 +760,12 @@ export default function LegacyRapidEntry() {
                     <td className="p-3">{rec.invoiceNumber || '-'} <span className="text-slate-400 font-normal">({rec.invoiceValue})</span></td>
                     <td className="p-3 text-right text-emerald-600 font-bold">{rec.goods?.[0]?.articles || '-'}</td>
                     <td className="p-3 text-right">
-                      <button 
+                      <Button variant="custom" 
                         onClick={() => handleEditRecord(rec)}
                         className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded transition-colors"
                       >
                         Edit
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import { Package, Truck, MapPin, Calendar, FileText } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 export default function WarehouseStatement() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -80,12 +81,12 @@ export default function WarehouseStatement() {
               />
             </div>
           </div>
-          <button 
+          <Button variant="custom" 
             onClick={handlePrint}
             className="h-10 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-sm shadow-sm flex items-center gap-2 transition-all active:scale-95"
           >
             <FileText size={16} /> Print Report
-          </button>
+          </Button>
         </div>
       </div>
 

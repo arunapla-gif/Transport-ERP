@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api, API_BASE } from '../api';
 import { Users, Activity, ShieldAlert, Key, UserPlus, LogOut, RefreshCw, Trash2, Edit, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Button } from '../components/ui/Button';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('users'); // 'users' or 'sessions'
@@ -101,18 +102,18 @@ export default function AdminDashboard() {
         </div>
         
         <div className="flex gap-2 w-full md:w-auto bg-slate-100 p-1 rounded-xl">
-          <button 
+          <Button variant="custom" 
             onClick={() => setActiveTab('users')}
             className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'users' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
             <Users size={16} /> Users
-          </button>
-          <button 
+          </Button>
+          <Button variant="custom" 
             onClick={() => setActiveTab('sessions')}
             className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'sessions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
             <Activity size={16} /> Sessions
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -125,7 +126,7 @@ export default function AdminDashboard() {
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h2 className="font-black text-slate-700 flex items-center gap-2"><Users size={18} className="text-indigo-500"/> Staff Directory</h2>
               <div className="flex items-center gap-3">
-                <button 
+                <Button variant="custom" 
                   onClick={() => {
                     const token = localStorage.getItem('erp_token');
                     window.open(`${API_BASE}/admin/backup?token=${token}`, '_blank');
@@ -133,8 +134,8 @@ export default function AdminDashboard() {
                   className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition-colors"
                 >
                   <Download size={16} /> Complete Backup (.xlsx)
-                </button>
-                <button 
+                </Button>
+                <Button variant="custom" 
                   onClick={() => {
                     setFormData({ username: '', pin: '', role: 'worker', branch: 'MAIN', status: 'Active', permissions: { create: true, edit: false, delete: false, reports: false } });
                     setEditingId(null);
@@ -143,7 +144,7 @@ export default function AdminDashboard() {
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition-colors"
                 >
                   <UserPlus size={16} /> Add Employee
-                </button>
+                </Button>
               </div>
             </div>
             
@@ -176,8 +177,8 @@ export default function AdminDashboard() {
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => handleEdit(user)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 rounded-lg transition-colors"><Edit size={16} /></button>
-                          <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                          <Button variant="custom" onClick={() => handleEdit(user)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 rounded-lg transition-colors"><Edit size={16} /></Button>
+                          <Button variant="custom" onClick={() => handleDelete(user.id)} className="p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors"><Trash2 size={16} /></Button>
                         </div>
                       </td>
                     </tr>
@@ -193,7 +194,7 @@ export default function AdminDashboard() {
           <div>
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h2 className="font-black text-slate-700 flex items-center gap-2"><Activity size={18} className="text-indigo-500"/> Active Sessions (Last 24 Hrs)</h2>
-              <button onClick={fetchData} className="text-slate-500 hover:text-slate-800 p-2 bg-white rounded-lg border border-slate-200 shadow-sm"><RefreshCw size={16} className={loading ? 'animate-spin' : ''}/></button>
+              <Button variant="custom" onClick={fetchData} className="text-slate-500 hover:text-slate-800 p-2 bg-white rounded-lg border border-slate-200 shadow-sm"><RefreshCw size={16} className={loading ? 'animate-spin' : ''}/></Button>
             </div>
             
             <div className="overflow-x-auto">
@@ -233,12 +234,12 @@ export default function AdminDashboard() {
                          )}
                       </td>
                       <td className="p-4 text-right">
-                        <button 
+                        <Button variant="custom" 
                           onClick={() => handleForceLogout(session.id)}
                           className="px-3 py-1.5 bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ml-auto"
                         >
                           <LogOut size={14} /> Force Logout
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -258,7 +259,7 @@ export default function AdminDashboard() {
                 {editingId ? <Edit size={18} className="text-indigo-500"/> : <UserPlus size={18} className="text-indigo-500"/>} 
                 {editingId ? 'Edit Employee' : 'Create Employee'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-xl leading-none">&times;</button>
+              <Button variant="custom" onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-xl leading-none">&times;</Button>
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -358,10 +359,10 @@ export default function AdminDashboard() {
               )}
 
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition-colors shadow-indigo-200">
+                <Button variant="custom" type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">Cancel</Button>
+                <Button variant="custom" type="submit" className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition-colors shadow-indigo-200">
                   {editingId ? 'Save Changes' : 'Create User'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

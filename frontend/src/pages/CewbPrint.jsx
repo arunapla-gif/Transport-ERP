@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { generateGdmPdfBlob } from '../utils/gdmPdfGenerator';
+import { Button } from '../components/ui/Button';
 
 export default function CewbPrint() {
   const { id } = useParams();
@@ -86,29 +87,29 @@ export default function CewbPrint() {
   return (
     <div className="h-screen w-full flex flex-col bg-slate-800">
       <div className="flex justify-between items-center p-4 bg-slate-900 text-white shadow-xl z-10 shrink-0">
-        <button 
+        <Button variant="custom" 
           onClick={() => navigate(-1)}
           className="bg-slate-700 px-5 py-2.5 rounded-lg font-bold hover:bg-slate-600 transition-colors shadow-lg"
         >
           ← Back
-        </button>
+        </Button>
         
         <div className="flex gap-3">
-          <button 
+          <Button variant="custom" 
             onClick={handleSilentHardwarePrint}
             disabled={!!hardwareStatus || !pdfUrl}
             className={`${hardwareStatus ? 'bg-amber-400' : 'bg-amber-500 hover:bg-amber-400'} text-slate-900 px-5 py-2.5 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2`}
           >
             {hardwareStatus || '🖨️ Hardware Print'}
-          </button>
+          </Button>
           
-          <button 
+          <Button variant="custom" 
             onClick={handleNativeDownload}
             disabled={!pdfUrl}
             className="bg-indigo-500 hover:bg-indigo-400 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2"
           >
             📥 Download PDF
-          </button>
+          </Button>
         </div>
       </div>
       <div className="flex-1 w-full bg-slate-800 p-8 overflow-hidden flex justify-center">

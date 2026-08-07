@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import { PackageOpen, Volume2, Loader2, ListFilter } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 export default function GodownPlanner() {
   const [stock, setStock] = useState([]);
@@ -213,24 +214,24 @@ export default function GodownPlanner() {
       {/* Voice Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
         {/* Basic Reading Button */}
-        <button 
+        <Button variant="custom" 
           onClick={handleSpeak}
           disabled={isSpeaking || loading || isListening}
           className={`w-full py-6 rounded-3xl font-black text-xl shadow-[0_8px_30px_rgba(245,158,11,0.3)] transition-all flex flex-col items-center justify-center gap-3 ${isSpeaking && !aiResponse ? 'bg-rose-500 text-white animate-pulse shadow-[0_8px_30px_rgba(243,64,121,0.5)]' : 'bg-amber-500 hover:bg-amber-400 text-white'}`}
         >
           <Volume2 size={36} />
           முழு விவரம் படி (Read All)
-        </button>
+        </Button>
 
         {/* AI Assistant Mic Button */}
-        <button 
+        <Button variant="custom" 
           onClick={toggleRecording}
           disabled={isSpeaking || (isListening && !isRecording)}
           className={`w-full py-6 rounded-3xl font-black text-xl shadow-[0_8px_30px_rgba(14,165,233,0.3)] transition-all flex flex-col items-center justify-center gap-3 select-none ${isRecording ? 'bg-rose-600 text-white animate-pulse shadow-[0_8px_30px_rgba(225,29,72,0.5)]' : isListening ? 'bg-sky-600 text-white animate-bounce' : 'bg-sky-500 hover:bg-sky-400 text-white'}`}
         >
           <Volume2 size={36} />
           {isRecording ? 'பேசுங்கள் (Click to Stop & Send)...' : isListening ? 'Processing AI...' : 'Click to Ask (கேள்வி கேள்)'}
-        </button>
+        </Button>
       </div>
 
       {/* Trial AI Output Box */}
@@ -248,12 +249,12 @@ export default function GodownPlanner() {
       {/* Clear Filter Button if active */}
       {visualFilter.length > 0 && (
         <div className="flex justify-center mt-2 mb-2">
-          <button 
+          <Button variant="custom" 
             onClick={() => setVisualFilter([])}
             className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-full text-sm transition-all shadow-sm"
           >
             அனைத்து சரக்குகளையும் காட்டு (Show All Stock)
-          </button>
+          </Button>
         </div>
       )}
 

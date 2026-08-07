@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { CheckCircle2, Server, Database, KeyRound, ArrowRight, Loader2, AlertCircle, Wifi } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
+import { Button } from '../components/ui/Button';
 
 export default function SystemBoot() {
   const navigate = useNavigate();
@@ -172,12 +173,12 @@ export default function SystemBoot() {
               <AlertCircle className="shrink-0 mt-0.5" size={18} />
               <p className="text-sm font-medium">{errorMsg}. Please check your connection.</p>
             </div>
-            <button 
+            <Button variant="custom" 
               onClick={() => window.__retryBootSequence && window.__retryBootSequence()}
               className="mt-1 py-2 px-4 bg-white/50 hover:bg-white rounded-lg border border-rose-200 font-bold text-sm transition-colors w-fit shadow-sm"
             >
               Retry Connection
-            </button>
+            </Button>
           </div>
         )}
 
@@ -187,7 +188,7 @@ export default function SystemBoot() {
               <div className="space-y-4">
                 <h2 className="text-center font-bold text-slate-500 mb-2 uppercase tracking-widest text-xs">Select Operating Branch</h2>
                 <div className="grid grid-cols-2 gap-4">
-                  <button
+                  <Button variant="custom"
                     onClick={() => {
                       localStorage.setItem('activeBranch', 'MAIN');
                       navigate('/new-gc');
@@ -196,8 +197,8 @@ export default function SystemBoot() {
                   >
                     <Database size={28} className="text-indigo-500 group-hover:text-indigo-200 transition-colors" />
                     <span className="font-black text-lg text-indigo-900 group-hover:text-white transition-colors">MAIN BRANCH</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="custom"
                     onClick={() => {
                       localStorage.setItem('activeBranch', 'AP_BNG');
                       navigate('/new-gc');
@@ -206,26 +207,26 @@ export default function SystemBoot() {
                   >
                     <Server size={28} className="text-amber-600 group-hover:text-amber-100 transition-colors" />
                     <span className="font-black text-lg text-amber-900 group-hover:text-white transition-colors">AP BNG</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
-              <button
+              <Button variant="custom"
                 onClick={() => navigate('/new-gc')}
                 className="w-full py-4 px-6 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all duration-300 bg-slate-900 text-white shadow-xl shadow-slate-200 hover:bg-indigo-600 hover:shadow-indigo-200 hover:-translate-y-0.5"
               >
                 Proceed to Operations
                 <ArrowRight size={20} className="animate-pulse" />
-              </button>
+              </Button>
             )}
           </div>
         )}
 
         {!allReady && (
           <div className="mt-8">
-            <button disabled className="w-full py-4 px-6 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all duration-300 bg-slate-100 text-slate-400 cursor-not-allowed">
+            <Button variant="custom" disabled className="w-full py-4 px-6 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all duration-300 bg-slate-100 text-slate-400 cursor-not-allowed">
               Awaiting System Readiness
-            </button>
+            </Button>
           </div>
         )}
 

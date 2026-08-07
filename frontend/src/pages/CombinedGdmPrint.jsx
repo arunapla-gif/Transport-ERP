@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { Button } from '../components/ui/Button';
 
 export default function CombinedGdmPrint() {
   const { id } = useParams();
@@ -298,19 +299,19 @@ export default function CombinedGdmPrint() {
       })}
 
       {/* Action buttons */}
-      <button 
+      <Button variant="custom" 
         onClick={() => navigate(-1)}
         className="fixed top-4 left-4 bg-slate-800 text-white px-4 py-2 rounded-lg font-bold shadow-lg print:hidden hover:bg-slate-700"
       >
         ← Back
-      </button>
+      </Button>
 
-      <button 
+      <Button variant="custom" 
         onClick={() => window.print()}
         className="fixed top-4 right-4 bg-purple-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg print:hidden hover:bg-purple-500"
       >
         🖨️ Print Combined
-      </button>
+      </Button>
 
     </div>
   );

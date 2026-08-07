@@ -191,7 +191,7 @@ export default function UnitMaster() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
               <h2 className="font-bold text-slate-800 text-lg">{editingId ? 'Edit Unit' : 'Add New Unit'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">&times;</button>
+              <Button variant="custom" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">&times;</Button>
             </div>
             
             <form onSubmit={handleSave} className="p-4 space-y-4">

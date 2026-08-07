@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Server, Database, Activity, Cpu, Cloud, Smartphone, Zap, X, CheckCircle, XCircle, Clock, MessageCircle, RefreshCw } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Button } from '../components/ui/Button';
 
 const TechCard = ({ icon: Icon, title, description, status, type, link }) => (
   <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 hover:shadow-md transition-all relative overflow-hidden group">
@@ -207,14 +208,14 @@ export default function TechnologyUsage() {
             <p className="text-sm font-medium text-slate-500">Monitor your cloud infrastructure, databases, and prepaid API costs.</p>
           </div>
         </div>
-        <button
+        <Button variant="custom"
           onClick={handleSandboxTest}
           disabled={isTestingSandbox}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
         >
           {isTestingSandbox ? <Activity className="animate-spin" size={18} /> : <Activity size={18} />}
           {isTestingSandbox ? 'Pinging NIC...' : 'Run Sandbox Test'}
-        </button>
+        </Button>
       </div>
 
       {/* SYSTEM HEALTH & VITALS */}
@@ -223,14 +224,14 @@ export default function TechnologyUsage() {
           <Server className="text-slate-500" size={20} /> System Health & Vitals
           {health && <span className="flex h-2 w-2 relative ml-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>}
         </h2>
-        <button 
+        <Button variant="custom" 
           onClick={handleManualRefresh}
           disabled={isRefreshing}
           className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors disabled:opacity-50"
         >
           <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-indigo-500' : ''} />
           {isRefreshing ? 'Refreshing...' : 'Refresh Vitals'}
-        </button>
+        </Button>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
@@ -492,9 +493,9 @@ export default function TechnologyUsage() {
                 <h3 className="font-black text-lg text-slate-800 tracking-tight">Sandbox Lifecycle Test</h3>
                 <p className="text-xs font-medium text-slate-500">Executing sequence on NIC testing environment</p>
               </div>
-              <button onClick={() => setSandboxModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-1.5 rounded-full border border-slate-200">
+              <Button variant="custom" onClick={() => setSandboxModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-1.5 rounded-full border border-slate-200">
                 <X size={18} />
-              </button>
+              </Button>
             </div>
             
             <div className="p-6">
@@ -528,12 +529,12 @@ export default function TechnologyUsage() {
             </div>
             
             <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
-               <button 
+               <Button variant="custom" 
                 onClick={() => setSandboxModalOpen(false)}
                 className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-bold text-sm transition-all"
                >
                  Close
-               </button>
+               </Button>
             </div>
           </div>
         </div>

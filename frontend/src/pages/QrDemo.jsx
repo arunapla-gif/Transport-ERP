@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { QrCode, Phone, ShieldCheck } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 export default function QrDemo() {
   const [amount, setAmount] = useState('');
@@ -61,12 +62,12 @@ export default function QrDemo() {
               className="w-full h-12 pl-10 pr-4 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
             />
           </div>
-          <button 
+          <Button variant="custom" 
             onClick={() => setAmount('')}
             className="h-12 px-6 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors"
           >
             Clear
-          </button>
+          </Button>
         </div>
       </div>
       

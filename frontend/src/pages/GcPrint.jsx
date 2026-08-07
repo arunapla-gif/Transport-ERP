@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { downloadGcPdf, generateGcPdfBlob } from '../utils/pdfGenerator';
+import { Button } from '../components/ui/Button';
 
 export default function GcPrint() {
   const { id } = useParams();
@@ -117,28 +118,28 @@ export default function GcPrint() {
       
       {/* Action buttons */}
       <div className="w-full bg-slate-900 p-4 flex justify-between items-center shadow-md shrink-0">
-        <button 
+        <Button variant="custom" 
           onClick={() => navigate(-1)}
           className="bg-slate-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg hover:bg-slate-600 transition-colors"
         >
           ← Back
-        </button>
+        </Button>
 
         <div className="flex gap-3">
-          <button 
+          <Button variant="custom" 
             onClick={handleSilentHardwarePrint}
             disabled={!!hardwareStatus || !pdfUrl}
             className={`${hardwareStatus ? 'bg-amber-400' : 'bg-amber-500 hover:bg-amber-400'} text-slate-900 px-5 py-2.5 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2`}
           >
             {hardwareStatus ? hardwareStatus : '⚡ Silent Hardware Print'}
-          </button>
-          <button 
+          </Button>
+          <Button variant="custom" 
             onClick={handleNativeDownload}
             disabled={!pdfUrl}
             className="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg hover:bg-emerald-500 transition-colors flex items-center gap-2"
           >
             ⬇️ Download PDF
-          </button>
+          </Button>
         </div>
       </div>
 

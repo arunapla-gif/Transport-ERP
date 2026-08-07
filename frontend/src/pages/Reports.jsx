@@ -3,6 +3,7 @@ import { api } from '../api';
 import { FileText, Calendar, Download, TrendingUp, Truck, Package, IndianRupee, Users, Building2, X, Clock, CheckCircle2, History } from 'lucide-react';
 import { List } from 'react-window';
 import { AutoSizer } from 'react-virtualized-auto-sizer';
+import { Button } from '../components/ui/Button';
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('gc'); // gc, gdm, ewaybill, consignor, consignee, vehicle
@@ -208,13 +209,13 @@ export default function Reports() {
           </div>
         </div>
         
-        <button 
+        <Button variant="custom" 
           onClick={handleExportCSV}
           disabled={!reportData.length}
           className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
         >
           <Download size={16} /> Export to CSV
-        </button>
+        </Button>
       </div>
 
       {/* TOP NAVIGATION TABS */}
@@ -227,7 +228,7 @@ export default function Reports() {
           { id: 'consignee', label: 'Consignee Report', icon: <Users size={16} /> },
           { id: 'vehicle', label: 'Vehicle Report', icon: <Truck size={16} /> },
         ].map(tab => (
-          <button
+          <Button variant="custom"
             key={tab.id}
             onClick={() => { setActiveTab(tab.id); setSearchQuery(''); }}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${
@@ -237,7 +238,7 @@ export default function Reports() {
             }`}
           >
             {tab.icon} {tab.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -349,13 +350,13 @@ export default function Reports() {
               </>
             )}
 
-            <button onClick={() => { 
+            <Button variant="custom" onClick={() => { 
                 setDateFrom(''); setDateTo(''); setSearchQuery(''); setBranch('ALL'); setStatusFilter(''); setFreightTypeFilter(''); setGodownFilter('');
               }} 
               className="mt-6 h-10 px-4 text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
             >
               Clear Filters
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -374,16 +375,16 @@ export default function Reports() {
               Loading Report Data...
             </div>
           ) : (
-            <div className="flex flex-col h-[500px] w-full min-w-[800px]">
+            <div className="flex flex-col w-full min-w-[800px] border border-slate-200 rounded-lg overflow-hidden">
               {/* Header */}
-              <div className="flex bg-white text-[10px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-200 shrink-0">
+              <div className="flex bg-slate-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-200 shrink-0">
                 {reportData.length > 0 && Object.keys(reportData[0]).filter(k => k !== '_gcObj' && k !== 'id').map(header => (
                   <div key={header} className="p-4 flex-1 truncate">{header}</div>
                 ))}
               </div>
               
               {/* Virtualized Body */}
-              <div className="flex-1 h-full min-h-0 w-full relative">
+              <div style={{ height: '500px' }} className="w-full relative bg-white">
                 {reportData.length === 0 ? (
                   <div className="p-8 text-center text-slate-400">No data found for the selected filters.</div>
                 ) : (
@@ -393,7 +394,7 @@ export default function Reports() {
                         className="List"
                         height={height}
                         itemCount={reportData.length}
-                        itemSize={50}
+                        itemSize={55}
                         width={width}
                         itemData={reportData}
                       >
@@ -404,10 +405,10 @@ export default function Reports() {
                               style={{...style}} 
                               key={row.id || index}
                               onClick={() => { if (activeTab === 'gc' && row._gcObj) setSelectedGc(row._gcObj); }}
-                              className={`flex items-center text-sm font-semibold text-slate-700 transition-colors border-b border-slate-100 ${activeTab === 'gc' ? 'cursor-pointer hover:bg-indigo-50/60' : 'hover:bg-slate-50'}`}
+                              className={`flex items-center text-sm font-semibold text-slate-700 transition-colors border-b border-slate-100 ${activeTab === 'gc' ? 'cursor-pointer hover:bg-indigo-50' : 'hover:bg-slate-50'}`}
                             >
                               {Object.entries(row).filter(([k]) => k !== '_gcObj' && k !== 'id').map(([k, val], i) => (
-                                <div key={i} className={`p-4 flex-1 truncate ${i === 0 ? 'font-bold text-indigo-900' : ''}`}>
+                                <div key={i} className={`px-4 flex-1 truncate ${i === 0 ? 'font-bold text-indigo-900' : ''}`}>
                                   {val}
                                 </div>
                               ))}
@@ -456,7 +457,7 @@ export default function Reports() {
                 <h2 className="text-xl font-black tracking-tight flex items-center gap-2"><History size={20} /> GC Tracking Log</h2>
                 <p className="text-indigo-200 text-sm font-medium mt-1">Timeline for {selectedGc.gcNumber}</p>
               </div>
-              <button onClick={() => setSelectedGc(null)} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={20}/></button>
+              <Button variant="custom" onClick={() => setSelectedGc(null)} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={20}/></Button>
             </div>
             
             <div className="p-6 bg-slate-50 border-b border-slate-200 shrink-0">

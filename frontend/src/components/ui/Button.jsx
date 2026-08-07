@@ -10,6 +10,7 @@ export function Button({ variant = 'primary', className = "", children, ...props
     danger: "bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-500/20 px-5 py-2.5",
     icon: "p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200",
     iconDanger: "p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100",
+    custom: "",
   };
 
   return (

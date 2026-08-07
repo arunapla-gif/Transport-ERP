@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, UserCircle, Truck } from 'lucide-react';
 import { API_BASE } from '../api';
+import { Button } from '../components/ui/Button';
 
 export default function Login({ onLogin }) {
   const [pin, setPin] = useState('');
@@ -101,39 +102,39 @@ export default function Login({ onLogin }) {
             {/* Numpad */}
             <div className="grid grid-cols-3 gap-3 mb-8 max-w-[280px] mx-auto">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
-                <button
+                <Button variant="custom"
                   key={digit}
                   type="button"
                   onClick={() => handleKeyPress(digit.toString())}
                   className="h-14 bg-stone-900 rounded-2xl text-xl font-bold text-white hover:bg-stone-700 transition-colors border border-stone-700/50 shadow-sm active:scale-95 touch-manipulation select-none"
                 >
                   {digit}
-                </button>
+                </Button>
               ))}
               <div className="h-14"></div>
-              <button
+              <Button variant="custom"
                 type="button"
                 onClick={() => handleKeyPress('0')}
                 className="h-14 bg-stone-900 rounded-2xl text-xl font-bold text-white hover:bg-stone-700 transition-colors border border-stone-700/50 shadow-sm active:scale-95 touch-manipulation select-none"
               >
                 0
-              </button>
-              <button
+              </Button>
+              <Button variant="custom"
                 type="button"
                 onClick={handleDelete}
                 className="h-14 bg-stone-900 rounded-2xl text-lg font-bold text-stone-400 hover:text-white hover:bg-stone-700 transition-colors border border-stone-700/50 shadow-sm flex items-center justify-center active:scale-95 touch-manipulation select-none"
               >
                 ⌫
-              </button>
+              </Button>
             </div>
 
-            <button 
+            <Button variant="custom" 
               type="submit" 
               className={`w-full py-4 rounded-xl font-black text-lg transition-all ${pin.length === 4 ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)]' : 'bg-stone-700 text-stone-500 cursor-not-allowed'}`}
               disabled={pin.length !== 4 || loading}
             >
               {loading ? 'Authenticating...' : 'Access System'}
-            </button>
+            </Button>
           </form>
           
           <div className="mt-6 pt-6 border-t border-stone-700 text-center flex flex-col gap-1">

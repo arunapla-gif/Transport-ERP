@@ -3,6 +3,7 @@ import { api } from '../api';
 import { Truck, CheckCircle, Calculator, Building2, User, Coins, Navigation } from 'lucide-react';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { TrackingModal } from '../components/ui/TrackingModal';
+import { Button } from '../components/ui/Button';
 
 export default function TripSettlement() {
   const [activeTrips, setActiveTrips] = useState([]);
@@ -217,7 +218,7 @@ export default function TripSettlement() {
                    <span className="text-slate-500 font-bold">Vehicle:</span>
                    <div className="flex items-center gap-2">
                      <span className="text-slate-800 font-black">{selectedTrip.vehicle?.vehicleNumber}</span>
-                     <button
+                     <Button variant="custom"
                         onClick={() => {
                           setTrackingVehicleNumber(selectedTrip.vehicle?.vehicleNumber);
                           setIsTrackingModalOpen(true);
@@ -226,7 +227,7 @@ export default function TripSettlement() {
                         title="Track Lorry Location"
                      >
                         <Navigation size={14} />
-                     </button>
+                     </Button>
                    </div>
                  </div>
                  <div className="flex justify-between items-center text-sm">
@@ -341,13 +342,13 @@ export default function TripSettlement() {
                                    className="w-24 h-10 px-2 bg-white border border-slate-200 rounded-md text-sm font-black text-emerald-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                                  />
                                </div>
-                               <button 
+                               <Button variant="custom" 
                                  onClick={() => handleFullToDriver(group.consigneeId, group.totalFreightDue)}
                                  className="mt-4 px-3 py-2 bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200 rounded-md text-[10px] font-black transition-colors"
                                  title="Fill full freight to driver"
                                >
                                  MAX
-                               </button>
+                               </Button>
                              </div>
                            </div>
                            
@@ -416,14 +417,14 @@ export default function TripSettlement() {
                           )}
                         </div>
 
-                        <button 
+                        <Button variant="custom" 
                           onClick={handleSettleTrip}
                           disabled={loading}
                           className="px-8 h-14 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:bg-slate-700 text-white rounded-xl font-black text-lg shadow-[0_0_20px_rgba(192,38,211,0.4)] transition-all flex items-center gap-2"
                         >
                           <CheckCircle size={20} />
                           {loading ? 'Processing...' : 'Finalize Settlement'}
-                        </button>
+                        </Button>
                       </div>
                    </div>
                 </div>

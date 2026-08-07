@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import { Loader2, ShieldAlert, PackageCheck, RefreshCw, Truck, FileText, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Button } from '../components/ui/Button';
 
 export default function GovtCompliance() {
   const [loading, setLoading] = useState(true);
@@ -173,9 +174,9 @@ export default function GovtCompliance() {
           <p className="text-xs font-bold text-slate-500 mt-0.5">Manage E-Way Bills and Generate Master CEWBs for Dispatches</p>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={fetchPendingGdms} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors">
+          <Button variant="custom" onClick={fetchPendingGdms} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors">
             <RefreshCw size={16} className={`text-slate-600 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -288,30 +289,30 @@ export default function GovtCompliance() {
           {/* ACTION PANEL FOOTER */}
           <div className="p-4 bg-white border-t border-slate-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
              <div className="flex gap-3 max-w-[900px] mx-auto">
-                <button 
+                <Button variant="custom" 
                   onClick={handleVerify}
                   disabled={allSelectedGcs.length === 0 || isVerifying || isHealing || isGeneratingCewb}
                   className="flex-1 h-12 bg-sky-50 text-sky-700 hover:bg-sky-100 disabled:opacity-50 border border-sky-200 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
                 >
                   {isVerifying ? <Loader2 size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
                   Verify Status
-                </button>
-                <button 
+                </Button>
+                <Button variant="custom" 
                   onClick={handleHeal}
                   disabled={allSelectedGcs.length === 0 || isVerifying || isHealing || isGeneratingCewb}
                   className="flex-1 h-12 bg-amber-500 text-white hover:bg-amber-400 disabled:opacity-50 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
                 >
                   {isHealing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                   Auto-Heal EWBs
-                </button>
-                <button 
+                </Button>
+                <Button variant="custom" 
                   onClick={handleGenerateCEWB}
                   disabled={allSelectedGcs.length === 0 || isVerifying || isHealing || isGeneratingCewb}
                   className="flex-[1.5] h-12 bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-md transform active:scale-[0.98]"
                 >
                   {isGeneratingCewb ? <Loader2 size={16} className="animate-spin" /> : <PackageCheck size={16} />}
                   Generate Master CEWB
-                </button>
+                </Button>
              </div>
           </div>
         </div>

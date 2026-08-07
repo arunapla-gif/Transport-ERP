@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import { Database, Search, Download, ArrowRight, UserCheck } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 
 export default function LegacyViewer() {
   const [companies, setCompanies] = useState([]);
@@ -143,36 +144,36 @@ export default function LegacyViewer() {
         {/* Tabs & Search */}
         <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-slate-100 gap-4 bg-slate-50/50">
           <div className="flex p-1 bg-slate-200/50 rounded-lg w-fit">
-            <button 
+            <Button variant="custom" 
               onClick={() => setActiveTab('consignors')}
               className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'consignors' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
             >
               Consignors
-            </button>
-            <button 
+            </Button>
+            <Button variant="custom" 
               onClick={() => setActiveTab('consignees')}
               className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'consignees' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
             >
               Consignees
-            </button>
-            <button 
+            </Button>
+            <Button variant="custom" 
               onClick={() => setActiveTab('vehicles')}
               className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'vehicles' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
             >
               Vehicles
-            </button>
-            <button 
+            </Button>
+            <Button variant="custom" 
               onClick={() => setActiveTab('transactions')}
               className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'transactions' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
             >
               GCs
-            </button>
-            <button 
+            </Button>
+            <Button variant="custom" 
               onClick={() => setActiveTab('gdms')}
               className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'gdms' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
             >
               GDMs
-            </button>
+            </Button>
           </div>
 
           <div className="relative">
@@ -279,13 +280,13 @@ export default function LegacyViewer() {
 
                   <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Click card for details</span>
-                    <button 
+                    <Button variant="custom" 
                       onClick={(e) => { e.stopPropagation(); handleRefine(row); }}
                       className="text-xs font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5"
                     >
                       <UserCheck size={14} />
                       Refine & Import
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -294,12 +295,12 @@ export default function LegacyViewer() {
           
           {filteredData.length > visibleCount && (
             <div className="flex justify-center mt-6 mb-4">
-              <button 
+              <Button variant="custom" 
                 onClick={() => setVisibleCount(prev => prev + 100)}
                 className="px-6 py-2 bg-white border border-slate-300 text-slate-600 font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
               >
                 Load More (+100)
-              </button>
+              </Button>
             </div>
           )}
           
@@ -318,12 +319,12 @@ export default function LegacyViewer() {
                 <Database className="text-indigo-600" size={24} />
                 Raw MS Access Record
               </h2>
-              <button 
+              <Button variant="custom" 
                 onClick={() => setSelectedRow(null)}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 transition-colors"
               >
                 ✕
-              </button>
+              </Button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
@@ -342,13 +343,13 @@ export default function LegacyViewer() {
             <div className="px-6 py-4 border-t border-slate-100 flex justify-between items-center bg-white">
               <p className="text-xs font-bold text-slate-400">Displaying exact fields extracted from .mdb file</p>
               <div className="flex gap-3">
-                <button 
+                <Button variant="custom" 
                   onClick={() => setSelectedRow(null)}
                   className="px-4 py-2 rounded-lg font-bold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   Close
-                </button>
-                <button 
+                </Button>
+                <Button variant="custom" 
                   onClick={() => {
                     handleRefine(selectedRow);
                     setSelectedRow(null);
@@ -357,7 +358,7 @@ export default function LegacyViewer() {
                 >
                   <UserCheck size={16} />
                   Refine & Import
-                </button>
+                </Button>
               </div>
             </div>
           </div>

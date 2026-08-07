@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api } from '../api';
 import { generateGcPdfBlob } from '../utils/pdfGenerator';
 import { generateGdmPdfBlob } from '../utils/gdmPdfGenerator';
+import { Button } from '../components/ui/Button';
 
 export default function PrintHub() {
   const navigate = useNavigate();
@@ -364,35 +365,35 @@ export default function PrintHub() {
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-6">
-              <button 
+              <Button variant="custom" 
                 onClick={() => setShowCopiesModal(false)}
                 className="px-3 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold text-sm flex justify-center items-center"
               >
                 Cancel
-              </button>
-              <button 
+              </Button>
+              <Button variant="custom" 
                 onClick={handleDownloadPdfGc}
                 disabled={selectedCopies.length === 0 || isPrinting}
                 className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-bold text-sm flex justify-center items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download size={16} />
                 PDF
-              </button>
-              <button 
+              </Button>
+              <Button variant="custom" 
                 onClick={confirmPrint}
                 className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold text-sm flex justify-center items-center gap-1.5"
               >
                 <FileText size={16} />
                 Preview
-              </button>
-              <button 
+              </Button>
+              <Button variant="custom" 
                 onClick={handleSilentPrintGc}
                 disabled={selectedCopies.length === 0 || isPrinting}
                 className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
               >
                 {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
                 Print
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -425,35 +426,35 @@ export default function PrintHub() {
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-6">
-              <button 
+              <Button variant="custom" 
                 onClick={() => setShowGdmFormatModal(false)}
                 className="px-3 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold text-sm flex justify-center items-center"
               >
                 Cancel
-              </button>
-              <button 
+              </Button>
+              <Button variant="custom" 
                 onClick={handleDownloadPdfGdm}
                 disabled={isPrinting}
                 className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 font-bold text-sm flex justify-center items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download size={16} />
                 PDF
-              </button>
-              <button 
+              </Button>
+              <Button variant="custom" 
                 onClick={confirmGdmPrint}
                 className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold text-sm flex justify-center items-center gap-1.5"
               >
                 <FileText size={16} />
                 Preview
-              </button>
-              <button 
+              </Button>
+              <Button variant="custom" 
                 onClick={handleSilentPrintGdm}
                 disabled={isPrinting}
                 className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
               >
                 {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
                 Print
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -492,18 +493,18 @@ export default function PrintHub() {
           
           <div className="w-full flex gap-2">
             <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 shrink-0 h-12">
-              <button 
+              <Button variant="custom" 
                 onClick={() => setGcPrefix('AP')}
                 className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gcPrefix === 'AP' ? 'bg-white shadow text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 AP
-              </button>
-              <button 
+              </Button>
+              <Button variant="custom" 
                 onClick={() => setGcPrefix('BELL')}
                 className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gcPrefix === 'BELL' ? 'bg-white shadow text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 BELL
-              </button>
+              </Button>
             </div>
             <input 
               type="text" 
@@ -512,7 +513,7 @@ export default function PrintHub() {
               onChange={(e) => setGcNumber(e.target.value.replace(/[^0-9]/g, ''))}
               className="flex-1 h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all uppercase"
             />
-            <button 
+            <Button variant="custom" 
               onClick={(e) => {
                 const fullNumber = `${gcPrefix}-${gcNumber}`;
                 if (gcSearchMode === 'gdm') {
@@ -525,7 +526,7 @@ export default function PrintHub() {
               className={`h-12 px-6 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-black rounded-xl transition-all shadow-sm hover:shadow-md ${!gcNumber ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Printer size={18} /> {gcSearchMode === 'gdm' ? 'Bulk Print' : 'Print'}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -540,18 +541,18 @@ export default function PrintHub() {
           <div className="w-full flex flex-col gap-2">
             <div className="flex gap-2">
               <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 shrink-0 h-12">
-                <button 
+                <Button variant="custom" 
                   onClick={() => setGdmPrefix('AP')}
                   className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gdmPrefix === 'AP' ? 'bg-white shadow text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                   AP
-                </button>
-                <button 
+                </Button>
+                <Button variant="custom" 
                   onClick={() => setGdmPrefix('BELL')}
                   className={`px-3 py-1.5 text-sm font-black rounded-lg transition-colors ${gdmPrefix === 'BELL' ? 'bg-white shadow text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                   BELL
-                </button>
+                </Button>
               </div>
               <input 
                 type="text" 
@@ -561,13 +562,13 @@ export default function PrintHub() {
                 className="w-full h-12 px-4 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all uppercase"
               />
             </div>
-            <button 
+            <Button variant="custom" 
               onClick={(e) => handleOpenGdmFormatModal(e, `${gdmPrefix}-${gdmNumber}`)}
               disabled={!gdmNumber}
               className={`w-full h-12 px-6 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-sm hover:shadow-md ${!gdmNumber ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Printer size={18} /> Choose Format & Print
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -579,18 +580,18 @@ export default function PrintHub() {
         
         {/* Tabs */}
         <div className="flex border-b border-slate-200 bg-slate-50/50 pt-2 px-4 gap-2">
-          <button 
+          <Button variant="custom" 
             onClick={() => setActiveTab('GC')}
             className={`px-6 py-3 font-bold text-sm rounded-t-lg transition-colors border-b-2 ${activeTab === 'GC' ? 'bg-white border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}
           >
             All GCs
-          </button>
-          <button 
+          </Button>
+          <Button variant="custom" 
             onClick={() => setActiveTab('GDM')}
             className={`px-6 py-3 font-bold text-sm rounded-t-lg transition-colors border-b-2 ${activeTab === 'GDM' ? 'bg-white border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}
           >
             All GDMs
-          </button>
+          </Button>
         </div>
 
         {/* Tab Content Header */}
@@ -616,21 +617,21 @@ export default function PrintHub() {
              </div>
              
             {activeTab === 'GC' ? (
-              <button 
+              <Button variant="custom" 
                 onClick={(e) => handleOpenCopiesModal(e, selectedGcs.join(','))}
                 disabled={selectedGcs.length === 0}
                 className={`h-10 px-6 shrink-0 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all shadow-sm ${selectedGcs.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Printer size={16} /> Print Selected ({selectedGcs.length})
-              </button>
+              </Button>
             ) : (
-              <button 
+              <Button variant="custom" 
                 onClick={(e) => handleOpenGdmFormatModal(e, selectedGdms.join(','))}
                 disabled={selectedGdms.length === 0}
                 className={`h-10 px-6 shrink-0 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition-all shadow-sm ${selectedGdms.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Printer size={16} /> Print Selected ({selectedGdms.length})
-              </button>
+              </Button>
             )}
           </div>
         </div>

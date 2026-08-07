@@ -402,7 +402,7 @@ export default function ConsignorMaster() {
           <div className="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {formData.addresses.map((addr, idx) => (
               <div key={idx} className="relative p-3 rounded-lg border border-slate-200 bg-white shadow-sm group">
-                <button onClick={() => setFormData(prev => ({ ...prev, addresses: prev.addresses.filter((_, i) => i !== idx) }))} className="absolute top-2 right-2 p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={12}/></button>
+                <Button variant="custom" onClick={() => setFormData(prev => ({ ...prev, addresses: prev.addresses.filter((_, i) => i !== idx) }))} className="absolute top-2 right-2 p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={12}/></Button>
                 <p className="text-xs font-bold text-slate-700 mb-1 pr-6">{addr.address || 'No Street Address'}</p>
                 <div className="flex gap-2 text-[10px] text-slate-500">
                   <span>{addr.city}</span>•<span>{addr.district}</span>•<span>{addr.state}</span>
@@ -418,9 +418,9 @@ export default function ConsignorMaster() {
       <GlassCard className="!p-0">
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-slate-50/50">
           <div className="flex bg-slate-200/50 p-1 rounded-lg w-full md:w-auto">
-             <button onClick={() => setActiveTab('API_ONLY')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'API_ONLY' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>API Data ({apiOnlyCount})</button>
-             <button onClick={() => setActiveTab('OLD_DATA_ONLY')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'OLD_DATA_ONLY' ? 'bg-white text-rose-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Kept Old Data ({oldDataCount})</button>
-             <button onClick={() => setActiveTab('MERGED_NAME')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'MERGED_NAME' ? 'bg-white text-blue-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Merged Names ({mergedCount})</button>
+             <Button variant="custom" onClick={() => setActiveTab('API_ONLY')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'API_ONLY' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>API Data ({apiOnlyCount})</Button>
+             <Button variant="custom" onClick={() => setActiveTab('OLD_DATA_ONLY')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'OLD_DATA_ONLY' ? 'bg-white text-rose-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Kept Old Data ({oldDataCount})</Button>
+             <Button variant="custom" onClick={() => setActiveTab('MERGED_NAME')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'MERGED_NAME' ? 'bg-white text-blue-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Merged Names ({mergedCount})</Button>
           </div>
           <div className="relative w-full md:w-auto group">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 md:w-3.5 md:h-3.5 group-focus-within:text-indigo-500 transition-colors z-10" />

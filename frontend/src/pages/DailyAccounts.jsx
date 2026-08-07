@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { Wallet, PlusCircle, CheckCircle, Search, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react';
-
+import { Button } from '../components/ui/Button';
 export default function DailyAccounts() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -219,13 +219,14 @@ export default function DailyAccounts() {
                 />
               </div>
 
-              <button 
+              <Button 
                 type="submit"
+                variant="primary"
                 disabled={loading}
-                className="w-full h-12 mt-4 bg-sky-600 hover:bg-sky-500 disabled:bg-sky-300 text-white rounded-xl font-black shadow-[0_4px_15px_rgba(2,132,199,0.3)] transition-all flex items-center justify-center gap-2"
+                className="w-full h-12 mt-4 gap-2 text-base"
               >
                 <PlusCircle size={18} /> Save Entry
-              </button>
+              </Button>
             </form>
           </div>
         </div>
@@ -305,9 +306,9 @@ export default function DailyAccounts() {
                            </span>
                          </td>
                          <td className="px-5 py-3 text-right">
-                           <button onClick={() => handleDelete(t.id)} className="text-slate-300 hover:text-rose-500 transition-colors">
+                           <Button variant="iconDanger" onClick={() => handleDelete(t.id)} className="p-1.5 h-auto text-slate-300 hover:text-rose-500 transition-colors bg-transparent border-0 hover:bg-transparent shadow-none">
                              <Trash2 size={16} />
-                           </button>
+                           </Button>
                          </td>
                        </tr>
                      ))}

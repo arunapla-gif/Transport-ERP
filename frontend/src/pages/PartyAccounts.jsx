@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { Building2, PlusCircle, CheckCircle, IndianRupee, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { Button } from '../components/ui/Button';
 
 export default function PartyAccounts() {
   const [partyType, setPartyType] = useState('Consignee');
@@ -261,13 +262,14 @@ export default function PartyAccounts() {
                   />
                 </div>
 
-                <button 
+                <Button 
+                  variant="success"
                   onClick={handleRecordPayment}
                   disabled={loading || !paymentForm.amount}
-                  className="w-full h-12 mt-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-300 text-white rounded-xl font-black shadow-[0_4px_15px_rgba(5,150,105,0.3)] transition-all flex items-center justify-center gap-2"
+                  className="w-full h-12 mt-2 gap-2"
                 >
                   <PlusCircle size={18} /> Record Payment
-                </button>
+                </Button>
               </div>
             </div>
           )}

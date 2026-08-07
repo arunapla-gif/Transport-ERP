@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { Button } from '../components/ui/Button';
 import { Save, Plus, Trash2, MapPin, Building2, Receipt, Package, Wallet, FileText, Truck } from 'lucide-react';
 
 // Specialized compact input primitives for the Premium layout
@@ -203,12 +204,12 @@ export default function LorryAccounts() {
              </div>
 
              <div className="flex gap-2 ml-2">
-               <button type="button" tabIndex="-1" onClick={handleReset} className="h-9 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50 hover:border-slate-300 shadow-sm hover:shadow transition-all duration-200 hover:-translate-y-[1px] active:translate-y-[1px] active:scale-95 flex items-center">
+               <Button variant="secondary" type="button" tabIndex="-1" onClick={handleReset} className="h-9 px-4 text-xs shadow-sm">
                  Reset
-               </button>
-               <button type="button" onClick={handleSave} disabled={loading} className="h-9 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs shadow-[0_2px_8px_rgba(79,70,229,0.3)] hover:shadow-[0_4px_12px_rgba(79,70,229,0.4)] transition-all duration-200 hover:-translate-y-[1px] active:translate-y-[1px] active:scale-95 flex items-center gap-1.5">
+               </Button>
+               <Button variant="primary" type="button" onClick={handleSave} disabled={loading} className="h-9 px-6 text-xs gap-1.5">
                  <FileText size={14} className={loading ? 'animate-pulse' : ''} /> {loading ? 'Wait...' : 'Submit'}
-               </button>
+               </Button>
              </div>
            </div>
         </div>
