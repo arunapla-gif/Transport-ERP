@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { Building2, PlusCircle, CheckCircle, IndianRupee, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
@@ -23,20 +23,42 @@ export default function PartyAccounts() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const observerRef = useRef(null);
+
   // Fetch Consignees or Consignors
   useEffect(() => {
     fetchParties();
     setSelectedPartyId('');
     setLedgerData([]);
     setCurrentBalance(0);
+    setPage(1);
+    setHasMore(true);
   }, [partyType]);
 
-  // Fetch Ledger when Party changes
+  // Fetch Ledger when Party changes or Page changes
   useEffect(() => {
     if (selectedPartyId) {
-      fetchLedger();
+      fetchLedger(page);
     }
-  }, [selectedPartyId]);
+  }, [selectedPartyId, page]);
+
+  // Observer for Infinite Scroll
+  useEffect(() => {
+    if (!selectedPartyId || !hasMore) return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { rootMargin: '1500px' }
+    );
+    if (observerRef.current) observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading, selectedPartyId]);
 
   const fetchParties = async () => {
     try {
@@ -48,12 +70,25 @@ export default function PartyAccounts() {
     }
   };
 
-  const fetchLedger = async () => {
+  const fetchLedger = async (pageNum = 1) => {
     try {
       setLoading(true);
-      const res = await api.get(`/party-ledger/${partyType}/${selectedPartyId}`);
-      setLedgerData(res.ledger || []);
-      setCurrentBalance(res.currentBalance || 0);
+      const res = await api.get(`/party-ledger/${partyType}/${selectedPartyId}?page=${pageNum}&limit=50`);
+      
+      if (res.ledger) {
+        setLedgerData(prev => {
+          if (pageNum === 1) return res.ledger;
+          const existingIds = new Set(prev.map(p => p.id));
+          return [...prev, ...res.ledger.filter(d => !existingIds.has(d.id))];
+        });
+        setCurrentBalance(res.currentBalance || 0);
+        setHasMore(res.page < res.totalPages);
+      } else {
+        // Fallback if not paginated
+        setLedgerData(res.ledger || []);
+        setCurrentBalance(res.currentBalance || 0);
+        setHasMore(false);
+      }
     } catch (err) {
       setError('Failed to load ledger');
     } finally {
@@ -92,8 +127,11 @@ export default function PartyAccounts() {
         date: new Date().toISOString().split('T')[0]
       });
 
-      // Refresh ledger
-      fetchLedger();
+      // Refresh ledger from scratch
+      setPage(1);
+      if (page === 1) {
+        fetchLedger(1);
+      }
 
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -300,6 +338,13 @@ export default function PartyAccounts() {
                          </td>
                        </tr>
                      ))}
+                     {hasMore && (
+                       <tr ref={observerRef}>
+                         <td colSpan="5" className="p-6 text-center text-slate-500 font-medium">
+                           {loading ? <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div> Loading more...</span> : 'Scroll for more'}
+                         </td>
+                       </tr>
+                     )}
                    </tbody>
                  </table>
                )}

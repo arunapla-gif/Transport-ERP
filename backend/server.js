@@ -3316,7 +3316,26 @@ app.get('/api/party-ledger/:partyType/:partyId', async (req, res) => {
       return { ...entry, balance: runningBalance };
     });
 
-    res.json({ ledger: ledgerWithBalance, currentBalance: runningBalance });
+    // 5. In-Memory Pagination
+    const page = req.query.page ? parseInt(req.query.page) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+    
+    const total = ledgerWithBalance.length;
+    
+    if (page && limit) {
+      const skip = (page - 1) * limit;
+      const paginatedLedger = ledgerWithBalance.slice(skip, skip + limit);
+      return res.json({ 
+        ledger: paginatedLedger, 
+        currentBalance: runningBalance,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+      });
+    }
+
+    // Fallback for unpaginated requests
+    res.json({ ledger: ledgerWithBalance, currentBalance: runningBalance, total });
   } catch (error) {
     console.error('Ledger Error:', error);
     res.status(500).json({ error: 'Failed to fetch ledger' });
@@ -3502,11 +3521,58 @@ app.post('/api/godown-ai', async (req, res) => {
 // Get all daily transactions (with optional date filtering later)
 app.get('/api/daily-transactions', async (req, res) => {
   try {
+    const page = req.query.page ? parseInt(req.query.page) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+
+    // Calculate global totals regardless of pagination
+    const allAggregates = await prisma.dailyTransaction.groupBy({
+      by: ['type'],
+      _sum: { amount: true }
+    });
+    
+    let totalIncome = 0;
+    let totalExpense = 0;
+    
+    allAggregates.forEach(agg => {
+      if (agg.type === 'INCOME') totalIncome = agg._sum.amount || 0;
+      if (agg.type === 'EXPENSE') totalExpense = agg._sum.amount || 0;
+    });
+
+    if (page && limit) {
+      const skip = (page - 1) * limit;
+      const [transactions, total] = await Promise.all([
+        prisma.dailyTransaction.findMany({
+          orderBy: { date: 'desc' },
+          skip,
+          take: limit
+        }),
+        prisma.dailyTransaction.count()
+      ]);
+      
+      return res.json({
+        data: transactions,
+        totalIncome,
+        totalExpense,
+        netBalance: totalIncome - totalExpense,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+      });
+    }
+
+    // Fallback for unpaginated
     const transactions = await prisma.dailyTransaction.findMany({
       orderBy: { date: 'desc' }
     });
-    res.json(transactions);
+    res.json({
+       data: transactions,
+       totalIncome,
+       totalExpense,
+       netBalance: totalIncome - totalExpense,
+       total: transactions.length
+    });
   } catch (error) {
+    console.error('Daily Tx Error:', error);
     res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 });

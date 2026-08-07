@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { Wallet, PlusCircle, CheckCircle, Search, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react';
 
@@ -18,20 +18,61 @@ export default function DailyAccounts() {
     date: new Date().toISOString().split('T')[0]
   });
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const observerRef = useRef(null);
+
+  const [totals, setTotals] = useState({
+    income: 0,
+    expense: 0,
+    balance: 0
+  });
+
   const categories = {
     EXPENSE: ['Fuel', 'Office Supplies', 'Tea/Snacks', 'Maintenance', 'Salary', 'Rent', 'Travel', 'Other'],
     INCOME:  ['Miscellaneous Income', 'Scrap Sale', 'Other']
   };
 
   useEffect(() => {
-    fetchTransactions();
-  }, []);
+    fetchTransactions(page);
+  }, [page]);
 
-  const fetchTransactions = async () => {
+  // Observer for Infinite Scroll
+  useEffect(() => {
+    if (!hasMore) return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { rootMargin: '1500px' }
+    );
+    if (observerRef.current) observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading]);
+
+  const fetchTransactions = async (pageNum = 1) => {
     try {
       setLoading(true);
-      const res = await api.get('/daily-transactions');
-      setTransactions(Array.isArray(res) ? res : []);
+      const res = await api.get(`/daily-transactions?page=${pageNum}&limit=50`);
+      
+      if (res.data) {
+        setTransactions(prev => {
+          if (pageNum === 1) return res.data;
+          const existingIds = new Set(prev.map(t => t.id));
+          return [...prev, ...res.data.filter(t => !existingIds.has(t.id))];
+        });
+        setTotals({
+          income: res.totalIncome || 0,
+          expense: res.totalExpense || 0,
+          balance: res.netBalance || 0
+        });
+        setHasMore(res.page < res.totalPages);
+      } else {
+        setTransactions(Array.isArray(res) ? res : []);
+        setHasMore(false);
+      }
     } catch (err) {
       setError('Failed to fetch daily accounts');
     } finally {
@@ -55,7 +96,8 @@ export default function DailyAccounts() {
         reference: ''
       }));
       
-      fetchTransactions();
+      setPage(1);
+      if (page === 1) fetchTransactions(1);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError('Failed to record transaction');
@@ -68,15 +110,12 @@ export default function DailyAccounts() {
     if (!window.confirm('Are you sure you want to delete this transaction?')) return;
     try {
       await api.delete(`/daily-transactions/${id}`);
-      fetchTransactions();
+      setPage(1);
+      if (page === 1) fetchTransactions(1);
     } catch (err) {
       setError('Failed to delete transaction');
     }
   };
-
-  const totalIncome = transactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
-  const totalExpense = transactions.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
-  const netBalance = totalIncome - totalExpense;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-10 pt-4" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
@@ -201,7 +240,7 @@ export default function DailyAccounts() {
                </div>
                <div>
                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Income</div>
-                 <div className="text-xl font-black text-slate-800">₹{totalIncome.toFixed(2)}</div>
+                 <div className="text-xl font-black text-slate-800">₹{totals.income.toFixed(2)}</div>
                </div>
             </div>
             <div className="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm flex items-center gap-4">
@@ -210,13 +249,13 @@ export default function DailyAccounts() {
                </div>
                <div>
                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Expense</div>
-                 <div className="text-xl font-black text-slate-800">₹{totalExpense.toFixed(2)}</div>
+                 <div className="text-xl font-black text-slate-800">₹{totals.expense.toFixed(2)}</div>
                </div>
             </div>
-            <div className={`border rounded-2xl p-4 shadow-sm flex flex-col justify-center ${netBalance >= 0 ? 'bg-sky-50 border-sky-200' : 'bg-orange-50 border-orange-200'}`}>
+            <div className={`border rounded-2xl p-4 shadow-sm flex flex-col justify-center ${totals.balance >= 0 ? 'bg-sky-50 border-sky-200' : 'bg-orange-50 border-orange-200'}`}>
                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Net Balance</div>
-               <div className={`text-2xl font-black ${netBalance >= 0 ? 'text-sky-700' : 'text-orange-600'}`}>
-                 ₹{Math.abs(netBalance).toFixed(2)}
+               <div className={`text-2xl font-black ${totals.balance >= 0 ? 'text-sky-700' : 'text-orange-600'}`}>
+                 ₹{Math.abs(totals.balance).toFixed(2)}
                </div>
             </div>
           </div>
@@ -272,6 +311,13 @@ export default function DailyAccounts() {
                          </td>
                        </tr>
                      ))}
+                     {hasMore && (
+                       <tr ref={observerRef}>
+                         <td colSpan="5" className="p-6 text-center text-slate-500 font-medium">
+                           {loading ? <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div> Loading more...</span> : 'Scroll for more'}
+                         </td>
+                       </tr>
+                     )}
                    </tbody>
                  </table>
                </div>
