@@ -100,33 +100,34 @@ export default function ConsignorMaster() {
     setHasMore(true);
   }, [debouncedSearch, branch]);
 
-  useEffect(() => {
-    const fetchConsignors = async () => {
-      try {
-        setLoading(true);
-        const url = `/consignors?branch=${branch}&page=${page}&limit=50&q=${encodeURIComponent(debouncedSearch)}`;
-        const res = await api.get(url);
-        
-        if (res.data) {
-           setConsignors(prev => {
-              if (page === 1) return res.data;
-              const existingIds = new Set(prev.map(p => p.id));
-              const newItems = res.data.filter(d => !existingIds.has(d.id));
-              return [...prev, ...newItems];
-           });
-           setHasMore(res.hasMore);
-           setTotalRecords(res.total);
-        } else {
-           setConsignors(res); // legacy fallback
-           setHasMore(false);
-        }
-      } catch (err) {
-        toast.error('Failed to fetch data.');
-      } finally {
-        setLoading(false);
+  const fetchConsignors = async (pageNum = page) => {
+    try {
+      setLoading(true);
+      const url = `/consignors?branch=${branch}&page=${pageNum}&limit=50&q=${encodeURIComponent(debouncedSearch)}`;
+      const res = await api.get(url);
+      
+      if (res.data) {
+         setConsignors(prev => {
+            if (pageNum === 1) return res.data;
+            const existingIds = new Set(prev.map(p => p.id));
+            const newItems = res.data.filter(d => !existingIds.has(d.id));
+            return [...prev, ...newItems];
+         });
+         setHasMore(res.hasMore);
+         setTotalRecords(res.total);
+      } else {
+         setConsignors(res); // legacy fallback
+         setHasMore(false);
       }
-    };
-    fetchConsignors();
+    } catch (err) {
+      toast.error('Failed to fetch data.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConsignors(page);
   }, [page, debouncedSearch, branch]);
 
   useEffect(() => {

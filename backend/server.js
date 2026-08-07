@@ -787,11 +787,47 @@ app.post('/api/freight-bills', async (req, res) => {
 app.get('/api/consignees', async (req, res) => {
   try {
     const branch = req.query.branch || 'MAIN';
-    const consignees = await prisma.consignee.findMany({ 
-      where: { branch },
-      orderBy: { id: 'desc' } 
+    const page = req.query.page ? parseInt(req.query.page) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
+    const q = req.query.q || '';
+    
+    let whereClause = { branch };
+    
+    if (q) {
+      whereClause.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { gstin: { contains: q, mode: 'insensitive' } },
+        { city: { contains: q, mode: 'insensitive' } }
+      ];
+    }
+
+    if (!page) {
+      const consignees = await prisma.consignee.findMany({ 
+        where: whereClause,
+        orderBy: { id: 'desc' },
+        take: 2000
+      });
+      return res.json(consignees);
+    }
+
+    const skip = (page - 1) * limit;
+    
+    const [data, total] = await Promise.all([
+      prisma.consignee.findMany({
+        where: whereClause,
+        orderBy: { id: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.consignee.count({ where: whereClause })
+    ]);
+
+    res.json({
+      data,
+      total,
+      hasMore: (skip + data.length) < total,
+      nextCursor: (skip + data.length) < total ? page + 1 : null
     });
-    res.json(consignees);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch consignees' });
   }
@@ -880,8 +916,41 @@ app.put('/api/consignees/:id/restore', async (req, res) => {
 // ==============================
 app.get('/api/vehicles', async (req, res) => {
   try {
-    const vehicles = await prisma.vehicle.findMany({ orderBy: { id: 'desc' } });
-    res.json(vehicles);
+    const page = req.query.page ? parseInt(req.query.page) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
+    const q = req.query.q || '';
+    
+    let whereClause = {};
+    if (q) {
+      whereClause.vehicleNo = { contains: q, mode: 'insensitive' };
+    }
+
+    if (!page) {
+      const vehicles = await prisma.vehicle.findMany({ 
+        where: whereClause,
+        orderBy: { id: 'desc' },
+        take: 2000
+      });
+      return res.json(vehicles);
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      prisma.vehicle.findMany({
+        where: whereClause,
+        orderBy: { id: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.vehicle.count({ where: whereClause })
+    ]);
+
+    res.json({
+      data,
+      total,
+      hasMore: (skip + data.length) < total,
+      nextCursor: (skip + data.length) < total ? page + 1 : null
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch vehicles' });
   }
@@ -948,8 +1017,45 @@ app.delete('/api/vehicles/:id', async (req, res) => {
 // ==============================
 app.get('/api/drivers', async (req, res) => {
   try {
-    const drivers = await prisma.driver.findMany({ orderBy: { updatedAt: 'desc' } });
-    res.json(drivers);
+    const page = req.query.page ? parseInt(req.query.page) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
+    const q = req.query.q || '';
+    
+    let whereClause = {};
+    if (q) {
+      whereClause.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { phone: { contains: q, mode: 'insensitive' } },
+        { licenseNo: { contains: q, mode: 'insensitive' } }
+      ];
+    }
+
+    if (!page) {
+      const drivers = await prisma.driver.findMany({ 
+        where: whereClause,
+        orderBy: { updatedAt: 'desc' },
+        take: 2000
+      });
+      return res.json(drivers);
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      prisma.driver.findMany({
+        where: whereClause,
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.driver.count({ where: whereClause })
+    ]);
+
+    res.json({
+      data,
+      total,
+      hasMore: (skip + data.length) < total,
+      nextCursor: (skip + data.length) < total ? page + 1 : null
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch drivers' });
   }

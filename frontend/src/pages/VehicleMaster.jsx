@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
@@ -71,7 +71,7 @@ export default function VehicleMaster() {
         id: null, vehicleNumber: '', type: '6 Wheel (Lorry/Truck)', ladenType: 'Open Body',
         ownerName: '', ownerPhone: '', ownerPhone2: '', makeModel: '', fitnessExpiry: null, insuranceExpiry: null, npExpiry: null, grossWeight: '', rcStatus: '', rcVerified: false 
       });
-      fetchVehicles();
+      fetchVehicles(1);
     } catch (err) {
       toast.error('Failed to save record: ' + (err.error || err.message || 'Unknown error'));
     } finally {
@@ -83,18 +83,66 @@ export default function VehicleMaster() {
     onSave: handleSave
   });
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const desktopObserverRef = useRef(null);
+  
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   useEffect(() => {
-    fetchVehicles();
-  }, []);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  const fetchVehicles = async () => {
+  useEffect(() => {
+    setPage(1);
+    setVehicles([]);
+    setHasMore(true);
+  }, [debouncedSearch]);
+
+  const fetchVehicles = async (pageNum = page) => {
     try {
-      const data = await api.get('/vehicles');
-      setVehicles(data || []);
+      setLoading(true);
+      const url = `/vehicles?page=${pageNum}&limit=50&q=${encodeURIComponent(debouncedSearch)}`;
+      const res = await api.get(url);
+      
+      if (res.data) {
+         setVehicles(prev => {
+            if (pageNum === 1) return res.data;
+            const existingIds = new Set(prev.map(p => p.id));
+            const newItems = res.data.filter(d => !existingIds.has(d.id));
+            return [...prev, ...newItems];
+         });
+         setHasMore(res.hasMore);
+         setTotalRecords(res.total);
+      } else {
+         setVehicles(res || []); // legacy fallback
+         setHasMore(false);
+      }
     } catch (err) {
       toast.error('Failed to fetch data.');
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchVehicles(page);
+  }, [page, debouncedSearch]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        const isIntersecting = entries.some(entry => entry.isIntersecting);
+        if (isIntersecting && hasMore && !loading) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { threshold: 0, rootMargin: '1500px' }
+    );
+    if (desktopObserverRef.current) observer.observe(desktopObserverRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading]);
 
   const handleFetchRC = async () => {
     if (!formData.vehicleNumber) {
@@ -154,7 +202,7 @@ export default function VehicleMaster() {
     if (!window.confirm('Are you sure you want to delete this record?')) return;
     try {
       await api.delete(`/vehicles/${id}`);
-      fetchVehicles();
+      fetchVehicles(1);
       toast.success('Record deleted');
     } catch (err) {
       toast.error('Failed to delete record');
@@ -350,7 +398,7 @@ export default function VehicleMaster() {
       {/* LIST CARD */}
       <GlassCard className="!p-0">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h3 className="font-bold text-sm text-slate-800">Saved Vehicles <span className="text-slate-400 font-medium ml-1">({vehicles.length})</span></h3>
+          <h3 className="font-bold text-sm text-slate-800">Saved Vehicles <span className="text-slate-400 font-medium ml-1">({totalRecords || vehicles.length})</span></h3>
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
@@ -400,8 +448,19 @@ export default function VehicleMaster() {
                   </td>
                 </tr>
               )) : (
+                !loading && (
+                  <tr>
+                    <td colSpan="5" className="px-4 py-8 text-center text-slate-500 text-sm">No records found.</td>
+                  </tr>
+                )
+              )}
+              {hasMore && (
                 <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-slate-500 text-sm">No records found.</td>
+                  <td colSpan="5" className="py-6 text-center text-slate-500 font-medium" ref={desktopObserverRef}>
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div> Loading more...</span>
+                    ) : 'Scroll for more'}
+                  </td>
                 </tr>
               )}
             </tbody>

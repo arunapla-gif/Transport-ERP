@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
@@ -78,19 +78,68 @@ export default function ConsigneeMaster() {
     onSave: (e) => handleSave(e || { preventDefault: () => {} })
   });
 
-  const fetchConsignees = async () => {
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const desktopObserverRef = useRef(null);
+  const mobileObserverRef = useRef(null);
+
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setPage(1);
+    setConsignees([]);
+    setHasMore(true);
+  }, [debouncedSearch, branch]);
+
+  const fetchConsignees = async (pageNum = page) => {
     try {
-      const data = await api.get(`/consignees?branch=${branch}`);
-      setConsignees(data);
-    } catch {
+      setLoading(true);
+      const url = `/consignees?branch=${branch}&page=${pageNum}&limit=50&q=${encodeURIComponent(debouncedSearch)}`;
+      const res = await api.get(url);
+      
+      if (res.data) {
+         setConsignees(prev => {
+            if (pageNum === 1) return res.data;
+            const existingIds = new Set(prev.map(p => p.id));
+            const newItems = res.data.filter(d => !existingIds.has(d.id));
+            return [...prev, ...newItems];
+         });
+         setHasMore(res.hasMore);
+         setTotalRecords(res.total);
+      } else {
+         setConsignees(res); // legacy fallback
+         setHasMore(false);
+      }
+    } catch (err) {
       toast.error('Failed to fetch data.');
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
-    fetchConsignees();
-  }, []);
+    fetchConsignees(page);
+  }, [page, debouncedSearch, branch]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        const isIntersecting = entries.some(entry => entry.isIntersecting);
+        if (isIntersecting && hasMore && !loading) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { threshold: 0, rootMargin: '1500px' }
+    );
+    if (desktopObserverRef.current) observer.observe(desktopObserverRef.current);
+    if (mobileObserverRef.current) observer.observe(mobileObserverRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading]);
 
   const updateConsigneeName = async (id, newName) => {
     try {
@@ -190,7 +239,7 @@ export default function ConsigneeMaster() {
         toast.success('Added successfully');
       }
       setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [], parentId: '' });
-      fetchConsignees();
+      fetchConsignees(1);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Operation failed');
     } finally {
@@ -392,8 +441,12 @@ export default function ConsigneeMaster() {
               </div>
             </div>
           )) : (
-            <div className="p-8 text-center font-bold text-slate-500 text-sm">No records found.</div>
+            !loading && <div className="p-8 text-center font-bold text-slate-500 text-sm">No records found.</div>
           )}
+          
+          <div className="md:hidden p-4 text-center text-slate-500 text-sm font-medium" ref={mobileObserverRef}>
+             {hasMore && (loading ? 'Loading more...' : 'Scroll for more')}
+          </div>
         </div>
 
         {/* DESKTOP TABLE VIEW */}
@@ -486,8 +539,19 @@ export default function ConsigneeMaster() {
                   </td>
                 </tr>
               )) : (
+                !loading && (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-8 text-center text-slate-500 text-sm">No records found.</td>
+                  </tr>
+                )
+              )}
+              {hasMore && (
                 <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-slate-500 text-sm">No records found.</td>
+                  <td colSpan="6" className="py-6 text-center text-slate-500 font-medium" ref={desktopObserverRef}>
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div> Loading more...</span>
+                    ) : 'Scroll for more'}
+                  </td>
                 </tr>
               )}
             </tbody>
