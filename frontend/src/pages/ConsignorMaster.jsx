@@ -137,7 +137,7 @@ export default function ConsignorMaster() {
           setPage(prev => prev + 1);
         }
       },
-      { threshold: 0.1, rootMargin: '200px' }
+      { threshold: 0, rootMargin: '1500px' }
     );
     if (desktopObserverRef.current) observer.observe(desktopObserverRef.current);
     if (mobileObserverRef.current) observer.observe(mobileObserverRef.current);
