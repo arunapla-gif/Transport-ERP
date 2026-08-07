@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { FileText, Calendar, Download, TrendingUp, Truck, Package, IndianRupee, Users, Building2, X, Clock, CheckCircle2, History } from 'lucide-react';
-import { List } from 'react-window';
-import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { Button } from '../components/ui/Button';
 
 export default function Reports() {
@@ -383,65 +381,50 @@ export default function Reports() {
                 ))}
               </div>
               
-              {/* Virtualized Body */}
-              <div style={{ height: '500px' }} className="w-full relative bg-white">
+              {/* Standard Scrollable Body */}
+              <div className="flex-1 overflow-y-auto max-h-[600px] w-full bg-white relative">
                 {reportData.length === 0 ? (
                   <div className="p-8 text-center text-slate-400">No data found for the selected filters.</div>
                 ) : (
-                  <AutoSizer>
-                    {({ height, width }) => (
-                      <List
-                        className="List"
-                        height={height}
-                        itemCount={reportData.length}
-                        itemSize={55}
-                        width={width}
-                        itemData={reportData}
+                  <div className="w-full flex flex-col">
+                    {reportData.map((row, index) => (
+                      <div 
+                        key={row.id || index}
+                        onClick={() => { if (activeTab === 'gc' && row._gcObj) setSelectedGc(row._gcObj); }}
+                        className={`flex items-center min-h-[55px] text-sm font-semibold text-slate-700 transition-colors border-b border-slate-100 ${activeTab === 'gc' ? 'cursor-pointer hover:bg-indigo-50' : 'hover:bg-slate-50'}`}
                       >
-                        {({ index, style, data }) => {
-                          const row = data[index];
-                          return (
-                            <div 
-                              style={{...style}} 
-                              key={row.id || index}
-                              onClick={() => { if (activeTab === 'gc' && row._gcObj) setSelectedGc(row._gcObj); }}
-                              className={`flex items-center text-sm font-semibold text-slate-700 transition-colors border-b border-slate-100 ${activeTab === 'gc' ? 'cursor-pointer hover:bg-indigo-50' : 'hover:bg-slate-50'}`}
-                            >
-                              {Object.entries(row).filter(([k]) => k !== '_gcObj' && k !== 'id').map(([k, val], i) => (
-                                <div key={i} className={`px-4 flex-1 truncate ${i === 0 ? 'font-bold text-indigo-900' : ''}`}>
-                                  {val}
-                                </div>
-                              ))}
-                            </div>
+                        {Object.entries(row).filter(([k]) => k !== '_gcObj' && k !== 'id').map(([k, val], i) => (
+                          <div key={i} className={`px-4 flex-1 truncate ${i === 0 ? 'font-bold text-indigo-900' : ''}`}>
+                            {val}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    
+                    {/* Infinite Scroll Observer Placed INSIDE the scrollable container */}
+                    {page < totalPages && (
+                      <div 
+                        className="h-16 flex shrink-0 items-center justify-center w-full"
+                        ref={(el) => {
+                          if (!el) return;
+                          const observer = new IntersectionObserver(
+                            (entries) => {
+                              if (entries[0].isIntersecting && !loading) {
+                                setPage(p => p + 1);
+                              }
+                            }, 
+                            { threshold: 0.1 }
                           );
+                          observer.observe(el);
+                          return () => observer.disconnect();
                         }}
-                      </List>
+                      >
+                        <div className="animate-spin h-6 w-6 border-b-2 border-indigo-600 rounded-full"></div>
+                      </div>
                     )}
-                  </AutoSizer>
+                  </div>
                 )}
               </div>
-            </div>
-          )}
-          
-          {/* Infinite Scroll Observer */}
-          {page < totalPages && (
-            <div 
-              className="h-16 mt-4 flex items-center justify-center"
-              ref={(el) => {
-                if (!el) return;
-                const observer = new IntersectionObserver(
-                  (entries) => {
-                    if (entries[0].isIntersecting && !loading) {
-                      setPage(p => p + 1);
-                    }
-                  },
-                  { threshold: 1.0 }
-                );
-                observer.observe(el);
-                return () => observer.disconnect();
-              }}
-            >
-              <div className="animate-pulse text-sm font-bold text-slate-500">Loading more rows...</div>
             </div>
           )}
         </div>
