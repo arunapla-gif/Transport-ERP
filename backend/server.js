@@ -2955,6 +2955,25 @@ app.post('/api/ewaybill/bulk-heal', paidApiLimiter, async (req, res) => {
   }
 });
 
+// ==========================================
+// PURE DATABASE LATENCY TESTER
+// ==========================================
+app.get('/api/test-db-ping', async (req, res) => {
+  try {
+    const start = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    const dbLatencyMs = Date.now() - start;
+    res.json({ 
+      serverRegion: "Railway (Singapore)",
+      databaseRegion: "Supabase (Mumbai)",
+      trueDatabaseLatency: `${dbLatencyMs} ms`,
+      message: "This represents the actual speed between your backend server and your database, completely ignoring your local Wi-Fi speed."
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
   try {
     const { company, ewbNo, vehicleNo } = req.body;
