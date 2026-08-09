@@ -9,6 +9,7 @@ import { queryClient } from './api/queryClient';
 // Lazy load all pages to drastically reduce the initial bundle size
 const SystemBoot = React.lazy(() => import('./pages/SystemBoot'));
 const NewGcEntry = React.lazy(() => import('./pages/NewGcEntry'));
+const AccordionGcEntry = React.lazy(() => import('./pages/AccordionGcEntry'));
 const WarehouseEntry = React.lazy(() => import('./pages/WarehouseEntry'));
 const WarehouseStatement = React.lazy(() => import('./pages/WarehouseStatement'));
 const ConsignorMaster = React.lazy(() => import('./pages/ConsignorMaster'));
@@ -158,6 +159,14 @@ function Layout({ children, role, onLogout }) {
                    <div>
                      <h4 className="text-xs font-black text-slate-800">GC Entry</h4>
                      <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Create Consignments</p>
+                   </div>
+                 </Link>
+
+                 <Link onClick={closeMenu} to="/acc-gc" className="group flex items-start gap-3 p-2.5 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100 hover:shadow-sm">
+                   <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-500 group-hover:text-white transition-colors shadow-sm"><FileText size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-slate-800">Acc GC (Demo)</h4>
+                     <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Accordion Form Prototype</p>
                    </div>
                  </Link>
                  
@@ -470,6 +479,7 @@ function App() {
               <Route path="/print/gdm-combined/:id" element={<CombinedGdmPrint />} />
               <Route path="/" element={<SystemBoot />} />
               <Route path="/new-gc" element={<NewGcEntry />} />
+              <Route path="/acc-gc" element={<AccordionGcEntry />} />
               <Route path="/legacy-rapid-entry" element={<LegacyRapidEntry />} />
               <Route path="/warehouse-entry" element={<WarehouseEntry />} />
               <Route path="/warehouse-statement" element={<WarehouseStatement />} />
