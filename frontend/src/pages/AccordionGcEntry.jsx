@@ -7,6 +7,7 @@ export default function AccordionGcEntry() {
   const [openSection, setOpenSection] = useState('document');
   const [companyMode, setCompanyMode] = useState('A');
   const [ewayBillNo, setEwayBillNo] = useState('');
+  const [ewbPulse, setEwbPulse] = useState(false);
 
   // Dummy state mimicking the real NewGcEntry structure exactly
   const [form, setForm] = useState({
@@ -54,6 +55,10 @@ export default function AccordionGcEntry() {
     setGoods([{ id: 1, articles: '150', units: 'Cases of Fireworks', description: 'Assorted Crackers', amount: '' }]);
     // The magic of progressive disclosure: Auto-collapse 1,2,3,4 and open Freight!
     setOpenSection('freight');
+    
+    // Trigger the magic pulse for 3 seconds
+    setEwbPulse(true);
+    setTimeout(() => setEwbPulse(false), 3000);
   };
 
   return (
@@ -100,6 +105,8 @@ export default function AccordionGcEntry() {
               badge={form.godown ? "FILLED" : null}
               summary={documentSummary}
               defaultOpen={true}
+              isCompleted={!!form.godown}
+              isDimmed={openSection !== null && openSection !== 'document'}
             >
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pb-2">
                 <div>
@@ -135,6 +142,8 @@ export default function AccordionGcEntry() {
               onToggle={() => setOpenSection(openSection === 'consignor' ? null : 'consignor')}
               badge={form.consignorName ? "FILLED" : null}
               summary={consignorSummary}
+              isCompleted={!!form.consignorName}
+              isDimmed={openSection !== null && openSection !== 'consignor'}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2">
                 <div>
@@ -156,8 +165,17 @@ export default function AccordionGcEntry() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                   <div className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded border border-slate-100 min-h-[40px] italic">
-                     {form.consignorName ? `123 Demo Street, Sivakasi (Address auto-filled)` : 'Address Preview will appear here...'}
+                   <div className="relative text-xs text-slate-700 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-white p-3 rounded-lg border border-slate-200 min-h-[60px] shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]">
+                     <span className="absolute top-2 right-2 text-[8px] font-black tracking-wider text-slate-300 uppercase">Shipping Label</span>
+                     {form.consignorName ? (
+                       <div>
+                         <span className="font-bold">{form.consignorName}</span><br />
+                         123 Demo Street, Industrial Estate<br />
+                         <span className="font-bold text-slate-900">SIVAKASI - 626123</span>
+                       </div>
+                     ) : (
+                       <span className="text-slate-400 italic">Address Preview will appear here...</span>
+                     )}
                    </div>
                 </div>
                 <div className="md:col-span-2 flex justify-end mt-2">
@@ -174,6 +192,8 @@ export default function AccordionGcEntry() {
               onToggle={() => setOpenSection(openSection === 'consignee' ? null : 'consignee')}
               badge={form.consigneeName ? "FILLED" : null}
               summary={consigneeSummary}
+              isCompleted={!!form.consigneeName}
+              isDimmed={openSection !== null && openSection !== 'consignee'}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2">
                 <div>
@@ -208,6 +228,8 @@ export default function AccordionGcEntry() {
               onToggle={() => setOpenSection(openSection === 'goods' ? null : 'goods')}
               badge={totalArticles > 0 ? "FILLED" : null}
               summary={goodsSummary}
+              isCompleted={totalArticles > 0}
+              isDimmed={openSection !== null && openSection !== 'goods'}
             >
               <div className="flex flex-col gap-4 pb-2">
                 {/* Invoice Line */}
@@ -289,21 +311,38 @@ export default function AccordionGcEntry() {
               icon={Calculator} 
               isOpen={openSection === 'freight'}
               onToggle={() => setOpenSection(openSection === 'freight' ? null : 'freight')}
+              isCompleted={!!form.freightAmount} // Added dummy field check for completion visual
+              isDimmed={openSection !== null && openSection !== 'freight'}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Payment Type</label>
-                  <select className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none h-9"
-                    value={form.freightType} onChange={e => setForm({...form, freightType: e.target.value})}>
-                    <option>To Pay</option>
-                    <option>Paid</option>
-                    <option>Account</option>
-                  </select>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    Freight Amount (₹)
+                    {ewbPulse && <span className="text-[9px] font-black text-indigo-500 animate-pulse bg-indigo-50 px-1.5 rounded">AUTO-NAVIGATED</span>}
+                  </label>
+                  <input type="number" 
+                    className={`w-full border rounded-lg p-3 text-2xl shadow-sm outline-none font-mono font-bold transition-all duration-500 ${ewbPulse ? 'border-indigo-500 ring-4 ring-indigo-500/20 bg-indigo-50/30 text-indigo-900' : 'bg-emerald-50/30 border-emerald-200 focus:border-emerald-500 text-emerald-800'}`}
+                    placeholder="0.00" 
+                    value={form.freightAmount} 
+                    onChange={e => setForm({...form, freightAmount: e.target.value})} 
+                    autoFocus={ewbPulse}
+                  />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Freight Note (Optional)</label>
-                  <input type="text" className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm shadow-sm focus:border-indigo-500 outline-none h-9" 
-                    value={form.freightNote} onChange={e => setForm({...form, freightNote: e.target.value})} />
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Payment Type</label>
+                    <select className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none h-9"
+                      value={form.freightType} onChange={e => setForm({...form, freightType: e.target.value})}>
+                      <option>To Pay</option>
+                      <option>Paid</option>
+                      <option>Account</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Freight Note (Optional)</label>
+                    <input type="text" className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm shadow-sm focus:border-indigo-500 outline-none h-9" 
+                      value={form.freightNote} onChange={e => setForm({...form, freightNote: e.target.value})} />
+                  </div>
                 </div>
               </div>
             </Accordion>

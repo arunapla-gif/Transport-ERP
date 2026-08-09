@@ -9,7 +9,9 @@ export default function Accordion({
   onToggle,
   defaultOpen = false,
   badge = null,
-  summary = null
+  summary = null,
+  isCompleted = false,
+  isDimmed = false
 }) {
   // If controlled by parent, use isOpen, else manage internal state
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -25,8 +27,16 @@ export default function Accordion({
     }
   };
 
+  // Determine icon styling
+  let iconStyles = 'bg-slate-100 text-slate-500'; // Default Gray
+  if (isCurrentlyOpen) {
+    iconStyles = 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-200 ring-offset-1 animate-pulse'; // Pulsing Blue
+  } else if (isCompleted) {
+    iconStyles = 'bg-emerald-100 text-emerald-600 border border-emerald-200 shadow-sm'; // Solid Emerald
+  }
+
   return (
-    <div className={`border rounded-xl mb-3 transition-all duration-300 ${isCurrentlyOpen ? 'border-indigo-200 bg-white shadow-sm shadow-indigo-900/5' : 'border-slate-200 bg-[#F8F6F0]/50 hover:bg-white hover:border-slate-300'}`}>
+    <div className={`border rounded-xl mb-3 transition-all duration-500 ${isCurrentlyOpen ? 'border-indigo-300 bg-white shadow-md shadow-indigo-900/10 scale-[1.01]' : 'border-slate-200 bg-[#F8F6F0]/50 hover:bg-white hover:border-slate-300'} ${isDimmed ? 'opacity-60 grayscale-[20%]' : 'opacity-100'}`}>
       
       {/* Accordion Header */}
       <button 
@@ -36,7 +46,7 @@ export default function Accordion({
       >
         <div className="flex items-start gap-3">
           {Icon && (
-            <div className={`p-1.5 rounded-md transition-colors mt-0.5 ${isCurrentlyOpen ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+            <div className={`p-1.5 rounded-md transition-all mt-0.5 ${iconStyles}`}>
               <Icon size={18} />
             </div>
           )}
