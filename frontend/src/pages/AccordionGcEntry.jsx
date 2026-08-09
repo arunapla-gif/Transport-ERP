@@ -9,10 +9,25 @@ export default function AccordionGcEntry() {
   // Dummy state just for the demo
   const [form, setForm] = useState({
     consignorName: '',
+    consignorGstin: '',
     consigneeName: '',
+    consigneeCity: '',
     freight: '',
     weight: ''
   });
+
+  // Compute Summaries for closed accordions
+  const consignorSummary = form.consignorName 
+    ? `${form.consignorName} ${form.consignorGstin ? `| GSTIN: ${form.consignorGstin}` : ''}`
+    : null;
+
+  const consigneeSummary = form.consigneeName 
+    ? `${form.consigneeName} ${form.consigneeCity ? `| City: ${form.consigneeCity}` : ''}`
+    : null;
+    
+  const freightSummary = form.freight || form.weight
+    ? `${form.weight ? `${form.weight}kg` : ''} ${form.freight && form.weight ? '|' : ''} ${form.freight ? `₹${form.freight}` : ''}`
+    : null;
 
   return (
     <div className="flex flex-col flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 bg-slate-50 overflow-y-auto h-full" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
@@ -37,13 +52,14 @@ export default function AccordionGcEntry() {
           isOpen={openSection === 'consignor'}
           onToggle={() => setOpenSection(openSection === 'consignor' ? null : 'consignor')}
           badge={form.consignorName ? "FILLED" : null}
+          summary={consignorSummary}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Consignor Name</label>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Consignor Name (Search Simulation)</label>
               <input 
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none" 
-                placeholder="Search Consignor..."
+                placeholder="Type 'Arun Fireworks'..."
                 value={form.consignorName}
                 onChange={e => setForm({...form, consignorName: e.target.value})}
               />
@@ -53,10 +69,12 @@ export default function AccordionGcEntry() {
               <input 
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none" 
                 placeholder="GSTIN Number"
+                value={form.consignorGstin}
+                onChange={e => setForm({...form, consignorGstin: e.target.value})}
               />
             </div>
             <div className="md:col-span-2 flex justify-end">
-               <Button onClick={() => setOpenSection('consignee')} variant="secondary" className="text-xs py-1 h-8">Next: Consignee →</Button>
+               <Button onClick={() => setOpenSection('consignee')} variant="secondary" className="text-xs py-1 h-8 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">Next: Consignee →</Button>
             </div>
           </div>
         </Accordion>
@@ -68,13 +86,14 @@ export default function AccordionGcEntry() {
           isOpen={openSection === 'consignee'}
           onToggle={() => setOpenSection(openSection === 'consignee' ? null : 'consignee')}
           badge={form.consigneeName ? "FILLED" : null}
+          summary={consigneeSummary}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Consignee Name</label>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Consignee Name (Search Simulation)</label>
               <input 
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none" 
-                placeholder="Search Consignee..."
+                placeholder="Type 'Mega Traders'..."
                 value={form.consigneeName}
                 onChange={e => setForm({...form, consigneeName: e.target.value})}
               />
@@ -84,10 +103,12 @@ export default function AccordionGcEntry() {
               <input 
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none" 
                 placeholder="City Name"
+                value={form.consigneeCity}
+                onChange={e => setForm({...form, consigneeCity: e.target.value})}
               />
             </div>
             <div className="md:col-span-2 flex justify-end">
-               <Button onClick={() => setOpenSection('freight')} variant="secondary" className="text-xs py-1 h-8">Next: Freight →</Button>
+               <Button onClick={() => setOpenSection('freight')} variant="secondary" className="text-xs py-1 h-8 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">Next: Freight →</Button>
             </div>
           </div>
         </Accordion>
@@ -98,6 +119,8 @@ export default function AccordionGcEntry() {
           icon={Calculator} 
           isOpen={openSection === 'freight'}
           onToggle={() => setOpenSection(openSection === 'freight' ? null : 'freight')}
+          badge={form.freight ? "FILLED" : null}
+          summary={freightSummary}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -106,6 +129,8 @@ export default function AccordionGcEntry() {
                 type="number"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none font-mono" 
                 placeholder="0.00"
+                value={form.weight}
+                onChange={e => setForm({...form, weight: e.target.value})}
               />
             </div>
             <div>
@@ -114,6 +139,8 @@ export default function AccordionGcEntry() {
                 type="number"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none font-mono text-indigo-700 font-bold" 
                 placeholder="0.00"
+                value={form.freight}
+                onChange={e => setForm({...form, freight: e.target.value})}
               />
             </div>
             <div>
@@ -130,7 +157,7 @@ export default function AccordionGcEntry() {
       </div>
       
       <div className="mt-8 flex justify-center text-xs text-slate-400 font-medium pb-10">
-        Notice how much cleaner the screen is when only one section is open at a time?
+        Notice how the closed tabs now display a summary of what you entered?
       </div>
 
     </div>

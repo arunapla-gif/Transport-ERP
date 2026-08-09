@@ -8,7 +8,8 @@ export default function Accordion({
   isOpen, 
   onToggle,
   defaultOpen = false,
-  badge = null
+  badge = null,
+  summary = null
 }) {
   // If controlled by parent, use isOpen, else manage internal state
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -31,22 +32,33 @@ export default function Accordion({
       <button 
         type="button"
         onClick={handleToggle}
-        className="w-full flex items-center justify-between p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 rounded-xl"
+        className="w-full flex items-center justify-between p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 rounded-xl text-left"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           {Icon && (
-            <div className={`p-1.5 rounded-md transition-colors ${isCurrentlyOpen ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+            <div className={`p-1.5 rounded-md transition-colors mt-0.5 ${isCurrentlyOpen ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
               <Icon size={18} />
             </div>
           )}
-          <h3 className={`font-bold transition-colors ${isCurrentlyOpen ? 'text-indigo-900' : 'text-slate-700'}`}>
-            {title}
-          </h3>
-          {badge && (
-            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 rounded-full ml-2">
-              {badge}
-            </span>
-          )}
+          <div className="flex flex-col">
+            <div className="flex items-center">
+              <h3 className={`font-bold transition-colors ${isCurrentlyOpen ? 'text-indigo-900' : 'text-slate-700'}`}>
+                {title}
+              </h3>
+              {badge && isCurrentlyOpen && (
+                <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 rounded-full ml-2">
+                  {badge}
+                </span>
+              )}
+            </div>
+            {/* The Summary Preview (Only visible when closed) */}
+            {!isCurrentlyOpen && summary && (
+              <p className="text-xs text-slate-500 font-medium mt-1 pr-4 animate-in fade-in duration-300">
+                <span className="text-indigo-400 mr-1.5">↳</span>
+                {summary}
+              </p>
+            )}
+          </div>
         </div>
         
         <div className={`p-1 rounded-full transition-all duration-300 ${isCurrentlyOpen ? 'bg-indigo-50 text-indigo-500 transform rotate-180' : 'text-slate-400 hover:bg-slate-100'}`}>
