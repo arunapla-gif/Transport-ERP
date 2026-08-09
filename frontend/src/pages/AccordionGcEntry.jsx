@@ -355,8 +355,6 @@ export default function AccordionGcEntry() {
                 </div>
               </div>
             </Accordion>
-
-            </Accordion>
             </div>
           </div>
         </div>
