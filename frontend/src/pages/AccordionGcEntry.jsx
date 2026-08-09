@@ -62,7 +62,7 @@ export default function AccordionGcEntry() {
   };
 
   return (
-    <div className="flex flex-col flex-1 w-full max-w-[1600px] mx-auto overflow-hidden bg-slate-100/50" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
+    <div className="flex flex-col flex-1 w-full mx-auto overflow-hidden bg-slate-100/50" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       
       {/* 1:1 REPLICA OF YOUR TOP RIBBON */}
       <div className="bg-white border-b border-slate-200 p-3 flex justify-between items-center shrink-0 z-20 shadow-sm">
@@ -92,8 +92,10 @@ export default function AccordionGcEntry() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50">
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+      <div className="flex-1 flex overflow-hidden bg-slate-50/50">
+        
+        {/* LEFT COLUMN: THE ACCORDION WORKFLOW */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-4xl mx-auto flex flex-col gap-2">
         
             {/* SECTION 1: DOCUMENT & GODOWN */}
@@ -349,6 +351,72 @@ export default function AccordionGcEntry() {
 
           </div>
         </div>
+
+        {/* RIGHT COLUMN: LIVE GC PREVIEW TICKET */}
+        <div className="hidden lg:block w-[340px] xl:w-[400px] border-l border-slate-200 bg-slate-100 p-4 xl:p-6 shrink-0 relative">
+           <div className="sticky top-6 flex flex-col h-[calc(100vh-140px)]">
+             <div className="flex items-center justify-between mb-3">
+               <h3 className="font-black text-slate-700 text-xs tracking-widest uppercase">Live GC Preview</h3>
+               <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-200 shadow-sm">{companyMode === 'A' ? 'AP' : 'BELL'} LOGISTICS</span>
+             </div>
+
+             {/* The Receipt Ticket */}
+             <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative">
+                {/* Ticket Jagged Top - purely CSS decorative */}
+                <div className="h-2 w-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cGF0aCBkPSJNMCAwIEw0IDggTDggMCBaIiBmaWxsPSIjZjFmNWY5Ii8+Cjwvc3ZnPg==')] absolute top-0 left-0 bg-repeat-x z-10 opacity-50"></div>
+                
+                <div className="p-5 pt-6 flex-1 overflow-y-auto custom-scrollbar">
+                  <div className="text-center mb-4 pb-4 border-b border-dashed border-slate-300">
+                    <div className="font-bold text-slate-800 text-lg mb-1">{form.consignorName || '---'}</div>
+                    <div className="text-xs text-slate-500 font-medium">TO</div>
+                    <div className="font-bold text-slate-800 text-lg mt-1">{form.consigneeName || '---'}</div>
+                  </div>
+
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 text-xs">Date</span>
+                      <span className="font-mono font-bold text-slate-700 text-xs">{form.date}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 text-xs">Godown</span>
+                      <span className="font-bold text-slate-700 text-xs">{form.godown || '---'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 text-xs">Articles</span>
+                      <span className="font-bold text-slate-700 text-xs">{totalArticles > 0 ? `${totalArticles} items` : '---'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 text-xs">Inv Value</span>
+                      <span className="font-mono font-bold text-slate-700 text-xs">₹ {form.invoiceValue || '0.00'}</span>
+                    </div>
+                  </div>
+
+                  {totalArticles > 0 && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-slate-300">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Item Breakdown</div>
+                      {goods.map((item, idx) => item.articles ? (
+                        <div key={idx} className="flex justify-between text-xs mb-1">
+                          <span className="text-slate-600">{item.articles}x {item.units.split(' ')[0]}</span>
+                          <span className="text-slate-400 truncate ml-2 max-w-[120px]">{item.description}</span>
+                        </div>
+                      ) : null)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-slate-800 text-white p-4">
+                  <div className="flex justify-between items-end">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Freight</span>
+                      <span className="text-xs text-slate-300">{form.freightType}</span>
+                    </div>
+                    <span className="text-2xl font-mono font-bold">₹ {form.freightAmount || '0.00'}</span>
+                  </div>
+                </div>
+             </div>
+           </div>
+        </div>
+
       </div>
     </div>
   );
