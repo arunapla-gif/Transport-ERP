@@ -308,6 +308,8 @@ app.use('/api/ulip', paidApiLimiter, ulipRoutes);
 const fastagRoutes = require('./routes/fastag');
 app.use('/api/fastag', paidApiLimiter, fastagRoutes);
 
+const whatsappRoutes = require('./routes/whatsapp');
+app.use('/api/whatsapp', whatsappRoutes);
 const os = require('os');
 app.get('/api/system/health', async (req, res) => {
   try {
