@@ -66,7 +66,7 @@ export default function SystemBoot() {
       } catch (err) {
         if (!isMounted) return;
         setBootState(prev => ({ ...prev, database: 'error' }));
-        setErrorMsg('Database Timeout');
+        setErrorMsg(err.message || 'Database Timeout');
         return;
       }
 
@@ -173,12 +173,26 @@ export default function SystemBoot() {
               <AlertCircle className="shrink-0 mt-0.5" size={18} />
               <p className="text-sm font-medium">{errorMsg}. Please check your connection.</p>
             </div>
-            <Button variant="custom" 
-              onClick={() => window.__retryBootSequence && window.__retryBootSequence()}
-              className="mt-1 py-2 px-4 bg-white/50 hover:bg-white rounded-lg border border-rose-200 font-bold text-sm transition-colors w-fit shadow-sm"
-            >
-              Retry Connection
-            </Button>
+            <div className="flex gap-2 mt-1">
+              <Button variant="custom" 
+                onClick={() => window.__retryBootSequence && window.__retryBootSequence()}
+                className="py-2 px-4 bg-white/50 hover:bg-white rounded-lg border border-rose-200 font-bold text-sm transition-colors shadow-sm flex-1"
+              >
+                Retry Connection
+              </Button>
+              {bootState.auth === 'error' && (
+                <Button variant="custom" 
+                  onClick={() => {
+                    localStorage.removeItem('erp_role');
+                    localStorage.removeItem('erp_token');
+                    window.location.reload();
+                  }}
+                  className="py-2 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm flex-1"
+                >
+                  Reset Session
+                </Button>
+              )}
+            </div>
           </div>
         )}
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, X, Loader2 } from 'lucide-react';
 
 export const AsyncSearchableSelect = React.memo(function AsyncSearchableSelect({ 
-  label, fetchOptions, value, initialOption, onChange, placeholder = "Search...", autoFocus = false, className = "", id, nextFocusId 
+  label, error, fetchOptions, value, initialOption, onChange, placeholder = "Search...", autoFocus = false, className = "", id, nextFocusId 
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -152,11 +152,11 @@ export const AsyncSearchableSelect = React.memo(function AsyncSearchableSelect({
 
   return (
     <div className={`flex flex-col group relative ${className}`} ref={wrapperRef} onKeyDown={handleKeyDown}>
-      {label && <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 transition-colors group-focus-within:text-indigo-600">{label}</label>}
+      {label && <label className={`text-[11px] font-bold uppercase tracking-wider mb-1 transition-colors ${error ? 'text-rose-600' : 'text-slate-500 group-focus-within:text-indigo-600'}`}>{label}</label>}
       
       <div 
         className={`relative flex items-center w-full px-3 py-2 rounded-xl text-sm transition-all cursor-text shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]
-          ${isOpen ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20' : 'bg-slate-50 border-slate-200 border hover:border-slate-300'}`}
+          ${isOpen ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20' : (error ? 'bg-rose-50/50 border-2 border-rose-500' : 'bg-slate-50 border-slate-200 border hover:border-slate-300')}`}
         onClick={() => setIsOpen(true)}
       >
         {(!isOpen && selectedOption) ? (

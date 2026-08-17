@@ -1,109 +1,23 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useForm, FormProvider } from 'react-hook-form';
 import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { usePermissions } from '../hooks/usePermissions';
+import { useEwayBillProcessor } from '../hooks/useEwayBillProcessor';
 import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
 import PrintCopiesModal from '../components/ui/PrintCopiesModal';
 import ScannerModal from '../components/ui/ScannerModal';
-import { Save, Plus, Trash2, MapPin, Building2, Receipt, Package, Wallet, FileText, Camera, AlertCircle, Clock, X, Edit2, Printer } from 'lucide-react';
+import { Save, Plus, Trash2, MapPin, Building2, Receipt, Package, Wallet, FileText, Camera, AlertCircle, Clock, X, Edit2, Printer, Loader2, Search } from 'lucide-react';
 import { z } from 'zod';
 
 import { DenseInput, DenseSelect, denseSearchableSelectClass, GlassCard } from '../components/ui/DensePrimitives';
 import { Button } from '../components/ui/Button';
 
 import { useLocation } from 'react-router-dom';
-
-const GoodsRow = React.memo(({ item, index, isLast, branch, unitHierarchy, allUnitOptions, getUnitBadge, updateItem, addRow, removeRow, canRemove }) => {
-  return (
-    <div className={`grid ${branch === 'BNG' ? 'grid-cols-[60px_180px_100px_1fr_80px_80px_80px_60px]' : 'grid-cols-[60px_100px_180px_100px_1fr_80px]'} gap-2 p-1 rounded-lg focus-within:bg-indigo-50/50 focus-within:ring-1 focus-within:ring-indigo-500 transition-all border border-transparent`}>
-      <DenseInput type="number" autoFocus={item.isNew} value={item.articles} onChange={(e) => updateItem(item.id, { articles: e.target.value })} />
-      
-      {branch !== 'BNG' && (
-        <DenseSelect 
-          value={item.unitCategory} 
-          onChange={(e) => {
-            const newCat = e.target.value;
-            const defaultItem = unitHierarchy[newCat] ? unitHierarchy[newCat][0] : null;
-            const defaultDesc = defaultItem ? defaultItem.label : '';
-            const defaultHsn = defaultItem?.hsn || '';
-            const defaultGoodsDesc = defaultItem?.goodsDesc || '';
-            updateItem(item.id, {
-              unitCategory: newCat, 
-              units: defaultDesc,
-              hsn: (!item.hsn || item.hsn.trim() === '') ? defaultHsn : item.hsn,
-              description: (!item.description || item.description.trim() === '') ? defaultGoodsDesc : item.description
-            });
-          }} 
-          options={Object.keys(unitHierarchy).map(k => ({ value: k, label: k }))} 
-        />
-      )}
-
-      <DenseSelect 
-        value={item.units} 
-        onChange={(e) => {
-          const newUnitDesc = e.target.value;
-          const match = allUnitOptions.find(o => o.label === newUnitDesc);
-          const defaultHsn = match?.hsn || '';
-          const defaultGoodsDesc = match?.goodsDesc || '';
-          updateItem(item.id, {
-            units: newUnitDesc,
-            hsn: branch !== 'BNG' && (!item.hsn || item.hsn.trim() === '') ? defaultHsn : item.hsn,
-            description: branch !== 'BNG' && (!item.description || item.description.trim() === '') ? defaultGoodsDesc : item.description
-          });
-        }} 
-        options={branch === 'BNG' 
-          ? [ { value: '', label: 'Select...' }, ...allUnitOptions.map(u => ({ value: u.label, label: u.label })) ]
-          : (unitHierarchy[item.unitCategory || 'Cases'] || []).map(u => ({ value: u.label, label: u.label }))} 
-      />
-      <DenseInput value={item.hsn} onChange={(e) => updateItem(item.id, { hsn: e.target.value })} />
-      <div className="flex items-center gap-1 w-full">
-        <DenseInput className="flex-1" value={item.description} onChange={(e) => updateItem(item.id, { description: e.target.value })} 
-          onKeyDown={(e) => {
-            if (branch !== 'BNG' && (e.key === 'Enter' || e.key === 'Tab') && isLast) {
-              if (item.description.trim() !== '' || item.articles !== '') {
-                e.preventDefault();
-                addRow();
-              } else if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('freight-remarks')?.focus();
-              }
-            }
-          }}/>
-        {branch !== 'BNG' && getUnitBadge(item.units)}
-      </div>
-      {branch === 'BNG' && (
-        <>
-          <DenseInput type="number" value={item.weight || ''} onChange={(e) => {
-             const w = e.target.value;
-             updateItem(item.id, { weight: w, amount: (parseFloat(w) || 0) * (parseFloat(item.rate) || 0) });
-          }} />
-          <DenseInput type="number" value={item.rate || ''} onChange={(e) => {
-             const r = e.target.value;
-             updateItem(item.id, { rate: r, amount: (parseFloat(item.weight) || 0) * (parseFloat(r) || 0) });
-          }} 
-          onKeyDown={(e) => {
-            if ((e.key === 'Enter' || e.key === 'Tab') && isLast) {
-              if (item.rate !== '' || item.weight !== '') {
-                e.preventDefault();
-                addRow();
-              } else if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('freight-remarks')?.focus();
-              }
-            }
-          }}/>
-          <div className="flex items-center justify-center font-mono font-bold text-sm bg-slate-50 border border-slate-200 rounded px-2">
-             {item.amount || 0}
-          </div>
-        </>
-      )}
-      <div className="flex gap-1 justify-center items-center">
-        <Button variant="secondary" type="button" tabIndex="-1" onClick={addRow} className="h-9 w-9 p-0 flex items-center justify-center shadow-sm"><Plus size={16} /></Button>
-        <Button variant="secondary" type="button" tabIndex="-1" onClick={() => removeRow(item.id)} disabled={!canRemove} className="h-9 w-9 p-0 flex items-center justify-center text-rose-500 hover:text-rose-600 hover:bg-rose-50 shadow-sm"><Trash2 size={16} /></Button>
-      </div>
-    </div>
-  );
-});
+import { GcDocumentDetails } from '../components/entry/GcDocumentDetails';
+import { PartyDetailsCard } from '../components/entry/PartyDetailsCard';
+import { GoodsEntryTable } from '../components/entry/GoodsEntryTable';
 
 export default function NewGcEntry() {
   const { canEdit } = usePermissions();
@@ -123,6 +37,7 @@ export default function NewGcEntry() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState('');
 
   // Edit Mode States
@@ -132,7 +47,6 @@ export default function NewGcEntry() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
-  // DRAFT PERSISTENCE LOGIC
   const loadDraft = (key, defaultVal) => {
     try {
       const draftStr = localStorage.getItem('gcDraft');
@@ -144,8 +58,23 @@ export default function NewGcEntry() {
     return defaultVal;
   };
 
+  const getInitialDraftStatus = () => {
+    try {
+      const draftStr = localStorage.getItem('gcDraft');
+      if (draftStr) {
+        const draft = JSON.parse(draftStr);
+        if (draft.timestamp) {
+          const time = new Date(draft.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return `Draft restored (from ${time})`;
+        }
+      }
+    } catch(e) {}
+    return '';
+  };
+
+  const [draftStatus, setDraftStatus] = useState(getInitialDraftStatus);
   const [ewayBillNo, setEwayBillNo] = useState(() => loadDraft('ewayBillNo', ''));
-  const [isFetchingEwb, setIsFetchingEwb] = useState(false);
+  const { fetchEwayBill, isFetchingEwb } = useEwayBillProcessor({ branch });
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [fetchedEwbDetails, setFetchedEwbDetails] = useState(() => loadDraft('fetchedEwbDetails', null));
   const [isReassigning, setIsReassigning] = useState(false);
@@ -178,9 +107,14 @@ export default function NewGcEntry() {
     consigneeData: null
   }));
 
-  const [goods, setGoods] = useState(() => loadDraft('goods', [
-    { id: Date.now(), articles: '', unitCategory: 'Cases', units: 'Cases of Fireworks', hsn: '', description: '', weight: '', rate: '', amount: 0 }
-  ]));
+  const methods = useForm({
+    defaultValues: {
+      goods: loadDraft('goods', [
+        { id: Date.now(), articles: '', unitCategory: 'Cases', units: 'Cases of Fireworks', hsn: '', description: '', weight: '', rate: '', amount: 0 }
+      ])
+    }
+  });
+  const currentGoods = methods.watch('goods');
 
   const [freight, setFreight] = useState(() => loadDraft('freight', {
     type: 'To Pay',
@@ -192,59 +126,100 @@ export default function NewGcEntry() {
     if (activeGcId) return;
 
     const timeoutId = setTimeout(() => {
+      // Create a clean copy of party details without massive nested JSON objects
+      const { consignorData, consigneeData, ...cleanPartyDetails } = partyDetails;
+      
+      const now = Date.now();
       const draft = {
         ewayBillNo,
-        fetchedEwbDetails,
+        // intentionally omitting `fetchedEwbDetails` as it can be >5MB and breaks localStorage
         gcDetails,
-        partyDetails,
-        goods,
-        freight
+        partyDetails: cleanPartyDetails,
+        goods: currentGoods,
+        freight,
+        timestamp: now
       };
       localStorage.setItem('gcDraft', JSON.stringify(draft));
+      
+      // Update status if it's not the initial mount
+      if (draftStatus !== '') {
+        const time = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setDraftStatus(`Auto-saved at ${time}`);
+      } else if (localStorage.getItem('gcDraft')) {
+         // This catches the first autosave after they start typing
+         const time = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+         setDraftStatus(`Auto-saved at ${time}`);
+      }
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [ewayBillNo, fetchedEwbDetails, gcDetails, partyDetails, goods, freight, activeGcId]);
+  }, [ewayBillNo, fetchedEwbDetails, gcDetails, partyDetails, currentGoods, freight, activeGcId]);
+
+  // Unsaved Changes Warning (Tab Close/Refresh)
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      // If we are not editing an existing GC, and a draft exists, warn them.
+      if (!activeGcId && localStorage.getItem('gcDraft')) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [activeGcId]);
 
   useKeyboardFlow({ onSave: () => handleSaveGC() });
 
-  const fetchMasters = useCallback(async () => {
-    try {
-      const gods = await api.get('/godowns').catch(() => []);
-      setGodowns(gods || []);
+  // React Query for Caching Masters
+  const { data: godownsData = [] } = useQuery({
+    queryKey: ['godowns'],
+    queryFn: () => api.get('/godowns').then(res => res || [])
+  });
+  
+  useEffect(() => {
+    setGodowns(godownsData);
+  }, [godownsData]);
 
-      const unitsRes = await api.get('/units').catch(() => []);
-      if (unitsRes && unitsRes.length > 0) {
-        const hierarchy = {};
-        unitsRes.forEach(u => {
-          if (!hierarchy[u.category]) hierarchy[u.category] = [];
-          hierarchy[u.category].push({
-            label: u.description || u.name,
-            code: u.code || '',
-            colorClass: u.color ? `bg-${u.color}-100 text-${u.color}-700 border-${u.color}-200` : '',
-            hsn: u.hsn || u.hsnCode || '',
-            goodsDesc: u.goodsDesc || ''
-          });
+  const { data: unitsData = [] } = useQuery({
+    queryKey: ['units'],
+    queryFn: () => api.get('/units').then(res => res || [])
+  });
+
+  useEffect(() => {
+    if (unitsData && unitsData.length > 0) {
+      const hierarchy = {};
+      unitsData.forEach(u => {
+        if (!hierarchy[u.category]) hierarchy[u.category] = [];
+        hierarchy[u.category].push({
+          label: u.description || u.name,
+          code: u.code || '',
+          colorClass: u.color ? `bg-${u.color}-100 text-${u.color}-700 border-${u.color}-200` : '',
+          hsn: u.hsn || u.hsnCode || '',
+          goodsDesc: u.goodsDesc || ''
         });
-        setUnitHierarchy(hierarchy);
-        setAllUnitOptions(Object.values(hierarchy).flat());
+      });
+      setUnitHierarchy(hierarchy);
+      setAllUnitOptions(Object.values(hierarchy).flat());
 
-        setGoods(prevGoods => {
-          if (branch !== 'BNG' && prevGoods.length === 1 && prevGoods[0].articles === '' && (!prevGoods[0].description || prevGoods[0].description === '')) {
-            const defaultItem = hierarchy['Cases'] ? hierarchy['Cases'][0] : null;
-            if (defaultItem) {
-              return [{
-                ...prevGoods[0],
-                units: defaultItem.label,
-                hsn: defaultItem.hsn || '',
-                description: defaultItem.goodsDesc || ''
-              }];
-            }
+      if (branch !== 'BNG') {
+        const defaultItem = hierarchy['Cases'] ? hierarchy['Cases'][0] : null;
+        if (defaultItem) {
+          const currentValues = methods.getValues('goods');
+          if (currentValues.length === 1 && currentValues[0].articles === '' && (!currentValues[0].description || currentValues[0].description === '')) {
+            methods.setValue('goods.0', {
+              ...currentValues[0],
+              units: defaultItem.label,
+              hsn: defaultItem.hsn || '',
+              description: defaultItem.goodsDesc || ''
+            });
           }
-          return prevGoods;
-        });
+        }
       }
+    }
+  }, [unitsData, branch]);
 
+  const fetchDynamicData = useCallback(async () => {
+    try {
       const nextNumRes = await api.get(`/gcs/next-number?mode=${gcDetails.companyMode}&branch=${branch}`).catch(() => ({ nextNumber: '5001' }));
       setGcDetails(prev => ({ 
         ...prev, 
@@ -256,15 +231,24 @@ export default function NewGcEntry() {
         setRecentGcs(recentRes.gcs || recentRes.data || (Array.isArray(recentRes) ? recentRes : []));
       }
     } catch (err) {
-      console.error('Failed to fetch initial data', err);
+      console.error('Failed to fetch dynamic data', err);
     }
   }, [branch, gcDetails.companyMode]);
 
   useEffect(() => {
-    fetchMasters();
-  }, [fetchMasters]);
+    fetchDynamicData();
+  }, [fetchDynamicData]);
 
   const handleCompanyToggle = async (mode) => {
+    if (mode === gcDetails.companyMode) return;
+    
+    // Optimistic UI update for instant toggle feedback
+    setGcDetails(prev => ({ 
+      ...prev, 
+      companyMode: mode,
+      gcNumber: '...' 
+    }));
+    
     try {
       const res = await api.get(`/gcs/next-number?mode=${mode}&branch=${branch}`);
       setGcDetails(prev => ({ 
@@ -274,142 +258,31 @@ export default function NewGcEntry() {
       }));
     } catch (err) {
       console.error('Failed to get next number', err);
+      setGcDetails(prev => ({ ...prev, gcNumber: 'ERROR' }));
     }
   };
 
   const handleEwayBillSearch = async () => {
-    if (!ewayBillNo.trim()) return;
-    try {
-      setIsFetchingEwb(true);
-      
-      const cleanEwbNo = ewayBillNo.trim().replace(/\s+/g, '');
-      const ewbData = await api.get(`/ewaybill/${cleanEwbNo}?company=${gcDetails.companyMode === 'B' ? 'BELL' : 'AP'}`);
-      
-      // Auto-Toggle Company
-      if (ewbData.detectedCompany && ewbData.detectedCompany !== gcDetails.companyMode) {
-        handleCompanyToggle(ewbData.detectedCompany);
-      }
-      
-      // Auto-populate Party Details
-      let cnorId = '';
-      let cnorPreview = [ewbData.fromAddr1, ewbData.fromAddr2, ewbData.fromPlace].filter(Boolean).join(', ') + (ewbData.fromPincode ? ` - ${ewbData.fromPincode}` : '') + (ewbData.fromStateCode ? ` (State: ${ewbData.fromStateCode})` : '');
-      
-      let matchedConsignor = null;
-      if (ewbData.fromGstin || ewbData.fromTrdName) {
-         const cnorRes = await api.get(`/consignors/search?branch=${branch}&q=${encodeURIComponent(ewbData.fromGstin || ewbData.fromTrdName)}`);
-         matchedConsignor = cnorRes.find(c => (c.gstin && ewbData.fromGstin && c.gstin.toLowerCase() === ewbData.fromGstin.toLowerCase()) || c.name.toLowerCase() === ewbData.fromTrdName?.toLowerCase());
-      }
+    const result = await fetchEwayBill(ewayBillNo, gcDetails.companyMode);
+    if (!result || !result.success) return;
 
-      let isNewCnor = false;
-      if (matchedConsignor) {
-        cnorId = matchedConsignor.id.toString();
-        cnorPreview = [matchedConsignor.address, matchedConsignor.city, matchedConsignor.pincode].filter(Boolean).join(', ') + (matchedConsignor.state ? ` (State: ${matchedConsignor.state})` : '');
-      } else if (ewbData.fromTrdName) {
-        try {
-          const newCnor = await api.post('/consignors', {
-            name: ewbData.fromTrdName.replace(/\s+/g, ' ').trim(),
-            gstin: ewbData.fromGstin ? ewbData.fromGstin.toUpperCase() : '',
-            address: [ewbData.fromAddr1, ewbData.fromAddr2].filter(Boolean).join(', '),
-            city: ewbData.fromPlace || ewbData.fromAddr2 || '',
-            state: ewbData.fromStateCode ? ewbData.fromStateCode.toString() : '',
-            pincode: ewbData.fromPincode ? ewbData.fromPincode.toString() : '',
-            migrationType: 'EWB_LITE'
-          });
-          matchedConsignor = newCnor;
-          cnorId = newCnor.id.toString();
-          cnorPreview = [newCnor.address, newCnor.city, newCnor.pincode].filter(Boolean).join(', ') + (newCnor.state ? ` (State: ${newCnor.state})` : '');
-          isNewCnor = true;
-        } catch (e) {
-          console.error("Auto-create consignor failed", e);
-        }
-      }
-
-      let cneeId = '';
-      let cneePreview = [ewbData.toAddr1, ewbData.toAddr2, ewbData.toPlace].filter(Boolean).join(', ') + (ewbData.toPincode ? ` - ${ewbData.toPincode}` : '') + (ewbData.toStateCode ? ` (State: ${ewbData.toStateCode})` : '');
-      
-      let matchedConsignee = null;
-      if (ewbData.toGstin || ewbData.toTrdName) {
-         const cneeRes = await api.get(`/consignees/search?branch=${branch}&q=${encodeURIComponent(ewbData.toGstin || ewbData.toTrdName)}`);
-         matchedConsignee = cneeRes.find(c => (c.gstin && ewbData.toGstin && c.gstin.toLowerCase() === ewbData.toGstin.toLowerCase()) || c.name.toLowerCase() === ewbData.toTrdName?.toLowerCase());
-      }
-
-      let isNewCnee = false;
-      if (matchedConsignee) {
-        cneeId = matchedConsignee.id.toString();
-        cneePreview = [matchedConsignee.address, matchedConsignee.city, matchedConsignee.pincode].filter(Boolean).join(', ') + (matchedConsignee.state ? ` (State: ${matchedConsignee.state})` : '');
-      } else if (ewbData.toTrdName) {
-        try {
-          const newCnee = await api.post('/consignees', {
-            name: ewbData.toTrdName.replace(/\s+/g, ' ').trim(),
-            gstin: ewbData.toGstin ? ewbData.toGstin.toUpperCase() : '',
-            address: [ewbData.toAddr1, ewbData.toAddr2].filter(Boolean).join(', '),
-            city: ewbData.toPlace || ewbData.toAddr2 || '',
-            state: ewbData.toStateCode ? ewbData.toStateCode.toString() : '',
-            pincode: ewbData.toPincode ? ewbData.toPincode.toString() : '',
-            migrationType: 'EWB_LITE'
-          });
-          matchedConsignee = newCnee;
-          cneeId = newCnee.id.toString();
-          cneePreview = [newCnee.address, newCnee.city, newCnee.pincode].filter(Boolean).join(', ') + (newCnee.state ? ` (State: ${newCnee.state})` : '');
-          isNewCnee = true;
-        } catch (e) {
-          console.error("Auto-create consignee failed", e);
-        }
-      }
-      
-      // Parse DD/MM/YYYY to YYYY-MM-DD
-      let parsedDate = partyDetails.invoiceDate;
-      const rawDate = ewbData.docDate || ewbData.documentDate;
-      if (rawDate) {
-        if (rawDate.includes('/')) {
-          const parts = rawDate.split('/');
-          if (parts.length === 3) {
-            parsedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-          }
-        } else if (rawDate.includes('-') && rawDate.split('-')[0].length === 2) {
-          const parts = rawDate.split('-');
-          parsedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        } else {
-          parsedDate = rawDate;
-        }
-      }
-
-      setPartyDetails(prev => ({
-        ...prev,
-        consignorId: cnorId,
-        consignorGstin: ewbData.fromGstin || '',
-        consignorAddressPreview: cnorPreview,
-        consignorData: matchedConsignor,
-        isNewConsignor: isNewCnor,
-        consigneeId: cneeId,
-        consigneeGstin: ewbData.toGstin || '',
-        consigneeAddressPreview: cneePreview,
-        consigneeData: matchedConsignee,
-        isNewConsignee: isNewCnee,
-        invoiceDate: parsedDate,
-        invoiceNumber: ewbData.docNo || ewbData.documentNo || prev.invoiceNumber,
-        invoiceValue: ewbData.totInvValue ? ewbData.totInvValue.toString() : prev.invoiceValue,
-        privateMark: cleanEwbNo,
-      }));
-
-      // We explicitly DO NOT update the `goods` array here.
-      // The user wants to preserve whatever Unit and Description is already set in the GC table
-      // (e.g. the default 'Cases of Fireworks') rather than having it split into multiple rows
-      // or overwritten by the EWB's itemList.
-      
-      setSuccess('E-Way Bill details fetched successfully.');
-      setFetchedEwbDetails({ 
-        ewbNo: cleanEwbNo, 
-        company: ewbData.detectedCompany === 'B' ? 'BELL' : 'AP',
-        rawData: ewbData 
-      });
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.error || err.message || 'Failed to fetch E-Way Bill');
-      setFetchedEwbDetails(null);
-    } finally {
-      setIsFetchingEwb(false);
+    if (result.detectedCompany && result.detectedCompany !== gcDetails.companyMode) {
+      handleCompanyToggle(result.detectedCompany);
     }
+    
+    setFetchedEwbDetails({ 
+      ewbNo: result.cleanEwbNo, 
+      rawData: result.ewbData, 
+      company: result.detectedCompany || gcDetails.companyMode 
+    });
+
+    setPartyDetails(prev => ({
+      ...prev,
+      ...result.partyUpdates,
+      invoiceDate: result.partyUpdates.invoiceDate || prev.invoiceDate,
+      invoiceNumber: result.partyUpdates.invoiceNumber || prev.invoiceNumber,
+      invoiceValue: result.partyUpdates.invoiceValue || prev.invoiceValue
+    }));
   };
 
   const handleReassignTransporter = async () => {
@@ -509,7 +382,7 @@ export default function NewGcEntry() {
       });
 
       if (gc.goods && gc.goods.length > 0) {
-        setGoods(gc.goods.map(g => {
+        methods.setValue('goods', gc.goods.map(g => {
           let legacyCat = 'Cases';
           const legacyDesc = g.units || '';
           for (const [cat, opts] of Object.entries(unitHierarchy)) {
@@ -535,7 +408,7 @@ export default function NewGcEntry() {
           };
         }));
       } else {
-        setGoods([{ id: Date.now(), articles: '', unitCategory: 'Cases', units: 'Cases of Fireworks', hsn: '', description: '', weight: '', rate: '', amount: 0 }]);
+        methods.setValue('goods', [{ id: Date.now(), articles: '', unitCategory: 'Cases', units: 'Cases of Fireworks', hsn: '', description: '', weight: '', rate: '', amount: 0 }]);
       }
 
       setFreight({
@@ -593,30 +466,6 @@ export default function NewGcEntry() {
     }));
   }, []);
 
-  const updateItem = useCallback((id, updates) => {
-    setGoods(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
-  }, []);
-
-  const addRow = useCallback(() => {
-    const defaultItem = unitHierarchy['Cases'] ? unitHierarchy['Cases'][0] : null;
-    setGoods(prev => [...prev, { 
-      id: Date.now(), 
-      articles: '', 
-      unitCategory: branch === 'BNG' ? '' : 'Cases', 
-      units: branch === 'BNG' ? '' : (defaultItem ? defaultItem.label : 'Cases of Fireworks'), 
-      hsn: branch === 'BNG' ? '' : (defaultItem?.hsn || ''), 
-      description: branch === 'BNG' ? '' : (defaultItem?.goodsDesc || ''), 
-      weight: '', 
-      rate: '', 
-      amount: 0, 
-      isNew: true 
-    }]);
-  }, [branch, unitHierarchy]);
-
-  const removeRow = useCallback((id) => {
-    setGoods(prev => prev.length > 1 ? prev.filter(g => g.id !== id) : prev);
-  }, []);
-
   const getUnitBadge = useCallback((unitValue) => {
     const match = allUnitOptions.find(o => o.label.toLowerCase() === (unitValue || '').toLowerCase());
     if (!match) return null;
@@ -629,7 +478,7 @@ export default function NewGcEntry() {
 
   const tally = useMemo(() => {
     let cases = 0, cartons = 0, bundles = 0, total = 0;
-    goods.forEach(g => {
+    (currentGoods || []).forEach(g => {
       const qty = parseInt(g.articles) || 0;
       total += qty;
       const match = allUnitOptions.find(o => o.label.toLowerCase() === (g.units || '').toLowerCase());
@@ -639,7 +488,7 @@ export default function NewGcEntry() {
       else if (code === 'BD/S') bundles += qty;
     });
     return { cases, cartons, bundles, total };
-  }, [goods]);
+  }, [currentGoods, allUnitOptions]);
 
   const handleSaveGC = async () => {
     // ANTI-REJECTION DEFENSE
@@ -656,29 +505,23 @@ export default function NewGcEntry() {
 
     try {
       setLoading(true);
-      
-      const validationSchema = z.object({
-        consignorId: z.union([z.string(), z.number()]).refine(val => !!val, { message: 'Please select a Consignor' }),
-        consigneeId: z.union([z.string(), z.number()]).refine(val => !!val, { message: 'Please select a Consignee' }),
-        godown: branch !== 'BNG' ? z.string().min(1, 'Godown is mandatory. Please select a Godown.') : z.string().optional(),
-        goods: z.array(z.object({
-          articles: z.union([z.string(), z.number()]).refine(val => !!val && parseInt(val) > 0, { message: 'Quantity is required and must be > 0' }),
-        })).min(1, 'At least one item must be added')
-      });
+      setError('');
+      setFieldErrors({});
 
-      try {
-        validationSchema.parse({
-          consignorId: partyDetails.consignorId,
-          consigneeId: partyDetails.consigneeId,
-          godown: gcDetails.godown,
-          goods: goods
-        });
-      } catch (validationError) {
-        throw new Error(validationError.errors[0].message);
+      let currentErrors = {};
+      if (!gcDetails.godown) currentErrors.godown = true;
+      if (!partyDetails.consignorId && !partyDetails.isNewConsignor) currentErrors.consignor = true;
+      if (!partyDetails.consigneeId && !partyDetails.isNewConsignee) currentErrors.consignee = true;
+
+      if (Object.keys(currentErrors).length > 0) {
+        setFieldErrors(currentErrors);
+        throw new Error("Please fill in all highlighted required fields.");
       }
+      
+      const formGoods = methods.getValues('goods');
 
       // Calculate total amount for BNG
-      const totalAmount = branch === 'BNG' ? goods.reduce((sum, item) => sum + ((parseFloat(item.weight) || 0) * (parseFloat(item.rate) || 0)), 0) : 0;
+      const totalAmount = branch === 'BNG' ? formGoods.reduce((sum, item) => sum + ((parseFloat(item.weight) || 0) * (parseFloat(item.rate) || 0)), 0) : 0;
 
       const { companyMode, ...safeGcDetails } = gcDetails;
       const { consignorData, consigneeData, isNewConsignor, isNewConsignee, ...safePartyDetails } = partyDetails;
@@ -688,8 +531,8 @@ export default function NewGcEntry() {
         ...safeGcDetails,
         gcNumber: finalGcNumber,
         ...safePartyDetails,
-        consignorId: parseInt(partyDetails.consignorId),
-        consigneeId: parseInt(partyDetails.consigneeId),
+        consignorId: parseInt(partyDetails.consignorId) || null,
+        consigneeId: parseInt(partyDetails.consigneeId) || null,
         invoiceValue: parseFloat(partyDetails.invoiceValue) || 0,
         actualWeight: partyDetails.actualWeight,
         freightType: freight.type,
@@ -699,7 +542,7 @@ export default function NewGcEntry() {
         balanceFreight: branch === 'BNG' ? totalAmount : 0,
         freightFixed: 'Yes',
         freightNote: freight.freightNote,
-        goods: goods.map(g => ({
+        goods: formGoods.map(g => ({
           articles: parseInt(g.articles) || null,
           units: g.units,
           hsn: g.hsn,
@@ -722,8 +565,6 @@ export default function NewGcEntry() {
       }
       
       handleReset();
-      fetchMasters();
-      
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.error || err.message || 'Failed to save');
@@ -751,39 +592,47 @@ export default function NewGcEntry() {
       invoiceNumber: '', privateMark: '', invoiceValue: '', actualWeight: 'FIXED',
     });
     const defaultItem = unitHierarchy['Cases'] ? unitHierarchy['Cases'][0] : null;
-    setGoods([{ 
-      id: Date.now(), 
-      articles: '', 
-      unitCategory: branch === 'BNG' ? '' : 'Cases', 
-      units: branch === 'BNG' ? '' : (defaultItem ? defaultItem.label : 'Cases of Fireworks'), 
-      hsn: branch === 'BNG' ? '' : (defaultItem?.hsn || ''), 
-      description: branch === 'BNG' ? '' : (defaultItem?.goodsDesc || ''), 
-      weight: '', 
-      rate: '', 
-      amount: 0 
-    }]);
+    methods.reset({
+      goods: [{ 
+        id: Date.now(), 
+        articles: '', 
+        unitCategory: branch === 'BNG' ? '' : 'Cases', 
+        units: branch === 'BNG' ? '' : (defaultItem ? defaultItem.label : 'Cases of Fireworks'), 
+        hsn: branch === 'BNG' ? '' : (defaultItem?.hsn || ''), 
+        description: branch === 'BNG' ? '' : (defaultItem?.goodsDesc || ''), 
+        weight: '', 
+        rate: '', 
+        amount: 0 
+      }]
+    });
     setFreight({ type: 'To Pay', freightNote: '' });
+    setDraftStatus('');
   };
 
   return (
-    <div className="flex flex-col flex-1 w-full max-w-[1600px] mx-auto overflow-hidden bg-slate-100/50" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
-
+    <FormProvider {...methods}>
+      <div className="flex flex-col flex-1 w-full max-w-[1600px] mx-auto overflow-hidden bg-slate-50/50 relative" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
+        
+        {/* AMBIENT MESH BACKGROUND */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-300/20 rounded-full blur-[120px] pointer-events-none z-0" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-violet-300/20 rounded-full blur-[120px] pointer-events-none z-0" />
       
-      {/* HEADER RIBBON */}
-      <div className="bg-white border-b border-slate-200 p-3 flex justify-between items-center shrink-0 z-20 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-800 text-lg">New GC</span>
-            <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-               <button type="button" onClick={() => handleCompanyToggle('A')} className={`px-3 py-1 flex items-center justify-center text-xs font-bold rounded-md transition-all ${gcDetails.companyMode === 'A' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>AP</button>
-               <button type="button" onClick={() => handleCompanyToggle('B')} className={`px-3 py-1 flex items-center justify-center text-xs font-bold rounded-md transition-all ${gcDetails.companyMode === 'B' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>BELL</button>
+        {/* HEADER RIBBON */}
+        <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 p-3 flex justify-between items-center shrink-0 z-20 shadow-sm relative">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-500 tracking-tight">New GC</span>
+              {!activeGcId && draftStatus && <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">{draftStatus}</span>}
+              <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 shadow-inner ml-2">
+                 <button type="button" onClick={() => handleCompanyToggle('A')} className={`px-3 py-1 flex items-center justify-center text-xs font-bold rounded-md transition-all ${gcDetails.companyMode === 'A' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>AP</button>
+                 <button type="button" onClick={() => handleCompanyToggle('B')} className={`px-3 py-1 flex items-center justify-center text-xs font-bold rounded-md transition-all ${gcDetails.companyMode === 'B' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>BELL</button>
+              </div>
             </div>
-          </div>
           
           <div className="flex items-center gap-2 bg-indigo-50/50 p-1 rounded-lg border border-indigo-100">
              <DenseInput placeholder="Enter E-Way Bill" value={ewayBillNo} onChange={e => { setEwayBillNo(e.target.value); setFetchedEwbDetails(null); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleEwayBillSearch(); } }} className="w-48 [&>input]:h-8" />
              <Button variant="primary" type="button" onClick={handleEwayBillSearch} disabled={isFetchingEwb} className="h-8 px-3 py-0 text-xs shadow-sm flex items-center gap-1">{isFetchingEwb ? '...' : 'Fetch EWB'}</Button>
-             <Button variant="success" type="button" onClick={() => setIsScannerOpen(true)} className="h-8 w-8 p-0 flex items-center justify-center shadow-sm mr-2"><Camera size={14}/></Button>
+             <Button variant="custom" type="button" onClick={() => setIsScannerOpen(true)} className="h-8 w-8 p-0 flex items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm mr-2 transition-colors"><Camera size={14}/></Button>
              
              {fetchedEwbDetails && (
                <>
@@ -827,18 +676,12 @@ export default function NewGcEntry() {
           {error && <div className="text-rose-600 font-bold text-sm flex items-center gap-1 animate-pulse"><AlertCircle size={14}/> {error}</div>}
           {success && <div className="text-emerald-600 font-bold text-sm flex items-center gap-1">✓ {success}</div>}
           
-          <div className="flex items-center gap-2 bg-amber-50/50 p-1 rounded-lg border border-amber-200 ml-4">
-             <DenseInput placeholder="GC Number" value={searchEditGc} onChange={e => setSearchEditGc(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); loadGcForEdit(); } }} className="w-32 [&>input]:h-8 [&>input]:bg-white" />
-             <Button variant="secondary" type="button" onClick={loadGcForEdit} disabled={loading} className="h-8 px-3 py-0 text-xs shadow-sm border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100">Load</Button>
-             <Button variant="secondary" type="button" onClick={(e) => { e.preventDefault(); if (searchEditGc) setShowPrintModal(true); }} className={`h-8 px-3 py-0 text-xs shadow-sm transition-all border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 ${!searchEditGc ? 'opacity-50 pointer-events-none' : ''}`}>Print</Button>
-          </div>
-
-          <div className="bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 text-indigo-700 font-bold text-sm flex items-center gap-2 ml-2">
+          <div className="bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 text-indigo-700 font-bold text-sm flex items-center gap-2 ml-4">
             {gcDetails.companyMode === 'A' ? 'AP' : 'BELL'} - {gcDetails.gcNumber}
           </div>
           
-          <Button variant="secondary" onClick={() => setIsHistoryOpen(true)} className="ml-2 flex items-center gap-2 h-9 px-3 py-0 text-xs shadow-sm">
-            <Clock size={14} /> Recent GCs
+          <Button variant="secondary" onClick={() => setIsHistoryOpen(true)} className="ml-2 flex items-center gap-2 h-9 px-4 py-0 text-xs shadow-sm bg-white border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors">
+            <Search size={14} className="text-indigo-500" /> Manage GCs
           </Button>
         </div>
       </div>
@@ -851,153 +694,42 @@ export default function NewGcEntry() {
             <div className="max-w-6xl mx-auto space-y-6 flex flex-col min-h-full">
             
             {/* DOC DETAILS */}
-            <GlassCard>
-              <h3 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2"><FileText size={16} className="text-indigo-500"/> Document Details</h3>
-              <div className="grid grid-cols-4 gap-3">
-                <DenseSelect label="Fin. Year" options={['2026-2027', '2025-2026']} value={gcDetails.financialYear} onChange={e => setGcDetails({...gcDetails, financialYear: e.target.value})} />
-                <DenseInput label="Booking Date" type="date" value={gcDetails.date} onChange={e => setGcDetails({...gcDetails, date: e.target.value})} />
-                <DenseInput label="Time" type="time" value={gcDetails.time} onChange={e => setGcDetails({...gcDetails, time: e.target.value})} />
-                <DenseSelect label={branch === 'BNG' ? 'Godown' : 'Godown *'} options={[{value: '', label: 'Select Godown'}, ...godowns.map(g => ({value: g.name, label: g.name}))]} value={gcDetails.godown || ''} onChange={e => setGcDetails({...gcDetails, godown: e.target.value})} />
-              </div>
-            </GlassCard>
+            <GcDocumentDetails 
+              gcDetails={gcDetails} 
+              setGcDetails={setGcDetails} 
+              branch={branch} 
+              godowns={godowns}
+              fieldErrors={fieldErrors}
+            />
 
             {/* PARTIES */}
-            <div className="grid grid-cols-2 gap-4">
-              <GlassCard>
-                 <h3 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
-                   <Building2 size={16} className="text-blue-500"/> Consignor
-                   {partyDetails.isNewConsignor && <span className="bg-emerald-500 text-white text-[9px] px-1.5 py-0.5 rounded shadow-sm animate-pulse ml-auto uppercase">Newly Saved</span>}
-                 </h3>
-                 <div className="flex items-end gap-2">
-                   <div className="flex-1">
-                     <AsyncSearchableSelect 
-                       id="consignor-select" 
-                       label="Search Consignor *" 
-                       fetchOptions={fetchConsignorsAsync} 
-                       value={partyDetails.consignorId?.toString()} 
-                       initialOption={partyDetails.consignorData ? { value: partyDetails.consignorId.toString(), label: partyDetails.consignorData.name, raw: partyDetails.consignorData } : null}
-                       onChange={handleConsignorChange} 
-                       autoFocus 
-                       className={denseSearchableSelectClass} 
-                     />
-                   </div>
-                   {partyDetails.consignorId && (
-                     <Button variant="icon" type="button" onClick={() => window.open('/consignor-master', '_blank')} className="h-9 w-9 p-0 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200" title="Edit Consignor">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                     </Button>
-                   )}
-                 </div>
-                 <div className="text-xs text-slate-500 mt-2 bg-slate-50 p-2 rounded border border-slate-100 min-h-[40px]">{partyDetails.consignorAddressPreview || 'No Address Selected'}</div>
-                 <div className="text-xs font-mono font-bold text-indigo-700 mt-1 uppercase flex items-center gap-2">
-                    {partyDetails.consignorGstin || 'No GSTIN'}
-                    {partyDetails.consignorGstin && <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200 text-[9px] font-black tracking-wider flex items-center gap-1 shrink-0"><span className="text-emerald-500">✓</span> VERIFIED</span>}
-                 </div>
-              </GlassCard>
-              <GlassCard>
-                 <h3 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
-                   <MapPin size={16} className="text-emerald-500"/> Consignee
-                   {partyDetails.isNewConsignee && <span className="bg-emerald-500 text-white text-[9px] px-1.5 py-0.5 rounded shadow-sm animate-pulse ml-auto uppercase">Newly Saved</span>}
-                 </h3>
-                 <div className="flex items-end gap-2">
-                   <div className="flex-1">
-                     <AsyncSearchableSelect 
-                       id="consignee-select" 
-                       label="Search Consignee *" 
-                       fetchOptions={fetchConsigneesAsync} 
-                       value={partyDetails.consigneeId?.toString()} 
-                       initialOption={partyDetails.consigneeData ? { value: partyDetails.consigneeId.toString(), label: partyDetails.consigneeData.name, raw: partyDetails.consigneeData } : null}
-                       onChange={handleConsigneeChange} 
-                       className={denseSearchableSelectClass} 
-                     />
-                   </div>
-                   {partyDetails.consigneeId && (
-                     <Button variant="icon" type="button" onClick={() => window.open('/consignee-master', '_blank')} className="h-9 w-9 p-0 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200" title="Edit Consignee">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                     </Button>
-                   )}
-                 </div>
-                 <div className="text-xs text-slate-500 mt-2 bg-slate-50 p-2 rounded border border-slate-100 min-h-[40px]">{partyDetails.consigneeAddressPreview || 'No Address Selected'}</div>
-                 <div className="text-xs font-mono font-bold text-emerald-700 mt-1 uppercase flex items-center gap-2">
-                    {partyDetails.consigneeGstin || 'No GSTIN'}
-                    {partyDetails.consigneeGstin && <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200 text-[9px] font-black tracking-wider flex items-center gap-1 shrink-0"><span className="text-emerald-500">✓</span> VERIFIED</span>}
-                 </div>
-              </GlassCard>
-            </div>
+            <PartyDetailsCard 
+              partyDetails={partyDetails}
+              setPartyDetails={setPartyDetails}
+              fetchConsignorsAsync={fetchConsignorsAsync}
+              handleConsignorChange={handleConsignorChange}
+              fetchConsigneesAsync={fetchConsigneesAsync}
+              handleConsigneeChange={handleConsigneeChange}
+              fieldErrors={fieldErrors}
+            />
 
             {/* GOODS & INVOICE */}
-            <GlassCard className="flex-1 flex flex-col">
-               <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
-                 <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2"><Package size={16} className="text-amber-500"/> Goods & Invoice Details</h3>
-                 <div className="flex gap-4 items-center">
-                    <DenseInput label="Inv No" value={partyDetails.invoiceNumber} onChange={e => setPartyDetails({...partyDetails, invoiceNumber: e.target.value})} className="w-24 [&>input]:h-7" />
-                    <DenseInput label="Inv Date" type="date" value={partyDetails.invoiceDate} onChange={e => setPartyDetails({...partyDetails, invoiceDate: e.target.value})} className="w-32 [&>input]:h-7" />
-                    <DenseInput label="Value ₹" type="number" value={partyDetails.invoiceValue} onChange={e => setPartyDetails({...partyDetails, invoiceValue: e.target.value})} className="w-24 [&>input]:h-7 [&>input]:bg-amber-50" />
-                    <DenseInput label="Weight" type="text" value={partyDetails.actualWeight} onChange={e => setPartyDetails({...partyDetails, actualWeight: e.target.value})} className="w-24 [&>input]:h-7" />
-                 </div>
-               </div>
-               
-               {/* EWB PREVIEW HINT */}
-               {fetchedEwbDetails?.rawData?.itemList && fetchedEwbDetails.rawData.itemList.length > 0 && (
-                 <div className="mb-4 bg-indigo-50/80 border border-indigo-200/60 rounded-xl p-3 shadow-sm">
-                   <div className="flex items-center gap-2 mb-2">
-                     <span className="bg-indigo-600 text-white text-[9px] font-black tracking-wider px-2 py-0.5 rounded uppercase">EWB Raw Data Preserved</span>
-                     <span className="text-xs font-bold text-indigo-900">Type actual physical packages below.</span>
-                   </div>
-                   <div className="space-y-1.5">
-                     {fetchedEwbDetails.rawData.itemList.map((item, idx) => (
-                       <div key={idx} className="flex flex-wrap gap-2 text-xs font-medium text-indigo-800/80 items-center">
-                         <span className="font-bold text-indigo-900">• EWB Item {idx + 1}:</span> 
-                         <span className="bg-white/60 px-1.5 rounded border border-indigo-100">{item.quantity} {item.qtyUnit}</span>
-                         <span>{item.productName}</span>
-                         <span className="text-indigo-600/70 text-[10px] ml-auto">(HSN: {item.hsnCode})</span>
-                       </div>
-                     ))}
-                   </div>
-                 </div>
-               )}
-               
-                <div className={`grid ${branch === 'BNG' ? 'grid-cols-[60px_180px_100px_1fr_80px_80px_80px_60px]' : 'grid-cols-[60px_100px_180px_100px_1fr_80px]'} gap-2 mb-1 px-2 py-1 bg-slate-100/50 rounded-lg text-center border border-slate-200/50`}>
-                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Qty</div>
-                 {branch !== 'BNG' && <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unit</div>}
-                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{branch === 'BNG' ? 'Unit' : 'Unit Desc'}</div>
-                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">HSN</div>
-                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Description of Goods</div>
-                 {branch === 'BNG' && (
-                   <>
-                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Weight</div>
-                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rate</div>
-                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Amount</div>
-                   </>
-                 )}
-                 <div></div>
-              </div>
-              
-              <div className="space-y-1">
-                {goods.map((item, index) => (
-                  <GoodsRow 
-                    key={item.id}
-                    item={item}
-                    index={index}
-                    isLast={index === goods.length - 1}
-                    branch={branch}
-                    unitHierarchy={unitHierarchy}
-                    allUnitOptions={allUnitOptions}
-                    getUnitBadge={getUnitBadge}
-                    updateItem={updateItem}
-                    addRow={addRow}
-                    removeRow={removeRow}
-                    canRemove={goods.length > 1}
-                  />
-                ))}
-              </div>
-            </GlassCard>
+            <GoodsEntryTable 
+              branch={branch}
+              partyDetails={partyDetails}
+              setPartyDetails={setPartyDetails}
+              fetchedEwbDetails={fetchedEwbDetails}
+              unitHierarchy={unitHierarchy}
+              allUnitOptions={allUnitOptions}
+              getUnitBadge={getUnitBadge}
+            />
 
             </div>
           </div>
         </div>
 
-         {/* ACTION FOOTER STICKY (MOVED FROM RIGHT COLUMN) */}
-        <div className="p-4 bg-white border-t border-slate-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 relative">
+        {/* ACTION FOOTER STICKY (FROSTED GLASS) */}
+        <div className="p-4 bg-white/70 backdrop-blur-xl border-t border-slate-200/60 shrink-0 shadow-[0_-8px_30px_-5px_rgba(0,0,0,0.05)] z-30 relative">
            <div className="max-w-6xl mx-auto flex items-end justify-between gap-6">
              
              {/* Left: Remarks */}
@@ -1029,9 +761,9 @@ export default function NewGcEntry() {
 
              {/* Right: Actions */}
              <div className="flex-1 flex gap-3 justify-end max-w-[35%]">
-               <Button variant="secondary" type="button" onClick={handleReset} className="w-28 h-12 text-sm shadow-sm">Reset</Button>
-               <Button variant="primary" type="button" onClick={handleSaveGC} disabled={loading || (activeGcId && !canEdit)} className="w-48 h-12 text-sm flex items-center justify-center gap-2">
-                 <Save size={18} /> {loading ? 'Saving...' : (activeGcId ? 'Update GC' : 'Save GC')}
+               <Button variant="secondary" type="button" onClick={handleReset} className="w-28 h-12 text-sm shadow-sm hover:bg-white border-slate-300 hover:text-rose-600">Reset</Button>
+               <Button variant="primary" type="button" onClick={handleSaveGC} disabled={loading || (activeGcId && !canEdit)} className="w-48 h-12 text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:brightness-110 shadow-lg shadow-indigo-500/30 border-0 transition-all duration-300">
+                 {loading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} {loading ? 'Saving...' : (activeGcId ? 'Update GC' : 'Save GC')}
                </Button>
              </div>
 
@@ -1045,9 +777,27 @@ export default function NewGcEntry() {
 
       {/* HISTORY DRAWER */}
       <div className={`fixed inset-y-0 right-0 w-80 bg-white/95 backdrop-blur-xl shadow-2xl border-l border-slate-200 transform transition-transform duration-300 z-50 flex flex-col ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-           <h2 className="font-bold flex items-center gap-2 text-slate-800"><Clock size={18} className="text-indigo-500" /> Recent History</h2>
-           <button onClick={() => setIsHistoryOpen(false)} className="p-1 hover:bg-slate-200 rounded-md text-slate-500"><X size={16} /></button>
+        <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-col gap-3 sticky top-0 z-10">
+           <div className="flex justify-between items-center">
+             <h2 className="font-bold flex items-center gap-2 text-slate-800"><Search size={16} className="text-indigo-500" /> Manage GCs</h2>
+             <button onClick={() => setIsHistoryOpen(false)} className="p-1 hover:bg-slate-200 rounded-md text-slate-500 transition-colors"><X size={16} /></button>
+           </div>
+           
+           <div className="flex gap-2">
+             <div className="flex-1">
+               <DenseInput 
+                 placeholder="Search or Load GC #..." 
+                 value={searchEditGc} 
+                 onChange={e => setSearchEditGc(e.target.value)} 
+                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); loadGcForEdit(); setIsHistoryOpen(false); } }} 
+                 className="w-full [&>input]:bg-white [&>input]:h-9" 
+               />
+             </div>
+             <div className="flex gap-1.5">
+               <Button variant="custom" type="button" onClick={() => { loadGcForEdit(); setIsHistoryOpen(false); }} disabled={loading || !searchEditGc} className="h-9 px-3 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors disabled:opacity-50 flex items-center gap-1 shadow-sm"><Edit2 size={14}/> Edit</Button>
+               <Button variant="custom" type="button" onClick={(e) => { e.preventDefault(); if (searchEditGc) { setShowPrintModal(true); setIsHistoryOpen(false); } }} disabled={!searchEditGc} className="h-9 px-3 rounded-lg text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50 flex items-center gap-1 shadow-sm"><Printer size={14}/> Print</Button>
+             </div>
+           </div>
         </div>
         <div className="p-4 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
            {recentGcs.map(gc => (
@@ -1072,5 +822,6 @@ export default function NewGcEntry() {
       {/* OVERLAY */}
       {isHistoryOpen && <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsHistoryOpen(false)} />}
     </div>
+    </FormProvider>
   );
 }

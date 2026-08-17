@@ -8,6 +8,9 @@ import { AsyncSearchableSelect } from '../components/ui/AsyncSearchableSelect';
 import { Button } from '../components/ui/Button';
 import { Save, Trash2, Truck, PackageCheck, FileText, Search, ShieldAlert, ChevronDown, ChevronUp, Loader2, RefreshCw, Clock, X, Printer, Edit2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { LorryDetailsCard } from '../components/entry/LorryDetailsCard';
+import { GdmDocumentDetails } from '../components/entry/GdmDocumentDetails';
+import { DespatchListTable } from '../components/entry/DespatchListTable';
 
 
 
@@ -598,440 +601,64 @@ export default function GdmEntry() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Lorry Details (Left - 33%) */}
         <div className="col-span-1">
-          <GlassCard className="h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="bg-emerald-50 text-emerald-600 p-2 rounded-lg shadow-inner border border-emerald-100/50"><Truck size={18} /></div>
-                <h3 className="font-bold text-lg text-slate-800 tracking-tight">Lorry Details</h3>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {gdmDetails.cewbNumber && (
-                  <div className="px-2.5 py-1 bg-amber-100 text-amber-800 text-[11px] font-black tracking-wider uppercase rounded-md border border-amber-300 shadow-sm">
-                    CEWB: {gdmDetails.cewbNumber}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 flex flex-col gap-4 justify-between">
-              <SearchableSelect 
-                id="vehicle-select"
-                nextFocusId="gdm-gc-search"
-                label="Search Lorry *"
-                options={vehicleOptions}
-                value={lorryDetails.vehicleId?.toString()}
-                onChange={handleVehicleChange}
-                placeholder=""
-                className="[&>div>button]:h-10 [&>div>button]:bg-slate-50/50 [&>div>button]:border-slate-200"
-              />
-              
-                <div className="space-y-4 pt-1 mt-1 flex-1 flex flex-col justify-between">
-                   <div className="flex flex-col gap-3 p-4 bg-slate-50/50 rounded-xl border border-slate-200 shadow-inner">
-                     <div className="flex items-center gap-2 mb-1">
-                       <ShieldAlert size={16} className="text-blue-500" />
-                       <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">License Verification</span>
-                     </div>
-                     <div className="flex items-end gap-3">
-                       <DenseInput label="DL No." value={dlDetails.license} onChange={e => setDlDetails({...dlDetails, license: e.target.value.toUpperCase()})} className="flex-1 [&>input]:uppercase [&>input]:h-10" />
-                       <DenseInput label="DOB" type="date" value={dlDetails.dob} onChange={e => setDlDetails({...dlDetails, dob: e.target.value})} className="w-[120px] [&>input]:h-10" />
-                     </div>
-                     <Button 
-                       variant="primary"
-                       type="button"
-                       onClick={handleFetchDL} 
-                       disabled={fetchingDl || !dlDetails.license || !dlDetails.dob}
-                       className="h-10 mt-1 px-4 text-sm w-full shadow-sm hover:shadow"
-                     >
-                       {fetchingDl ? 'Verifying...' : 'Verify & Check Eligibility'}
-                     </Button>
-                     
-                     {/* DL Verified Badge */}
-                     {dlData && (
-                       <div className="mt-2 flex flex-col gap-1.5 p-2 bg-blue-50 border border-blue-100 rounded-md">
-                         <div className="flex items-center justify-between">
-                           <span className={`text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-sm ${dlData.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                             {dlData.status}
-                           </span>
-                           {/* Eligibility */}
-                           {(() => {
-                              const validClasses = ['TRANS', 'HTV', 'HMV', 'HGMV', 'MGV', 'MGMV'];
-                              const hasValidClass = dlData.vehicle_classes?.some(c => validClasses.includes(c?.toUpperCase()));
-                              let isExpired = false;
-                              if (dlData.validity_tr && dlData.validity_tr !== '-' && dlData.validity_tr !== 'NA') {
-                                const parts = dlData.validity_tr.split('-');
-                                if (parts.length === 3) {
-                                  const [day, month, year] = parts;
-                                  const expiryDate = new Date(`${year}-${month}-${day}`);
-                                  if (expiryDate < new Date()) isExpired = true;
-                                } else isExpired = true;
-                              } else isExpired = true;
- 
-                              if (!hasValidClass) {
-                                return <span className="text-[10px] font-black tracking-wider text-rose-700 uppercase bg-rose-100 px-2 py-0.5 rounded-sm flex items-center gap-1 border border-rose-200">Missing Heavy Class</span>;
-                              } else if (isExpired) {
-                                return <span className="text-[10px] font-black tracking-wider text-rose-700 uppercase bg-rose-100 px-2 py-0.5 rounded-sm flex items-center gap-1 border border-rose-200">TR Expired</span>;
-                              } else {
-                                return <span className="text-[10px] font-black tracking-wider text-emerald-700 uppercase bg-emerald-100 px-2 py-0.5 rounded-sm flex items-center gap-1 border border-emerald-200">Transport Eligible</span>;
-                              }
-                           })()}
-                         </div>
-                         <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
-                           {dlData.owner_name} {dlData.owner_name?.includes('*') && <span className="text-[9px] font-black tracking-wider text-rose-500 bg-rose-50 px-1 py-0.5 rounded uppercase">Masked</span>}
-                         </div>
-                         <div className="flex justify-between text-[10px] font-bold text-slate-500">
-                           <span>TR Val: {dlData.validity_tr}</span>
-                           <span>Class: {dlData.vehicle_classes?.join(', ')}</span>
-                         </div>
-                       </div>
-                     )}
-                   </div>
-
-                    <div className="flex gap-3">
-                     <DenseInput label="Driver Name" value={lorryDetails.driverName} onChange={e => setLorryDetails({...lorryDetails, driverName: e.target.value})} className="w-1/2 [&>input]:h-10" />
-                     <DenseInput label="Driver Phone" value={lorryDetails.driverPhone} onChange={e => setLorryDetails({...lorryDetails, driverPhone: e.target.value})} className="w-1/2 [&>input]:h-10" />
-                   </div>
-                </div>
-            </div>
-          </GlassCard>
+          <LorryDetailsCard 
+              gdmDetails={gdmDetails}
+              lorryDetails={lorryDetails}
+              setLorryDetails={setLorryDetails}
+              vehicleOptions={vehicleOptions}
+              handleVehicleChange={handleVehicleChange}
+              dlDetails={dlDetails}
+              setDlDetails={setDlDetails}
+              fetchingDl={fetchingDl}
+              handleFetchDL={handleFetchDL}
+              dlData={dlData}
+            />
         </div>
 
         {/* Delivery Memo (Right - 66%) */}
         <div className="lg:col-span-2 relative z-20">
-          <GlassCard className="relative z-20 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
-              <div className="flex items-center gap-2">
-                <div className="bg-indigo-50 text-indigo-600 p-2 rounded-lg shadow-inner border border-indigo-100/50"><PackageCheck size={18} /></div>
-                <h3 className="font-bold text-lg text-slate-800 tracking-tight">Delivery Memo</h3>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <DenseInput label="GDM No" value={gdmNumberDisplay} readOnly className="w-1/3 [&>input]:font-black [&>input]:text-indigo-900 [&>input]:bg-indigo-50/50" />
-                <DenseInput label="Date" type="date" value={gdmDetails.date} onChange={e => setGdmDetails({...gdmDetails, date: e.target.value})} className="w-1/3" />
-                <DenseInput label="Time" type="time" value={gdmDetails.time || ''} onChange={e => setGdmDetails({...gdmDetails, time: e.target.value})} className="w-1/3" />
-              </div>
-              <div className="flex gap-2">
-                <DenseInput label="From" value={gdmDetails.fromLocation} onChange={e => setGdmDetails({...gdmDetails, fromLocation: e.target.value})} className="w-1/3" />
-                <DenseInput label="To (Name)" value={gdmDetails.toName} onChange={e => setGdmDetails({...gdmDetails, toName: e.target.value})} className="w-1/3" />
-                <DenseInput label="Delivery At" value={gdmDetails.deliveryAt} onChange={e => setGdmDetails({...gdmDetails, deliveryAt: e.target.value})} className="w-1/3 [&>input]:border-amber-300 [&>input]:bg-amber-50 focus-within:[&>input]:border-amber-500" />
-              </div>
-              <div className="p-3 bg-slate-50/50 rounded-xl border border-slate-200 shadow-inner mt-2 relative z-20">
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-col">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Consignee Mode</label>
-                    <select 
-                      className="h-9 px-3 bg-white border border-slate-200 text-sm font-semibold rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700"
-                      value={consigneeMode} 
-                      onChange={e => {
-                        const newMode = e.target.value;
-                        setConsigneeMode(newMode);
-                        if (newMode === 'Multiple Consignee') {
-                          setGdmDetails({...gdmDetails, toName: 'AS PER BILLS', deliveryAt: ''});
-                          setSelectedConsigneeData(null);
-                        } else {
-                          setGdmDetails({...gdmDetails, toName: '', deliveryAt: ''});
-                        }
-                      }}
-                    >
-                      <option>Multiple Consignee</option>
-                      <option>Single Consignee</option>
-                    </select>
-                  </div>
-                  {consigneeMode === 'Single Consignee' && (
-                    <div className="mt-1">
-                      <AsyncSearchableSelect 
-                        id="consignee-select"
-                        nextFocusId="gdm-gc-search"
-                        label="Select Consignee"
-                        fetchOptions={fetchConsigneesAsync}
-                        value={selectedConsigneeData?.id?.toString() || ''}
-                        onChange={handleConsigneeChange}
-                        placeholder="Search consignee..."
-                        className="[&>div>button]:h-9 [&>div>button]:bg-white [&>div>button]:border-slate-200"
-                      />
-                    </div>
-                  )}
-                  <p className="text-[9px] text-slate-400 font-medium leading-tight">
-                    {consigneeMode === 'Multiple Consignee' 
-                      ? "Each GC can have a different consignee." 
-                      : "All GCs in this GDM are for one consignee."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </GlassCard>
+          <GdmDocumentDetails 
+              gdmNumberDisplay={gdmNumberDisplay}
+              gdmDetails={gdmDetails}
+              setGdmDetails={setGdmDetails}
+              consigneeMode={consigneeMode}
+              setConsigneeMode={setConsigneeMode}
+              selectedConsigneeData={selectedConsigneeData}
+              setSelectedConsigneeData={setSelectedConsigneeData}
+              fetchConsigneesAsync={fetchConsigneesAsync}
+              handleConsigneeChange={handleConsigneeChange}
+            />
         </div>
       </div>
 
       {/* BOTTOM ROW: Despatch List */}
       <div className="mt-4">
-        <GlassCard className="h-full flex flex-col">
-            <div className="flex flex-wrap gap-4 justify-between items-center mb-5 pb-4 border-b border-slate-100">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="bg-amber-50 text-amber-600 p-2 rounded-lg shadow-inner border border-amber-100/50"><FileText size={18} /></div>
-                  <h3 className="font-bold text-lg text-slate-800 tracking-tight whitespace-nowrap">Despatch List</h3>
-                </div>
-                
-                <div className="hidden sm:flex items-center bg-slate-100/50 border border-slate-200 rounded-lg p-0.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] transition-all">
-                   <select 
-                     className="h-8 px-2.5 bg-transparent text-xs font-bold text-slate-600 focus:outline-none cursor-pointer"
-                     value={freightMode}
-                     onChange={e => setFreightMode(e.target.value)}
-                   >
-                     <option>Use Individual GC Freight</option>
-                     <option>Overall Rate for GDM</option>
-                   </select>
-                   {freightMode === 'Overall Rate for GDM' && (
-                     <div className="flex items-center h-8 bg-white border border-slate-200 rounded-md px-2 ml-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
-                       <span className="text-[10px] font-bold text-slate-400 mr-1">₹</span>
-                       <input 
-                         type="number" 
-                         className="w-20 bg-transparent text-xs font-black text-emerald-700 focus:outline-none placeholder-slate-300" 
-                         placeholder="Amount" 
-                         value={overallRate} 
-                         onChange={e => setOverallRate(e.target.value)} 
-                       />
-                     </div>
-                   )}
-                </div>
-              </div>
-                 {/* Infinite Scroll Observer */}
-                {page < totalPages && (
-                  <div 
-                    className="h-10 mt-4 flex items-center justify-center px-2"
-                    ref={(el) => {
-                      if (!el) return;
-                      const observer = new IntersectionObserver(
-                        (entries) => {
-                          if (entries[0].isIntersecting) {
-                            setPage(p => p + 1);
-                          }
-                        },
-                        { threshold: 1.0 }
-                      );
-                      observer.observe(el);
-                      return () => observer.disconnect();
-                    }}
-                  >
-                    <div className="animate-pulse text-xs font-bold text-slate-500">Loading more...</div>
-                  </div>
-                )}
-              
-              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200/60 shadow-inner shrink-0 w-full sm:w-auto overflow-x-auto">
-                {success && (
-                  <div className="h-9 px-3 bg-emerald-100 text-emerald-800 rounded-lg text-[11px] font-black tracking-wide flex items-center whitespace-nowrap border border-emerald-200 animate-in fade-in slide-in-from-right-2 duration-300">
-                    ✓ {success}
-                  </div>
-                )}
-                {error && (
-                  <div className="h-9 px-3 bg-rose-100 text-rose-800 rounded-lg text-[11px] font-black tracking-wide flex items-center whitespace-nowrap border border-rose-200 animate-in fade-in slide-in-from-right-2 duration-300">
-                    ⚠️ {error}
-                  </div>
-                )}
-                <div className="flex flex-col group w-48">
-                  <div className="flex h-9 rounded-lg overflow-hidden border border-slate-200 bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
-                    <span className="flex items-center justify-center px-2 bg-slate-50 text-slate-500 font-bold text-xs border-r border-slate-200">
-                      {gdmCompanyMode === 'A' ? 'AP' : 'BELL'}-
-                    </span>
-                    <input 
-                      id="gdm-gc-search"
-                      placeholder="GC Number"
-                      className="w-full px-2 text-sm font-black text-indigo-900 bg-transparent outline-none" 
-                      value={searchGcText} 
-                      onChange={e => setSearchGcText(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearchGc(); } }}
-                    />
-                  </div>
-                </div>
-                <Button 
-                  variant="primary"
-                  onClick={handleSearchGc}
-                  disabled={loading}
-                  className="h-9 px-4 text-xs shadow-sm flex items-center gap-1.5"
-                >
-                  <Search size={14} /> Add
-                </Button>
-              </div>
-            </div>
-
-            {/* Bulk Generate Ribbon */}
-            {gcs.length > 0 && gcs.some(gc => gc.ewbStatus === 'Expired' || gc.ewbStatus === 'Pending') && (
-              <div className="mb-4 px-4 py-3 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">⚠️</span>
-                  <div>
-                    <h4 className="text-sm font-bold text-amber-900 tracking-tight">E-Way Bill Action Required</h4>
-                    <p className="text-[11px] font-semibold text-amber-700">Some GCs have expired or missing E-Way Bills. Regenerate them before dispatching.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex-1 overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[700px]">
-                <thead>
-                  <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                    <th className="p-3 pl-4 rounded-tl-lg">GC No</th>
-                    <th className="p-3">EWB Status</th>
-                    <th className="p-3">Consignor</th>
-                    <th className="p-3">Consignee</th>
-                    <th className="p-3 text-center">Packages</th>
-                    <th className="p-3 text-right">Freight</th>
-                    <th className="p-3 text-center rounded-tr-lg">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm font-semibold text-slate-700 divide-y divide-slate-100">
-                  {gcs.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="p-12 text-center text-slate-400 font-medium">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <PackageCheck size={32} className="opacity-20" />
-                          <p>Scan or type a GC Number above to add it to the Despatch Memo</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    gcs.map(gc => {
-                      let c = 0, n = 0, b = 0, totalPkgs = 0;
-                      if (gc.goods) {
-                        gc.goods.forEach(item => {
-                          const qty = parseInt(item.articleCount) || 0;
-                          totalPkgs += qty;
-                          const unitStr = (item.units || '').toLowerCase().trim();
-                          const match = allUnitOptions.find(o => 
-                            (o.label || '').toLowerCase().trim() === unitStr || 
-                            (o.code || '').toLowerCase().trim() === unitStr ||
-                            (o.category || '').toLowerCase().trim() === unitStr
-                          );
-                          const cat = match ? (match.category || '').toLowerCase() : null;
-                          if (cat === 'cases') c += qty;
-                          else if (cat === 'cartons') n += qty;
-                          else if (cat === 'bundles') b += qty;
-                        });
-                      }
-                      
-                      const tallyParts = [];
-                      if (c > 0) tallyParts.push(`${c} C/S`);
-                      if (n > 0) tallyParts.push(`${n} C/N`);
-                      if (b > 0) tallyParts.push(`${b} BD/S`);
-                      const otherPkgs = totalPkgs - (c + n + b);
-                      if (otherPkgs > 0) tallyParts.push(`${otherPkgs} OTH`);
-                      const tallyStr = tallyParts.length > 0 ? tallyParts.join(' + ') : '0';
-                      
-                      // Status Badge Logic
-                      let badgeClass = "bg-slate-100 text-slate-600";
-                      if (gc.ewbStatus === 'Valid') badgeClass = "bg-emerald-100 text-emerald-700 border-emerald-200";
-                      else if (gc.ewbStatus === 'Expired') badgeClass = "bg-rose-100 text-rose-700 border-rose-200";
-                      else if (gc.ewbStatus === 'Expiring') badgeClass = "bg-amber-100 text-amber-700 border-amber-200";
-                      else if (gc.ewbStatus === 'Pending') badgeClass = "bg-blue-100 text-blue-700 border-blue-200";
-
-                      return (
-                        <tr key={gc.id} className="hover:bg-indigo-50/30 transition-colors group">
-                          <td className="p-3 pl-4 text-indigo-700 font-bold">{gc.gcNumber}</td>
-                          <td className="p-3">
-                            <div className="flex flex-col items-start gap-1.5">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
-                                {gc.ewbStatus || 'Unknown'} {gc.ewbAge > 0 ? `(${gc.ewbAge}d)` : ''}
-                              </span>
-                              {gc.ewbNumber && (
-                                <span className="text-xs font-mono text-indigo-700 font-bold bg-indigo-50/50 px-1.5 py-0.5 rounded border border-indigo-100">
-                                  {gc.ewbNumber.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3')}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 truncate max-w-[150px]">{gc.consignor?.name || 'N/A'}</td>
-                          <td className="p-3 truncate max-w-[150px]">{gc.consignee?.name || 'N/A'}</td>
-                          <td className="p-3 text-center">
-                            <div className="flex flex-col items-center">
-                              <span className="text-slate-900 font-black">{totalPkgs}</span>
-                              {tallyStr !== '0' && <span className="text-[10px] text-slate-500 font-bold">{tallyStr}</span>}
-                            </div>
-                          </td>
-                          <td className="p-3 text-right tabular-nums">₹{gc.freightTotal?.toFixed(2) || '0.00'}</td>
-                          <td className="p-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              {(gc.ewbStatus === 'Expired' || gc.ewbStatus === 'Expiring') && (
-                                <Button 
-                                  variant="icon"
-                                  title="Extend / Update Part-B"
-                                  className="text-amber-500 hover:text-amber-700 bg-transparent hover:bg-amber-50 p-1.5 w-8 h-8"
-                                >
-                                  <Truck size={16} />
-                                </Button>
-                              )}
-                              <Button variant="iconDanger" onClick={() => removeGc(gc.id)} className="p-1.5 w-8 h-8 bg-transparent">
-                                <Trash2 size={16} />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Totals Footer */}
-            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 p-4 rounded-xl border">
-              
-              <div className="flex flex-wrap gap-6">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cases</span>
-                  <span className="text-2xl font-black text-indigo-900">{totals.cases}</span>
-                </div>
-                <div className="flex flex-col border-l border-slate-200 pl-4">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cartons</span>
-                  <span className="text-2xl font-black text-indigo-900">{totals.cartons}</span>
-                </div>
-                <div className="flex flex-col border-l border-slate-200 pl-4">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Bundles</span>
-                  <span className="text-2xl font-black text-indigo-900">{totals.bundles}</span>
-                </div>
-                {totals.others > 0 && (
-                  <div className="flex flex-col border-l border-slate-200 pl-4">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Others</span>
-                    <span className="text-2xl font-black text-slate-700">{totals.others}</span>
-                  </div>
-                )}
-                <div className="flex flex-col border-l border-slate-200 pl-4">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Packages</span>
-                  <span className="text-2xl font-black text-indigo-900">{totals.total}</span>
-                </div>
-                <div className="flex flex-col border-l border-slate-200 pl-4">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Freight</span>
-                  <span className="text-2xl font-black text-emerald-600">₹{totals.totalFreightAmount.toFixed(2)}</span>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                 <Button 
-                   variant="secondary"
-                   onClick={() => handleSaveGDM('Created')}
-                   disabled={loading || gcs.length === 0}
-                   className="h-12 px-6 text-sm shadow-sm flex items-center gap-2 whitespace-nowrap"
-                 >
-                   <Save size={16} className={loading ? 'animate-pulse' : ''} /> Save Draft
-                 </Button>
-                 <Button 
-                   variant="primary"
-                   onClick={() => setIsDispatchDrawerOpen(true)}
-                   className="h-12 px-6 sm:px-8 bg-slate-800 hover:bg-slate-700 shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center gap-3 whitespace-nowrap !transition-all"
-                 >
-                    Proceed to Dispatch <ChevronDown className="-rotate-90" size={20} />
-                 </Button>
-              </div>
-
-            </div>
-        </GlassCard>
+        <DespatchListTable 
+            gcs={gcs}
+            gdmCompanyMode={gdmCompanyMode}
+            freightMode={freightMode}
+            setFreightMode={setFreightMode}
+            overallRate={overallRate}
+            setOverallRate={setOverallRate}
+            searchGcText={searchGcText}
+            setSearchGcText={setSearchGcText}
+            handleSearchGc={handleSearchGc}
+            removeGc={removeGc}
+            totals={totals}
+            allUnitOptions={allUnitOptions}
+            loading={loading}
+            success={success}
+            error={error}
+            handleSaveGDM={handleSaveGDM}
+            setIsDispatchDrawerOpen={setIsDispatchDrawerOpen}
+            page={page}
+            totalPages={totalPages}
+            setPage={setPage}
+          />
       </div>
 
       {/* HISTORY DRAWER */}
-      <div className={`fixed inset-y-0 right-0 w-80 bg-white/95 backdrop-blur-xl shadow-2xl border-l border-slate-200 transform transition-transform duration-300 z-50 flex flex-col ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed inset-y-0 right-0 w-80 bg-white shadow-2xl border-l border-slate-200 transform transition-transform duration-300 z-50 flex flex-col ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
            <h2 className="font-bold flex items-center gap-2 text-slate-800"><Clock size={18} className="text-indigo-500" /> Recent History</h2>
            <button onClick={() => setIsHistoryOpen(false)} className="p-1 hover:bg-slate-200 rounded-md text-slate-500"><X size={16} /></button>
@@ -1062,10 +689,10 @@ export default function GdmEntry() {
       </div>
 
       {/* OVERLAY */}
-      {(isHistoryOpen || isDispatchDrawerOpen) && <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => { setIsHistoryOpen(false); setIsDispatchDrawerOpen(false); }} />}
+      {(isHistoryOpen || isDispatchDrawerOpen) && <div className="fixed inset-0 bg-slate-900/30 z-40 transition-opacity" onClick={() => { setIsHistoryOpen(false); setIsDispatchDrawerOpen(false); }} />}
 
       {/* DISPATCH DRAWER */}
-      <div className={`fixed inset-y-0 right-0 w-full sm:w-[450px] bg-white/95 backdrop-blur-xl shadow-2xl border-l border-slate-200 transform transition-transform duration-300 z-50 flex flex-col ${isDispatchDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed inset-y-0 right-0 w-full sm:w-[450px] bg-white shadow-2xl border-l border-slate-200 transform transition-transform duration-300 z-50 flex flex-col ${isDispatchDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50/80">
            <div>
              <h2 className="text-2xl font-black flex items-center gap-2 text-slate-800">Dispatch Operations</h2>

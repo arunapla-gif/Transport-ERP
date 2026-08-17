@@ -2,7 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { api } from '../api';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
 import { Button } from '../components/ui/Button';
-import { Search, Calculator, FileText, CheckCircle2 } from 'lucide-react';
+import { Search, FileText, CheckCircle2 } from 'lucide-react';
+import FreightCalculationCard from '../components/entry/FreightCalculationCard';
+import RecentFreightActivities from '../components/entry/RecentFreightActivities';
 
 // Specialized compact input primitives for the Premium layout
 const DenseInput = ({ label, className = "", ...props }) => (
@@ -226,93 +228,25 @@ export default function FreightEntry() {
           </GlassCard>
 
           {/* 3. FREIGHT CALCULATION */}
-          <GlassCard>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg shadow-inner border border-emerald-100/50"><Calculator size={16} /></div>
-              <h3 className="font-bold text-sm text-slate-800 tracking-tight">Freight Calculation</h3>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
-              <DenseInput 
-                label="Rate Per Article ₹" 
-                type="number" 
-                value={freightRate} 
-                onChange={e => setFreightRate(e.target.value)} 
-                className="[&>input]:font-bold [&>input]:text-slate-800"
-              />
-              
-              <div className="flex flex-col group">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Total Freight</label>
-                <div className="h-9 px-3 border border-indigo-100 rounded-lg bg-indigo-50/50 text-base font-black text-indigo-900 flex items-center shadow-inner">
-                  {totalFreight.toFixed(2)}
-                </div>
-              </div>
-
-              <DenseInput 
-                label="Advance Received ₹" 
-                type="number" 
-                value={advancePaid} 
-                onChange={e => setAdvancePaid(e.target.value)} 
-              />
-              
-              <div className="flex flex-col group">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Balance</label>
-                <div className={`h-9 px-3 border rounded-lg text-base font-black flex items-center shadow-inner
-                  ${balanceFreight > 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
-                  {balanceFreight.toFixed(2)}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100">
-               <Button variant="secondary" type="button" tabIndex="-1" onClick={() => setActiveGc(null)} className="h-9 px-4 text-xs shadow-sm flex items-center">
-                 Cancel
-               </Button>
-               <Button variant="success" type="button" onClick={handleSave} disabled={loading} className="h-9 px-6 text-xs shadow-sm flex items-center gap-1.5">
-                 <CheckCircle2 size={14} className={loading ? 'animate-pulse' : ''} /> {loading ? 'Saving...' : 'Save Freight Entry'}
-               </Button>
-            </div>
-          </GlassCard>
+          <FreightCalculationCard
+            freightRate={freightRate}
+            setFreightRate={setFreightRate}
+            totalFreight={totalFreight}
+            advancePaid={advancePaid}
+            setAdvancePaid={setAdvancePaid}
+            balanceFreight={balanceFreight}
+            setActiveGc={setActiveGc}
+            handleSave={handleSave}
+            loading={loading}
+          />
         </>
       )}
 
       {/* 4. RECENT ACTIVITY AUDIT FEED */}
-      {!activeGc && recentActivities.length > 0 && (
-        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4">
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <div className="bg-slate-100 text-slate-500 p-1.5 rounded-lg border border-slate-200"><FileText size={16} /></div>
-            <h3 className="font-bold text-sm text-slate-700 tracking-tight uppercase">Recent Freight Entries</h3>
-          </div>
-          <GlassCard className="!p-0 border-slate-200/60 shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/80 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                    <th className="p-3 pl-5">GC Number</th>
-                    <th className="p-3">Consignee</th>
-                    <th className="p-3 text-center">Bundles</th>
-                    <th className="p-3 text-right">Freight Total</th>
-                    <th className="p-3 text-right pr-5">Advance</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm font-semibold text-slate-600 divide-y divide-slate-50">
-                  {recentActivities.map((gc, i) => {
-                    const bundles = gc.goods ? gc.goods.reduce((s, item) => s + (item.articleCount || 0), 0) : 0;
-                    return (
-                      <tr key={gc.id || i} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-3 pl-5 font-bold text-indigo-700">{gc.gcNumber}</td>
-                        <td className="p-3 truncate max-w-[200px]">{gc.consignee?.name || '-'}</td>
-                        <td className="p-3 text-center text-slate-800 font-bold">{bundles}</td>
-                        <td className="p-3 text-right font-black text-emerald-600">₹{gc.freightTotal?.toFixed(2)}</td>
-                        <td className="p-3 text-right pr-5 font-medium text-slate-500">₹{gc.advancePaid?.toFixed(2) || '0.00'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </GlassCard>
-        </div>
-      )}
+      <RecentFreightActivities
+        activeGc={activeGc}
+        recentActivities={recentActivities}
+      />
 
     </div>
   );

@@ -26,9 +26,10 @@ const fetchWithWakeupIndicator = async (url, options) => {
     dispatchDbStatus('waking');
   }, 1200);
 
-  // Add a hard timeout of 15 seconds to prevent hanging on dead Wi-Fi
+  // Add a hard timeout (15s default, 60s for long running tests like sandbox)
+  const isLongRunning = url.includes('sandbox-test') || url.includes('print');
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), isLongRunning ? 60000 : 15000);
   const finalOptions = { ...options, signal: controller.signal };
 
   try {

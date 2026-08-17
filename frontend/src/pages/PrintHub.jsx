@@ -3,9 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Printer, FileText, PackageCheck, Search, CheckSquare, Download, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../api';
-import { generateGcPdfBlob } from '../utils/pdfGenerator';
-import { generateGdmPdfBlob } from '../utils/gdmPdfGenerator';
 import { Button } from '../components/ui/Button';
+import { PrintCopiesModal, PrintFormatModal } from '../components/print/PrintHubModals';
+import { BatchPrintSection } from '../components/print/BatchPrintSection';
 
 export default function PrintHub() {
   const navigate = useNavigate();
@@ -344,121 +344,28 @@ export default function PrintHub() {
     <div className="max-w-6xl mx-auto space-y-6 pb-10 pt-4" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       
       {/* Selection Modal */}
-      {showCopiesModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center print:hidden p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-            <h2 className="text-xl font-black text-slate-800 mb-4 text-center">Print GC Copies</h2>
-            <p className="text-sm font-semibold text-slate-500 mb-6 text-center">Select which copies you want to print.</p>
-            
-            <div className="space-y-3 mb-8">
-              {['CONSIGNOR COPY', 'CONSIGNEE COPY', 'LORRY COPY'].map(copy => (
-                <label key={copy} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${selectedCopies.includes(copy) ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-300'}`}>
-                  <input 
-                    type="checkbox" 
-                    className="w-5 h-5 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500"
-                    checked={selectedCopies.includes(copy)}
-                    onChange={() => toggleCopy(copy)}
-                  />
-                  <span className={`font-bold ${selectedCopies.includes(copy) ? 'text-indigo-900' : 'text-slate-600'}`}>{copy}</span>
-                </label>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-6">
-              <Button variant="custom" 
-                onClick={() => setShowCopiesModal(false)}
-                className="px-3 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold text-sm flex justify-center items-center"
-              >
-                Cancel
-              </Button>
-              <Button variant="custom" 
-                onClick={handleDownloadPdfGc}
-                disabled={selectedCopies.length === 0 || isPrinting}
-                className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-bold text-sm flex justify-center items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download size={16} />
-                PDF
-              </Button>
-              <Button variant="custom" 
-                onClick={confirmPrint}
-                className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold text-sm flex justify-center items-center gap-1.5"
-              >
-                <FileText size={16} />
-                Preview
-              </Button>
-              <Button variant="custom" 
-                onClick={handleSilentPrintGc}
-                disabled={selectedCopies.length === 0 || isPrinting}
-                className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
-              >
-                {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
-                Print
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PrintCopiesModal 
+        show={showCopiesModal}
+        onClose={() => setShowCopiesModal(false)}
+        selectedCopies={selectedCopies}
+        toggleCopy={toggleCopy}
+        handleDownloadPdfGc={handleDownloadPdfGc}
+        confirmPrint={confirmPrint}
+        handleSilentPrintGc={handleSilentPrintGc}
+        isPrinting={isPrinting}
+      />
 
       {/* GDM Format Modal */}
-      {showGdmFormatModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center print:hidden p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-            <h2 className="text-xl font-black text-slate-800 mb-4 text-center">Select Print Format</h2>
-            <p className="text-sm font-semibold text-slate-500 mb-6 text-center">Choose the format for your Delivery Memo.</p>
-            
-            <div className="space-y-3 mb-8">
-              {[
-                { id: 'gdm', label: 'Standard GDM' },
-                { id: 'cewb', label: 'CEWB Format' },
-                { id: 'gdm-combined', label: 'Combined (Both)' }
-              ].map(format => (
-                <label key={format.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${gdmPrintType === format.id ? 'border-emerald-600 bg-emerald-50/50' : 'border-slate-200 hover:border-emerald-300'}`}>
-                  <input 
-                    type="radio" 
-                    name="gdmFormat"
-                    className="w-5 h-5 text-emerald-600 border-slate-300 focus:ring-emerald-500"
-                    checked={gdmPrintType === format.id}
-                    onChange={() => setGdmPrintType(format.id)}
-                  />
-                  <span className={`font-bold ${gdmPrintType === format.id ? 'text-emerald-900' : 'text-slate-600'}`}>{format.label}</span>
-                </label>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-6">
-              <Button variant="custom" 
-                onClick={() => setShowGdmFormatModal(false)}
-                className="px-3 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 font-bold text-sm flex justify-center items-center"
-              >
-                Cancel
-              </Button>
-              <Button variant="custom" 
-                onClick={handleDownloadPdfGdm}
-                disabled={isPrinting}
-                className="px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 font-bold text-sm flex justify-center items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download size={16} />
-                PDF
-              </Button>
-              <Button variant="custom" 
-                onClick={confirmGdmPrint}
-                className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-bold text-sm flex justify-center items-center gap-1.5"
-              >
-                <FileText size={16} />
-                Preview
-              </Button>
-              <Button variant="custom" 
-                onClick={handleSilentPrintGdm}
-                disabled={isPrinting}
-                className="px-3 py-2 bg-yellow-500 text-slate-900 rounded-lg hover:bg-yellow-400 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5"
-              >
-                {isPrinting ? <div className="animate-spin h-4 w-4 border-b-2 border-slate-900 rounded-full"></div> : <Zap size={16} />}
-                Print
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PrintFormatModal 
+        show={showGdmFormatModal}
+        onClose={() => setShowGdmFormatModal(false)}
+        gdmPrintType={gdmPrintType}
+        setGdmPrintType={setGdmPrintType}
+        handleDownloadPdfGdm={handleDownloadPdfGdm}
+        confirmGdmPrint={confirmGdmPrint}
+        handleSilentPrintGdm={handleSilentPrintGdm}
+        isPrinting={isPrinting}
+      />
 
       <div className="flex items-center gap-3 mb-8">
         <div className="bg-indigo-100 text-indigo-700 p-2.5 rounded-xl shadow-sm">
@@ -576,156 +483,29 @@ export default function PrintHub() {
 
 
       {/* BATCH PRINTING SECTION */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-        
-        {/* Tabs */}
-        <div className="flex border-b border-slate-200 bg-slate-50/50 pt-2 px-4 gap-2">
-          <Button variant="custom" 
-            onClick={() => setActiveTab('GC')}
-            className={`px-6 py-3 font-bold text-sm rounded-t-lg transition-colors border-b-2 ${activeTab === 'GC' ? 'bg-white border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}
-          >
-            All GCs
-          </Button>
-          <Button variant="custom" 
-            onClick={() => setActiveTab('GDM')}
-            className={`px-6 py-3 font-bold text-sm rounded-t-lg transition-colors border-b-2 ${activeTab === 'GDM' ? 'bg-white border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}
-          >
-            All GDMs
-          </Button>
-        </div>
-
-        {/* Tab Content Header */}
-        <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between bg-white gap-4">
-          <div>
-            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-              <CheckSquare className={activeTab === 'GC' ? "text-indigo-600" : "text-emerald-600"} size={20} />
-              Batch Print {activeTab === 'GC' ? 'GCs' : 'GDMs'}
-            </h2>
-            <p className="text-xs font-semibold text-slate-500 mt-0.5">Select multiple documents to print them all in one go.</p>
-          </div>
-          
-          <div className="flex gap-4 items-center w-full md:w-auto">
-             <div className="relative flex-1 md:w-64">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder={`Search ${activeTab === 'GC' ? 'GCs...' : 'GDMs...'}`} 
-                  value={activeTab === 'GC' ? gcSearchTerm : gdmSearchTerm}
-                  onChange={(e) => activeTab === 'GC' ? setGcSearchTerm(e.target.value) : setGdmSearchTerm(e.target.value)}
-                  className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-lg bg-slate-50 text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                />
-             </div>
-             
-            {activeTab === 'GC' ? (
-              <Button variant="custom" 
-                onClick={(e) => handleOpenCopiesModal(e, selectedGcs.join(','))}
-                disabled={selectedGcs.length === 0}
-                className={`h-10 px-6 shrink-0 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all shadow-sm ${selectedGcs.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Printer size={16} /> Print Selected ({selectedGcs.length})
-              </Button>
-            ) : (
-              <Button variant="custom" 
-                onClick={(e) => handleOpenGdmFormatModal(e, selectedGdms.join(','))}
-                disabled={selectedGdms.length === 0}
-                className={`h-10 px-6 shrink-0 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition-all shadow-sm ${selectedGdms.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Printer size={16} /> Print Selected ({selectedGdms.length})
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Tab Content Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              {activeTab === 'GC' ? (
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-3 w-12 text-center">
-                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" onChange={toggleAllGcs} checked={recentGcs.length > 0 && selectedGcs.length === recentGcs.length} />
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">GC No.</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Consignor</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Consignee</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Bundles</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Freight</th>
-                </tr>
-              ) : (
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-3 w-12 text-center">
-                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" onChange={toggleAllGdms} checked={recentGdms.length > 0 && selectedGdms.length === recentGdms.length} />
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">GDM No.</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Vehicle</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Destination</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">GCs Linked</th>
-                </tr>
-              )}
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {loading && recentGcs.length === 0 && recentGdms.length === 0 ? (
-                <tr><td colSpan="7" className="p-8 text-center text-slate-400 font-semibold animate-pulse">Loading records...</td></tr>
-              ) : activeTab === 'GC' ? (
-                <>
-                  {recentGcs.length === 0 ? (
-                    <tr><td colSpan="7" className="p-8 text-center text-slate-400 font-semibold">No GCs found.</td></tr>
-                  ) : (
-                    recentGcs.map((gc) => (
-                      <tr key={gc.id} className={`hover:bg-slate-50 transition-colors cursor-pointer ${selectedGcs.includes(gc.gcNumber) ? 'bg-indigo-50/50' : ''}`} onClick={() => toggleGcSelection(gc.gcNumber)}>
-                        <td className="px-4 py-3 text-center">
-                          <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked={selectedGcs.includes(gc.gcNumber)} readOnly />
-                        </td>
-                        <td className="px-4 py-3"><span className="font-bold text-slate-800">{gc.gcNumber}</span></td>
-                        <td className="px-4 py-3 text-sm font-medium text-slate-600">{gc.date ? new Date(gc.date).toLocaleDateString('en-GB') : '-'}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gc.consignor?.name || '-'}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gc.consignee?.name || '-'}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-slate-800 text-center">{gc.goods?.reduce((sum, g) => sum + (g.articleCount || 0), 0) || 0}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-emerald-600 text-right">₹{gc.freightTotal?.toFixed(2) || '0.00'}</td>
-                      </tr>
-                    ))
-                  )}
-                  {hasMoreGcs && (
-                    <tr ref={gcObserverRef}>
-                      <td colSpan="7" className="p-6 text-center text-slate-500 font-medium">
-                        {loading ? <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div> Loading more...</span> : 'Scroll for more'}
-                      </td>
-                    </tr>
-                  )}
-                </>
-              ) : (
-                <>
-                  {recentGdms.length === 0 ? (
-                    <tr><td colSpan="6" className="p-8 text-center text-slate-400 font-semibold">No GDMs found.</td></tr>
-                  ) : (
-                    recentGdms.map((gdm) => (
-                      <tr key={gdm.id} className={`hover:bg-slate-50 transition-colors cursor-pointer ${selectedGdms.includes(gdm.gdmNumber) ? 'bg-emerald-50/50' : ''}`} onClick={() => toggleGdmSelection(gdm.gdmNumber)}>
-                        <td className="px-4 py-3 text-center">
-                          <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" checked={selectedGdms.includes(gdm.gdmNumber)} readOnly />
-                        </td>
-                        <td className="px-4 py-3"><span className="font-bold text-slate-800">{gdm.gdmNumber}</span></td>
-                        <td className="px-4 py-3 text-sm font-medium text-slate-600">{gdm.date ? new Date(gdm.date).toLocaleDateString('en-GB') : '-'}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gdm.vehicle?.vehicleNumber || '-'}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-slate-600 truncate max-w-[200px]">{gdm.toName || '-'}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-slate-800 text-right">{gdm.gcs?.length || 0}</td>
-                      </tr>
-                    ))
-                  )}
-                  {hasMoreGdms && (
-                    <tr ref={gdmObserverRef}>
-                      <td colSpan="6" className="p-6 text-center text-slate-500 font-medium">
-                        {loading ? <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div> Loading more...</span> : 'Scroll for more'}
-                      </td>
-                    </tr>
-                  )}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <BatchPrintSection
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        gcSearchTerm={gcSearchTerm}
+        setGcSearchTerm={setGcSearchTerm}
+        gdmSearchTerm={gdmSearchTerm}
+        setGdmSearchTerm={setGdmSearchTerm}
+        handleOpenCopiesModal={handleOpenCopiesModal}
+        handleOpenGdmFormatModal={handleOpenGdmFormatModal}
+        selectedGcs={selectedGcs}
+        selectedGdms={selectedGdms}
+        toggleGcSelection={toggleGcSelection}
+        toggleGdmSelection={toggleGdmSelection}
+        toggleAllGcs={toggleAllGcs}
+        toggleAllGdms={toggleAllGdms}
+        recentGcs={recentGcs}
+        recentGdms={recentGdms}
+        hasMoreGcs={hasMoreGcs}
+        hasMoreGdms={hasMoreGdms}
+        loading={loading}
+        gcObserverRef={gcObserverRef}
+        gdmObserverRef={gdmObserverRef}
+      />
 
       {/* HARDWARE PRINT AGENT SECTION */}
       <div className="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 overflow-hidden mt-6 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">

@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import ScannerModal from '../components/ui/ScannerModal';
-import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Button } from '../components/ui/Button';
-import { Building2, Camera, PackageCheck, CheckCircle2, Save, Printer, Edit3, Smartphone, X } from 'lucide-react';
+import { Building2, Camera, PackageCheck, Smartphone, X } from 'lucide-react';
+import WarehouseInwardForm from '../components/entry/WarehouseInwardForm';
+import WarehouseRecentCard from '../components/entry/WarehouseRecentCard';
 
 const GlassCard = ({ children, className = "" }) => (
   <div className={`bg-white/90 backdrop-blur-2xl border border-white/60 rounded-xl p-4 md:p-5 shadow-[0_4px_20px_rgb(79,70,229,0.04)] relative transition-all duration-300 hover:shadow-[0_4px_20px_rgb(79,70,229,0.06)] ${className}`}>
@@ -365,135 +366,38 @@ export default function WarehouseEntry() {
       </GlassCard>
 
       {/* Inward Form Fields */}
-      <GlassCard className="animate-in fade-in slide-in-from-bottom-4 duration-500 print:hidden">
-        <h3 className="font-black text-slate-800 uppercase text-sm tracking-wider mb-4 md:mb-5 border-b border-slate-100 pb-2">
-          {editingId ? 'Edit Entry Details' : 'Entry Details'}
-        </h3>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
-          <SearchableSelect 
-            label="Consignor Name *" 
-            options={consignorOptions}
-            value={consignorName} 
-            onChange={val => setConsignorName(val)} 
-            placeholder="Search Consignor..."
-            className="[&>div:nth-of-type(1)]:h-12 [&>div:nth-of-type(1)]:md:h-10 [&>div:nth-of-type(1)]:bg-white/70 [&>div:nth-of-type(1)]:md:bg-white/50 [&>label]:text-[11px] md:[&>label]:text-[10px] [&_input]:text-base md:[&_input]:text-sm [&>div:nth-of-type(1)]:rounded-xl [&>div:nth-of-type(1)]:md:rounded-lg"
-          />
-          <SearchableSelect 
-            label="Consignee Name *" 
-            options={consigneeOptions}
-            value={consigneeName} 
-            onChange={val => {
-              setConsigneeName(val);
-              const found = consignees.find(c => c.name === val);
-              if (found && found.city) setConsigneeCity(found.city);
-            }} 
-            placeholder="Search Consignee..."
-            className="[&>div:nth-of-type(1)]:h-12 [&>div:nth-of-type(1)]:md:h-10 [&>div:nth-of-type(1)]:bg-white/70 [&>div:nth-of-type(1)]:md:bg-white/50 [&>label]:text-[11px] md:[&>label]:text-[10px] [&_input]:text-base md:[&_input]:text-sm [&>div:nth-of-type(1)]:rounded-xl [&>div:nth-of-type(1)]:md:rounded-lg"
-          />
-          <DenseInput 
-            label="Consignee City" 
-            placeholder="Enter City" 
-            value={consigneeCity} 
-            onChange={e => setConsigneeCity(e.target.value)} 
-          />
-          <DenseInput 
-            label="Articles (Qty) *" 
-            type="number" 
-            inputMode="numeric"
-            placeholder="0" 
-            value={articles} 
-            onChange={e => setArticles(e.target.value)} 
-          />
-          
-          <div className="flex flex-col group">
-            <label className="text-[11px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 transition-colors group-focus-within:text-indigo-600">Godown No *</label>
-            <select 
-              className="w-full h-12 md:h-10 px-3 border border-slate-200 rounded-xl md:rounded-lg bg-white/70 md:bg-white/50 text-base md:text-sm font-semibold md:font-medium text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 hover:border-slate-300 transition-all shadow-sm appearance-none"
-              value={godownNo}
-              onChange={e => setGodownNo(e.target.value)}
-            >
-              <option value="">Select Godown</option>
-              {godowns.map(g => (
-                <option key={g.id} value={g.name}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-          
-          <DenseInput 
-            label="Remarks" 
-            placeholder="Optional remarks..." 
-            value={remarks} 
-            onChange={e => setRemarks(e.target.value)} 
-          />
-        </div>
-        
-        <div className="mt-8 flex justify-end">
-          {editingId && (
-            <Button 
-              variant="secondary"
-              type="button"
-              onClick={() => {
-                setEditingId(null);
-                setEwayBillNo(''); setConsignorName(''); setConsigneeName(''); setConsigneeCity(''); setArticles(''); setGodownNo(''); setRemarks('');
-              }}
-              className="w-full sm:w-auto h-14 md:h-12 px-6 mr-3 text-lg md:text-base flex items-center justify-center gap-2"
-            >
-              Cancel Edit
-            </Button>
-          )}
-          <Button 
-            variant="primary"
-            onClick={handleInward}
-            disabled={loading}
-            className={`w-full sm:w-auto h-14 md:h-12 px-10 text-lg md:text-base flex items-center justify-center gap-2 ${editingId ? 'bg-blue-600 hover:bg-blue-500' : 'bg-emerald-600 hover:bg-emerald-500'}`}
-          >
-            <Save size={20} /> {loading ? 'Saving...' : (editingId ? 'Update Entry' : 'Confirm Entry')}
-          </Button>
-        </div>
-      </GlassCard>
+      <WarehouseInwardForm
+        editingId={editingId}
+        loading={loading}
+        consignorName={consignorName}
+        setConsignorName={setConsignorName}
+        consigneeName={consigneeName}
+        setConsigneeName={setConsigneeName}
+        consigneeCity={consigneeCity}
+        setConsigneeCity={setConsigneeCity}
+        articles={articles}
+        setArticles={setArticles}
+        godownNo={godownNo}
+        setGodownNo={setGodownNo}
+        remarks={remarks}
+        setRemarks={setRemarks}
+        consignorOptions={consignorOptions}
+        consigneeOptions={consigneeOptions}
+        godowns={godowns}
+        consignees={consignees}
+        handleInward={handleInward}
+        cancelEdit={() => {
+          setEditingId(null);
+          setEwayBillNo(''); setConsignorName(''); setConsigneeName(''); setConsigneeCity(''); setArticles(''); setGodownNo(''); setRemarks('');
+        }}
+      />
 
       {/* Last Saved Entry Display */}
-      {recentEntry && (
-        <GlassCard className="mt-2 border-l-4 border-l-indigo-500 animate-in fade-in slide-in-from-bottom-4 duration-500 print:hidden">
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">
-                Last Saved Entry <span className="text-indigo-600 ml-1">#{recentEntry.receiptNo}</span>
-              </h3>
-              <p className="text-[10px] font-bold text-slate-500">
-                {new Date(recentEntry.createdAt).toLocaleString('en-IN')}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="icon" onClick={handleEditRecent} className="p-2 w-9 h-9 text-blue-600 bg-blue-50 hover:bg-blue-100 bg-transparent flex items-center justify-center" title="Edit">
-                <Edit3 size={16} />
-              </Button>
-              <Button variant="icon" onClick={handlePrintRecent} className="p-2 w-9 h-9 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 bg-transparent flex items-center justify-center" title="Print Slip">
-                <Printer size={16} />
-              </Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Consignor</p>
-              <p className="font-bold text-slate-800 truncate">{recentEntry.consignorName}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Consignee</p>
-              <p className="font-bold text-slate-800 truncate">{recentEntry.consigneeName}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Articles</p>
-              <p className="font-black text-indigo-600">{recentEntry.articles}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Godown</p>
-              <p className="font-bold text-slate-800">{recentEntry.godownNo}</p>
-            </div>
-          </div>
-        </GlassCard>
-      )}
+      <WarehouseRecentCard
+        recentEntry={recentEntry}
+        handleEditRecent={handleEditRecent}
+        handlePrintRecent={handlePrintRecent}
+      />
 
       {/* Print Layout for Single Slip (3.5in x 5in) */}
       <div className="hidden print:block font-sans text-black" style={{ width: '3.5in', height: '4.8in', margin: '0 auto', position: 'relative' }}>

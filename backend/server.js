@@ -81,9 +81,27 @@ prisma.$use(async (params, next) => {
 const PORT = process.env.PORT || 5000;
 
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : null;
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // Allow non-browser requests
+    
+    if (origin.startsWith('http://localhost:')) {
+      return callback(null, true); // Allow local development
+    }
+    
+    if (frontendUrl && origin === frontendUrl) {
+      return callback(null, true); // Allow production frontend
+    }
+    
+    return callback(new Error('Not allowed by CORS'));
+  }
+}));
+
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
 
@@ -122,91 +140,25 @@ const paidApiLimiter = rateLimit({
 
 app.use('/api', globalLimiter);
 
-// ==========================================
-// SYSTEM PULSE (For Google Apps Script Ping)
-// ==========================================
-app.get('/api/system-pulse', async (req, res) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
-    // 1. Total Inwards Today
-    const inwardsToday = await prisma.warehouseInward.count({
-      where: { createdAt: { gte: today } }
-    });
+// ==============================
+// MODULARIZED ROUTES
+// ==============================
+const authRoutes = require('./routes/auth');
+app.use('/api', authRoutes);
 
-    // 2. Total Pending GCs (Created but not dispatched)
-    const pendingGCs = await prisma.gC.count({
-      where: { status: 'Created' }
-    });
+const systemRoutes = require('./routes/system');
+app.use('/api', systemRoutes);
 
-    // 3. Total API Usage Today
-    const apiCallsToday = await prisma.apiUsageLog.count({
-      where: { timestamp: { gte: today } }
-    });
+const mastersRoutes = require('./routes/masters');
+app.use('/api', mastersRoutes);
 
-    // Determine System Health
-    const dbStatus = "Connected";
-    let urgentAlert = null;
+const freightRoutes = require('./routes/freight');
+app.use('/api', freightRoutes);
 
-    if (pendingGCs > 1000) {
-      urgentAlert = `Warning: High backlog! ${pendingGCs} GCs are pending dispatch.`;
-    } else if (apiCallsToday > 500) {
-      urgentAlert = `Warning: High API usage! ${apiCallsToday} API calls made today. Check limits.`;
-    }
+const warehouseRoutes = require('./routes/warehouse');
+app.use('/api', warehouseRoutes);
 
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      stats: {
-        inwardsToday,
-        pendingGCs,
-        apiCallsToday,
-        dbStatus
-      },
-      urgentAlert
-    });
-  } catch (error) {
-    console.error('System Pulse Error:', error);
-    res.status(500).json({ error: 'Failed to fetch pulse.' });
-  }
-});
-
-app.post('/api/login', loginLimiter, async (req, res) => {
-  try {
-    const { pin } = req.body;
-    
-    // Fallback/Bootstrap Admin PIN from .env (in case DB is locked out)
-    const adminPin = process.env.OWNER_PIN;
-    if (adminPin && pin === adminPin) {
-      const token = jwt.sign({ role: 'admin', branch: 'ALL' }, JWT_SECRET, { expiresIn: '7d' });
-      return res.json({ token, role: 'admin', branch: 'ALL', username: 'Super Admin' });
-    }
-
-    const user = await prisma.user.findFirst({
-      where: { pin, status: 'Active' }
-    });
-
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid PIN code' });
-    }
-
-    const token = jwt.sign({ userId: user.id, role: user.role, branch: user.branch }, JWT_SECRET, { expiresIn: '7d' });
-    
-    // Create Session
-    await prisma.session.create({
-      data: {
-        userId: user.id,
-        token: token
-      }
-    });
-
-    return res.json({ token, role: user.role, branch: user.branch, username: user.username, permissions: user.permissions });
-  } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ error: 'Internal server error during login' });
-  }
-});
 
 const authenticate = async (req, res, next) => {
   let token = req.headers['authorization']?.split(' ')[1];
@@ -311,69 +263,6 @@ app.use('/api/fastag', paidApiLimiter, fastagRoutes);
 const whatsappRoutes = require('./routes/whatsapp');
 app.use('/api/whatsapp', whatsappRoutes);
 const os = require('os');
-app.get('/api/system/health', async (req, res) => {
-  try {
-    const start = Date.now();
-    // Execute a simple query to measure DB latency
-    await prisma.$queryRaw`SELECT 1`;
-    const dbLatency = Date.now() - start;
-
-    const memoryUsage = process.memoryUsage();
-    
-    const axios = require('axios');
-    
-    // Attempt to ping external APIs to check their availability
-    const checkUrl = async (url) => {
-      try {
-        const fetchStart = Date.now();
-        const response = await axios.head(url, { timeout: 3000, validateStatus: () => true });
-        return { online: response.status < 500, latency: Date.now() - fetchStart };
-      } catch (err) {
-        return { online: false, latency: -1 };
-      }
-    };
-    
-    const [appyflowStatus, vahanStatus] = await Promise.all([
-      checkUrl('https://b2b.appyflow.in'),
-      checkUrl('https://vahan.parivahan.gov.in') // just a domain check
-    ]);
-
-    res.json({
-      success: true,
-      data: {
-        uptime: process.uptime(),
-        memoryUsage: {
-          rss: memoryUsage.rss,
-          heapTotal: memoryUsage.heapTotal,
-          heapUsed: memoryUsage.heapUsed,
-        },
-        cpuLoad: os.loadavg(),
-        dbLatency,
-        externalServices: {
-          appyflow: appyflowStatus,
-          vahan: vahanStatus
-        }
-      }
-    });
-  } catch (error) {
-    console.error("Health check error:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/api/system/health/history', async (req, res) => {
-  try {
-    const logs = await prisma.systemHealthLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 96 // last 24 hours at 15-min intervals
-    });
-    // Reverse to get chronological order for charts
-    res.json({ success: true, data: logs.reverse() });
-  } catch (error) {
-    console.error("Health history error:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
 
 
 const { logApiUsage } = require('./utils/logger');
@@ -398,17 +287,6 @@ const insertAuditLog = async (req, action, entity, entityId, details) => {
   }
 };
 
-app.get('/api/audit-logs', async (req, res) => {
-  try {
-    const logs = await prisma.auditLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 500
-    });
-    res.json(logs);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch audit logs' });
-  }
-});
 
 // Generic Audit Log Middleware for all mutations
 app.use((req, res, next) => {
@@ -437,860 +315,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/api/usage/sandbox-test', async (req, res) => {
-  // Set long timeout for multi-step test
-  req.setTimeout(60000);
-  
-  try {
-    const results = [];
-    const pushResult = (step, success, ping, message, data = null) => {
-      results.push({ step, success, ping, message, data });
-    };
 
-    // Shared Sandbox Credentials
-    const email = process.env.WHITEBOOKS_EMAIL?.trim() || "admin@example.com"; 
-    const username = "BVMGSP";
-    const password = "Wbooks@0142";
-    const gstin = "29AAGCB1286Q000";
-    const clientId = "EWBS670d1a72-ce2e-4c8d-9839-73b5ebc30539";
-    const clientSecret = "EWBSafc52ae4-adc7-455e-b458-7539b8321d36";
-    const headers = { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" };
-
-    // --- STEP 1: AUTH ---
-    let authStart = Date.now();
-    let authRes, authData;
-    try {
-      authRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`, { method: "GET", headers });
-      authData = await authRes.json();
-      const ping = Date.now() - authStart;
-      if (!authRes.ok || authData.status_cd === "0") throw new Error(authData.error?.message || authData.status_desc || 'Auth Failed');
-      headers["AuthToken"] = authData.authtoken || authData.data?.authtoken || authData.AuthToken || '';
-      pushResult("Authenticate", true, ping, "Successfully retrieved token.");
-    } catch (e) {
-      pushResult("Authenticate", false, Date.now() - authStart, e.message);
-      return res.json({ success: false, results }); // Abort if auth fails
-    }
-
-    // --- STEP 2: GENERATE EWB 1 ---
-    let gen1Start = Date.now();
-    let ewb1 = null;
-    try {
-      const docNo = `TEST-${Math.floor(Date.now() / 1000)}`;
-      
-      const genPayload = {
-        supplyType: "O", subSupplyType: "1", docType: "INV", docNo, docDate: "29/07/2026",
-        fromGstin: gstin, fromTrdName: "TEST CONSIGNOR", fromAddr1: "Bangalore", fromPlace: "Bangalore", fromPincode: 560001, fromStateCode: 29, actualFromStateCode: 29,
-        toGstin: "URP", toTrdName: "TEST CONSIGNEE", toAddr1: "Sivakasi", toPlace: "Sivakasi", toPincode: 626123, toStateCode: 33, actualToStateCode: 33,
-        totalValue: 100, cgstValue: 9, sgstValue: 9, igstValue: 0, cessValue: 0, totInvValue: 118,
-        transporterId: "", transporterName: "", transMode: "1", transDistance: "100", vehicleNo: "KA01AB1234", vehicleType: "R",
-        itemList: [{ productName: "Goods", productDesc: "Goods", hsnCode: 3604, quantity: 1, qtyUnit: "NOS", taxableAmount: 100, sgstRate: 9, cgstRate: 9, igstRate: 0, cessRate: 0 }]
-      };
-      
-      const genRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`, { method: "POST", headers, body: JSON.stringify(genPayload) });
-      const genData = await genRes.json();
-      const ping = Date.now() - gen1Start;
-      if (!genRes.ok || genData.status_cd === "0") throw new Error(genData.error?.message || genData.error?.errorDesc || genData.status_desc || 'Generate Failed');
-      ewb1 = genData.data?.ewayBillNo || genData.ewayBillNo;
-      pushResult("Generate", true, ping, `Success! EWB: ${ewb1}`);
-    } catch (e) {
-      pushResult("Generate", false, Date.now() - gen1Start, e.message);
-    }
-
-    // --- STEP 3: FETCH EWB ---
-    let fetchStart = Date.now();
-    try {
-      if (!ewb1) throw new Error('Skipped because Generation failed.');
-      const fetchRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=${ewb1}`, { method: "GET", headers });
-      const fetchData = await fetchRes.json();
-      const ping = Date.now() - fetchStart;
-      if (!fetchRes.ok || fetchData.status_cd === "0") throw new Error(fetchData.error?.message || 'Fetch Failed');
-      pushResult("Fetch", true, ping, `Successfully fetched mapping for ${ewb1}`);
-    } catch (e) {
-      pushResult("Fetch", false, Date.now() - fetchStart, e.message);
-    }
-
-    // --- STEP 4: REGENERATE (GENERATE EWB 2) ---
-    let regStart = Date.now();
-    let ewb2 = null;
-    try {
-      const docNo = `REG-${Math.floor(Date.now() / 1000)}`;
-      
-      const regPayload = {
-        supplyType: "O", subSupplyType: "1", docType: "INV", docNo, docDate: "29/07/2026",
-        fromGstin: gstin, fromTrdName: "TEST CONSIGNOR", fromAddr1: "Bangalore", fromPlace: "Bangalore", fromPincode: 560001, fromStateCode: 29, actualFromStateCode: 29,
-        toGstin: "URP", toTrdName: "TEST CONSIGNEE", toAddr1: "Sivakasi", toPlace: "Sivakasi", toPincode: 626123, toStateCode: 33, actualToStateCode: 33,
-        totalValue: 100, cgstValue: 9, sgstValue: 9, igstValue: 0, cessValue: 0, totInvValue: 118,
-        transporterId: "", transporterName: "", transMode: "1", transDistance: "100", vehicleNo: "KA01AB1234", vehicleType: "R",
-        itemList: [{ productName: "Goods", productDesc: "Goods", hsnCode: 3604, quantity: 1, qtyUnit: "NOS", taxableAmount: 100, sgstRate: 9, cgstRate: 9, igstRate: 0, cessRate: 0 }]
-      };
-      
-      const regRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`, { method: "POST", headers, body: JSON.stringify(regPayload) });
-      const regData = await regRes.json();
-      const ping = Date.now() - regStart;
-      if (!regRes.ok || regData.status_cd === "0") throw new Error(regData.error?.message || regData.error?.errorDesc || 'Regenerate Failed');
-      ewb2 = regData.data?.ewayBillNo || regData.ewayBillNo;
-      pushResult("Regenerate", true, ping, `Success! EWB: ${ewb2}`);
-    } catch (e) {
-      pushResult("Regenerate", false, Date.now() - regStart, e.message);
-    }
-
-    // --- STEP 5: CONSOLIDATE (CEWB) ---
-    let cewbStart = Date.now();
-    try {
-      if (!ewb1 || !ewb2) throw new Error('Skipped because we need 2 active EWBs.');
-      const cewbPayload = {
-        vehicleNo: "KA01AB1234", fromPlace: "Bangalore", fromState: 29, transMode: "1", 
-        transDocNo: `TR-${Math.floor(Date.now() / 1000)}`,
-        transDocDate: "29/07/2026",
-        tripSheetEwbBills: [{ ewbNo: Number(ewb1) }, { ewbNo: Number(ewb2) }]
-      };
-      
-      const cewbRes = await fetch(`https://apisandbox.whitebooks.in/ewaybillapi/v1.03/ewayapi/generatecewb?email=${encodeURIComponent(email)}`, { method: "POST", headers, body: JSON.stringify(cewbPayload) });
-      const cewbData = await cewbRes.json();
-      const ping = Date.now() - cewbStart;
-      
-      if (!cewbRes.ok || cewbData.status_cd === "0") throw new Error(cewbData.error?.message || cewbData.error?.errorDesc || 'CEWB Failed');
-      const cewbNo = cewbData.data?.cEwbNo || cewbData.cEwbNo;
-      pushResult("CEWB", true, ping, `Success! CEWB: ${cewbNo}`);
-    } catch (e) {
-      pushResult("CEWB", false, Date.now() - cewbStart, e.message);
-    }
-
-    const allSuccess = results.every(r => r.success);
-    
-    // Log overall ping
-    try {
-       await prisma.apiUsageLog.create({
-         data: { provider: 'WhiteBooks (Sandbox)', apiName: 'Full Lifecycle Test', status: allSuccess ? 'Success' : 'Failed', cost: 0.00 }
-       });
-    } catch(e) {}
-
-    res.json({ success: allSuccess, results });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.get('/api/usage/stats', async (req, res) => {
-  try {
-    // 1. Raw SQL for fast Database Aggregation (Daily)
-    const dailyRaw = await prisma.$queryRaw`
-      SELECT date_trunc('day', timestamp) as day, 
-             COUNT(*)::int as count, 
-             SUM(cost)::float as cost 
-      FROM "ApiUsageLog" 
-      GROUP BY 1 
-      ORDER BY 1 DESC 
-      LIMIT 30;
-    `;
-    
-    // 2. Raw SQL for fast Database Aggregation (Monthly)
-    const monthlyRaw = await prisma.$queryRaw`
-      SELECT date_trunc('month', timestamp) as month, 
-             COUNT(*)::int as count, 
-             SUM(cost)::float as cost 
-      FROM "ApiUsageLog" 
-      GROUP BY 1 
-      ORDER BY 1 DESC 
-      LIMIT 12;
-    `;
-
-    // 3. Fast Total Aggregate
-    const totalAgg = await prisma.apiUsageLog.aggregate({
-      _sum: { cost: true }
-    });
-
-    // 4. Strict limit on Recent Logs
-    const recent = await prisma.apiUsageLog.findMany({
-      orderBy: { timestamp: 'desc' },
-      take: 100
-    });
-
-    // Structure for Frontend
-    const stats = {
-      daily: {},
-      monthly: {},
-      yearly: {}, // Frontend only uses monthly/daily currently
-      totalCost: totalAgg._sum.cost || 0,
-      recent
-    };
-
-    // Format SQL results for frontend maps
-    dailyRaw.forEach(row => {
-      const dateStr = new Date(row.day).toISOString().split('T')[0];
-      stats.daily[dateStr] = { count: row.count, cost: row.cost || 0 };
-    });
-
-    monthlyRaw.forEach(row => {
-      const monthStr = new Date(row.month).toISOString().substring(0, 7);
-      stats.monthly[monthStr] = { count: row.count, cost: row.cost || 0 };
-    });
-
-    res.json(stats);
-  } catch (error) {
-    console.error("GET /api/usage/stats failed:", error);
-    res.status(500).json({ error: 'Failed to fetch API stats' });
-  }
-});
-
-// ==============================
-// CONSIGNOR ENDPOINTS
-// ==============================
-app.get('/api/consignors', cacheMiddleware(3600), async (req, res) => {
-  try {
-    const branch = req.query.branch || 'MAIN';
-    const page = req.query.page ? parseInt(req.query.page) : null;
-    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-    const q = req.query.q || '';
-    
-    let whereClause = { branch };
-    
-    // Inactive filter is usually handled on frontend, but we should probably apply it if searching
-    if (q) {
-      whereClause.OR = [
-        { name: { contains: q, mode: 'insensitive' } },
-        { gstin: { contains: q, mode: 'insensitive' } },
-        { city: { contains: q, mode: 'insensitive' } }
-      ];
-    }
-
-    // Legacy support: if no page is requested, return simple array
-    if (!page) {
-      const consignors = await prisma.consignor.findMany({ 
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        take: 2000 // Safeguard against OOM
-      });
-      return res.json(consignors);
-    }
-
-    // Pagination support
-    const skip = (page - 1) * limit;
-    
-    const [data, total] = await Promise.all([
-      prisma.consignor.findMany({
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.consignor.count({ where: whereClause })
-    ]);
-
-    res.json({
-      data,
-      total,
-      hasMore: (skip + data.length) < total,
-      nextCursor: (skip + data.length) < total ? page + 1 : null
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch consignors' });
-  }
-});
-
-app.get('/api/consignors/search', async (req, res) => {
-  try {
-    const { branch = 'MAIN', q = '' } = req.query;
-    if (!q || q.trim() === '') return res.json([]);
-    const results = await prisma.consignor.findMany({
-      where: {
-        branch,
-        isActive: true,
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { gstin: { contains: q, mode: 'insensitive' } }
-        ]
-      },
-      take: 50,
-      orderBy: { name: 'asc' }
-    });
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ error: 'Search failed' });
-  }
-});
-
-app.post('/api/consignors', async (req, res) => {
-  try {
-    const { name, branch = 'MAIN', ...rest } = req.body;
-    const consignor = await prisma.consignor.upsert({
-      where: { name_branch: { name, branch } },
-      update: { ...rest, branch },
-      create: { name, branch, ...rest }
-    });
-    res.json(consignor);
-  } catch (error) {
-    console.error("Error creating consignor:", error);
-    res.status(500).json({ error: error.message || 'Failed to create consignor' });
-  }
-});
-
-app.put('/api/consignors/:id', async (req, res) => {
-  try {
-    const consignor = await prisma.consignor.update({
-      where: { id: parseInt(req.params.id) },
-      data: {
-        ...req.body,
-        stateCode: req.body.stateCode !== undefined ? req.body.stateCode : undefined
-      },
-    });
-    res.json(consignor);
-  } catch (error) {
-    console.error("Error updating consignor:", error);
-    res.status(500).json({ error: error.message || 'Failed to update consignor' });
-  }
-});
-
-app.delete('/api/consignors/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.consignor.update({
-      where: { id: parseInt(id) },
-      data: { isActive: false }
-    });
-    res.json({ message: 'Consignor archived successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to archive consignor' });
-  }
-});
-
-app.put('/api/consignors/:id/restore', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const consignor = await prisma.consignor.update({
-      where: { id: parseInt(id) },
-      data: { isActive: true }
-    });
-    res.json(consignor);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to restore consignor' });
-  }
-});
-
-
-// ==============================
-// FREIGHT BILL ENDPOINTS
-// ==============================
-app.get('/api/freight-bills', async (req, res) => {
-  try {
-    const bills = await prisma.freightBill.findMany({ orderBy: { id: 'desc' } });
-    res.json(bills);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch Freight Bills' });
-  }
-});
-
-app.post('/api/freight-bills', async (req, res) => {
-  try {
-    const billData = req.body;
-    
-    if (billData.date) billData.date = new Date(billData.date);
-    if (billData.grossFreight) billData.grossFreight = parseFloat(billData.grossFreight);
-    if (billData.advancePaid) billData.advancePaid = parseFloat(billData.advancePaid);
-    if (billData.commission) billData.commission = parseFloat(billData.commission);
-    if (billData.shortage) billData.shortage = parseFloat(billData.shortage);
-    if (billData.tds) billData.tds = parseFloat(billData.tds);
-    if (billData.netBalance) billData.netBalance = parseFloat(billData.netBalance);
-
-    const bill = await prisma.freightBill.create({
-      data: billData
-    });
-    res.status(201).json(bill);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to create Freight Bill' });
-  }
-});
-
-// ==============================
-// CONSIGNEE ENDPOINTS
-// ==============================
-app.get('/api/consignees', cacheMiddleware(3600), async (req, res) => {
-  try {
-    const branch = req.query.branch || 'MAIN';
-    const page = req.query.page ? parseInt(req.query.page) : null;
-    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-    const q = req.query.q || '';
-    
-    let whereClause = { branch };
-    
-    if (q) {
-      whereClause.OR = [
-        { name: { contains: q, mode: 'insensitive' } },
-        { gstin: { contains: q, mode: 'insensitive' } },
-        { city: { contains: q, mode: 'insensitive' } }
-      ];
-    }
-
-    if (!page) {
-      const consignees = await prisma.consignee.findMany({ 
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        take: 2000
-      });
-      return res.json(consignees);
-    }
-
-    const skip = (page - 1) * limit;
-    
-    const [data, total] = await Promise.all([
-      prisma.consignee.findMany({
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.consignee.count({ where: whereClause })
-    ]);
-
-    res.json({
-      data,
-      total,
-      hasMore: (skip + data.length) < total,
-      nextCursor: (skip + data.length) < total ? page + 1 : null
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch consignees' });
-  }
-});
-
-app.get('/api/consignees/search', async (req, res) => {
-  try {
-    const { branch = 'MAIN', q = '' } = req.query;
-    if (!q || q.trim() === '') return res.json([]);
-    const results = await prisma.consignee.findMany({
-      where: {
-        branch,
-        isActive: true,
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { gstin: { contains: q, mode: 'insensitive' } }
-        ]
-      },
-      take: 50,
-      orderBy: { name: 'asc' }
-    });
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ error: 'Search failed' });
-  }
-});
-
-app.post('/api/consignees', async (req, res) => {
-  try {
-    const { name, branch = 'MAIN', stateCode, ...rest } = req.body;
-    const consignee = await prisma.consignee.upsert({
-      where: { name_branch: { name, branch } },
-      update: { ...rest, branch, stateCode: stateCode || null },
-      create: { name, branch, stateCode: stateCode || null, ...rest }
-    });
-    res.json(consignee);
-  } catch (error) {
-    console.error("Error creating consignee:", error);
-    res.status(500).json({ error: error.message || 'Failed to create consignee' });
-  }
-});
-
-app.put('/api/consignees/:id', async (req, res) => {
-  try {
-    const consignee = await prisma.consignee.update({
-      where: { id: parseInt(req.params.id) },
-      data: {
-        ...req.body,
-        stateCode: req.body.stateCode !== undefined ? req.body.stateCode : undefined
-      },
-    });
-    res.json(consignee);
-  } catch (error) {
-    console.error("Error updating consignee:", error);
-    res.status(500).json({ error: error.message || 'Failed to update consignee' });
-  }
-});
-
-app.delete('/api/consignees/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.consignee.update({
-      where: { id: parseInt(id) },
-      data: { isActive: false }
-    });
-    res.json({ message: 'Consignee archived successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to archive consignee' });
-  }
-});
-
-app.put('/api/consignees/:id/restore', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const consignee = await prisma.consignee.update({
-      where: { id: parseInt(id) },
-      data: { isActive: true }
-    });
-    res.json(consignee);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to restore consignee' });
-  }
-});
-// ==============================
-// VEHICLE ENDPOINTS
-// ==============================
-app.get('/api/vehicles', cacheMiddleware(3600), async (req, res) => {
-  try {
-    const page = req.query.page ? parseInt(req.query.page) : null;
-    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-    const q = req.query.q || '';
-    
-    let whereClause = {};
-    if (q) {
-      whereClause.vehicleNo = { contains: q, mode: 'insensitive' };
-    }
-
-    if (!page) {
-      const vehicles = await prisma.vehicle.findMany({ 
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        take: 2000
-      });
-      return res.json(vehicles);
-    }
-
-    const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      prisma.vehicle.findMany({
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.vehicle.count({ where: whereClause })
-    ]);
-
-    res.json({
-      data,
-      total,
-      hasMore: (skip + data.length) < total,
-      nextCursor: (skip + data.length) < total ? page + 1 : null
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch vehicles' });
-  }
-});
-
-app.post('/api/vehicles', async (req, res) => {
-  try {
-    const data = { ...req.body };
-    if (data.fitnessExpiry) data.fitnessExpiry = new Date(data.fitnessExpiry);
-    else data.fitnessExpiry = null;
-    
-    if (data.insuranceExpiry) data.insuranceExpiry = new Date(data.insuranceExpiry);
-    else data.insuranceExpiry = null;
-    
-    if (data.npExpiry) data.npExpiry = new Date(data.npExpiry);
-    else data.npExpiry = null;
-    
-    const vehicle = await prisma.vehicle.create({ data });
-    res.json(vehicle);
-  } catch (error) {
-    if (error.code === 'P2002') {
-      return res.status(400).json({ error: 'Vehicle Number already exists' });
-    }
-    res.status(500).json({ error: 'Failed to create vehicle' });
-  }
-});
-
-app.put('/api/vehicles/:id', async (req, res) => {
-  try {
-    const data = { ...req.body };
-    if (data.fitnessExpiry) data.fitnessExpiry = new Date(data.fitnessExpiry);
-    else data.fitnessExpiry = null;
-    
-    if (data.insuranceExpiry) data.insuranceExpiry = new Date(data.insuranceExpiry);
-    else data.insuranceExpiry = null;
-    
-    if (data.npExpiry) data.npExpiry = new Date(data.npExpiry);
-    else data.npExpiry = null;
-
-    const vehicle = await prisma.vehicle.update({
-      where: { id: parseInt(req.params.id) },
-      data,
-    });
-    res.json(vehicle);
-  } catch (error) {
-    if (error.code === 'P2002') {
-      return res.status(400).json({ error: 'Vehicle Number already exists' });
-    }
-    res.status(500).json({ error: 'Failed to update vehicle' });
-  }
-});
-
-app.delete('/api/vehicles/:id', async (req, res) => {
-  try {
-    await prisma.vehicle.delete({ where: { id: parseInt(req.params.id) } });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete vehicle' });
-  }
-});
-
-// ==============================
-// DRIVER MASTER ENDPOINTS
-// ==============================
-app.get('/api/drivers', async (req, res) => {
-  try {
-    const page = req.query.page ? parseInt(req.query.page) : null;
-    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-    const q = req.query.q || '';
-    
-    let whereClause = {};
-    if (q) {
-      whereClause.OR = [
-        { name: { contains: q, mode: 'insensitive' } },
-        { phone: { contains: q, mode: 'insensitive' } },
-        { licenseNo: { contains: q, mode: 'insensitive' } }
-      ];
-    }
-
-    if (!page) {
-      const drivers = await prisma.driver.findMany({ 
-        where: whereClause,
-        orderBy: { updatedAt: 'desc' },
-        take: 2000
-      });
-      return res.json(drivers);
-    }
-
-    const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      prisma.driver.findMany({
-        where: whereClause,
-        orderBy: { updatedAt: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.driver.count({ where: whereClause })
-    ]);
-
-    res.json({
-      data,
-      total,
-      hasMore: (skip + data.length) < total,
-      nextCursor: (skip + data.length) < total ? page + 1 : null
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch drivers' });
-  }
-});
-
-app.post('/api/drivers', async (req, res) => {
-  try {
-    const data = { ...req.body };
-    delete data.id;
-    const driver = await prisma.driver.create({ data });
-    res.json(driver);
-  } catch (error) {
-    console.error("Failed to create driver:", error);
-    if (error.code === 'P2002') return res.status(400).json({ error: 'License Number already exists' });
-    res.status(500).json({ error: 'Failed to create driver' });
-  }
-});
-
-app.put('/api/drivers/:id', async (req, res) => {
-  try {
-    const data = { ...req.body };
-    delete data.id;
-    const driver = await prisma.driver.update({
-      where: { id: parseInt(req.params.id) },
-      data,
-    });
-    res.json(driver);
-  } catch (error) {
-    console.error("Failed to update driver:", error);
-    if (error.code === 'P2002') return res.status(400).json({ error: 'License Number already exists' });
-    res.status(500).json({ error: 'Failed to update driver' });
-  }
-});
-
-app.delete('/api/drivers/:id', async (req, res) => {
-  try {
-    await prisma.driver.delete({ where: { id: parseInt(req.params.id) } });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete driver' });
-  }
-});
-
-// ==============================
-// HEALTH & BOOT ENDPOINT
-// ==============================
-app.get('/api/health', async (req, res) => {
-  try {
-    // Lightweight query to ensure Neon database connection is active
-    await prisma.$queryRaw`SELECT 1`;
-    res.status(200).json({ status: 'healthy', db: 'connected', timestamp: new Date() });
-  } catch (error) {
-    console.error("Health check failed:", error);
-    res.status(503).json({ status: 'unhealthy', db: 'disconnected', error: error.message });
-  }
-});
-
-// ==============================
-// COMPANY ENDPOINTS
-// ==============================
-app.get('/api/companies', async (req, res) => {
-  try {
-    const companies = await prisma.company.findMany({ orderBy: { id: 'desc' } });
-    res.json(companies);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch companies' });
-  }
-});
-
-app.post('/api/companies', async (req, res) => {
-  try {
-    const data = { ...req.body };
-    delete data.id;
-    const company = await prisma.company.create({ data });
-    res.json(company);
-  } catch (error) {
-    console.error("Failed to create company:", error);
-    if (error.code === 'P2002') return res.status(400).json({ error: 'GSTIN already exists' });
-    res.status(500).json({ error: 'Failed to create company' });
-  }
-});
-
-app.put('/api/companies/:id', async (req, res) => {
-  try {
-    const data = { ...req.body };
-    delete data.id;
-    const company = await prisma.company.update({
-      where: { id: parseInt(req.params.id) },
-      data,
-    });
-    res.json(company);
-  } catch (error) {
-    console.error("Failed to update company:", error);
-    if (error.code === 'P2002') return res.status(400).json({ error: 'GSTIN already exists' });
-    res.status(500).json({ error: 'Failed to update company' });
-  }
-});
-
-app.delete('/api/companies/:id', async (req, res) => {
-  try {
-    await prisma.company.delete({ where: { id: parseInt(req.params.id) } });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete company' });
-  }
-});
-
-// ==============================
-// UNIT MASTER ENDPOINTS
-// ==============================
-app.get('/api/units', cacheMiddleware(86400), async (req, res) => {
-  try {
-    const units = await prisma.unitMaster.findMany({ 
-      orderBy: [
-        { category: 'asc' },
-        { id: 'asc' }
-      ] 
-    });
-    res.json(units);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/units', async (req, res) => {
-  try {
-    const { category, description, code, color, hsn, goodsDesc } = req.body;
-    const unit = await prisma.unitMaster.create({
-      data: { category, description, code, color: color || 'slate', hsn, goodsDesc }
-    });
-    res.status(201).json(unit);
-  } catch (error) {
-    if (error.code === 'P2002') return res.status(400).json({ error: 'This unit combination already exists.' });
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.put('/api/units/:id', async (req, res) => {
-  try {
-    const { category, description, code, color, hsn, goodsDesc } = req.body;
-    const unit = await prisma.unitMaster.update({
-      where: { id: parseInt(req.params.id) },
-      data: { category, description, code, color, hsn, goodsDesc }
-    });
-    res.json(unit);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-app.delete('/api/units/:id', async (req, res) => {
-  try {
-    await prisma.unitMaster.delete({ where: { id: parseInt(req.params.id) } });
-    res.status(204).send();
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// ==============================
-// HSN MASTER ENDPOINTS
-// ==============================
-app.get('/api/hsn', async (req, res) => {
-  try {
-    const query = req.query.q;
-    if (query) {
-      const hsn = await prisma.hSNMaster.findFirst({
-        where: { hsnCode: query }
-      });
-      return res.json(hsn || { error: 'Not found' });
-    }
-    const hsnList = await prisma.hSNMaster.findMany({ orderBy: { hsnCode: 'asc' } });
-    res.json(hsnList);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/hsn', async (req, res) => {
-  try {
-    const { hsnCode, description, gstRate } = req.body;
-    const hsn = await prisma.hSNMaster.upsert({
-      where: { hsnCode },
-      update: { description, gstRate: parseFloat(gstRate) },
-      create: { hsnCode, description, gstRate: parseFloat(gstRate) }
-    });
-    res.status(201).json(hsn);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// ==============================
-// GODOWN ENDPOINTS
-// ==============================
-app.get('/api/godowns', cacheMiddleware(86400), async (req, res) => {
-  try {
-    const godowns = await prisma.godown.findMany({ orderBy: { id: 'desc' } });
-    res.json(godowns);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch godowns' });
-  }
-});
-
-app.post('/api/godowns', async (req, res) => {
-  try {
-    const { name } = req.body;
-    const godown = await prisma.godown.create({ data: { name } });
-    res.json(godown);
-  } catch (error) {
-    if (error.code === 'P2002') return res.status(400).json({ error: 'Godown name already exists' });
-    res.status(500).json({ error: 'Failed to create godown' });
-  }
-});
 
 // --- Remote Mobile Scanner API ---
 const remoteScans = {};
@@ -1316,112 +341,7 @@ app.post('/api/scanner/push', (req, res) => {
   res.json({ success: true });
 });
 
-// --- Warehouse Inward Endpoints ---
-app.get('/api/warehouse-inward', async (req, res) => {
-  try {
-    const { date } = req.query;
-    let whereClause = {};
-    
-    if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      whereClause.createdAt = {
-        gte: startOfDay,
-        lte: endOfDay
-      };
-    } else {
-      // Default to today if no date provided
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      whereClause.createdAt = {
-        gte: today
-      };
-    }
 
-    const page = req.query.page ? parseInt(req.query.page) : undefined;
-    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-
-    if (page) {
-      const skip = (page - 1) * limit;
-      const [inwards, total] = await Promise.all([
-        prisma.warehouseInward.findMany({
-          where: whereClause,
-          orderBy: { createdAt: 'desc' },
-          skip,
-          take: limit
-        }),
-        prisma.warehouseInward.count({ where: whereClause })
-      ]);
-      return res.json({ data: inwards, total, page, totalPages: Math.ceil(total / limit) });
-    }
-
-    const inwards = await prisma.warehouseInward.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' }
-    });
-    res.json(inwards);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch inward entries' });
-  }
-});
-
-app.post('/api/warehouse-inward', async (req, res) => {
-  try {
-    const lastEntry = await prisma.warehouseInward.findFirst({
-      orderBy: { receiptNo: 'desc' },
-      where: { receiptNo: { not: null } }
-    });
-    const nextReceiptNo = lastEntry && lastEntry.receiptNo ? lastEntry.receiptNo + 1 : 1;
-
-    const inward = await prisma.warehouseInward.create({ 
-      data: { ...req.body, receiptNo: nextReceiptNo } 
-    });
-    res.json(inward);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to save inward entry' });
-  }
-});
-
-app.put('/api/warehouse-inward/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const inward = await prisma.warehouseInward.update({
-      where: { id: parseInt(id) },
-      data: req.body
-    });
-    res.json(inward);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to update inward entry' });
-  }
-});
-
-app.put('/api/godowns/:id', async (req, res) => {
-  try {
-    const { name } = req.body;
-    const godown = await prisma.godown.update({
-      where: { id: parseInt(req.params.id) },
-      data: { name },
-    });
-    res.json(godown);
-  } catch (error) {
-    if (error.code === 'P2002') return res.status(400).json({ error: 'Godown name already exists' });
-    res.status(500).json({ error: 'Failed to update godown' });
-  }
-});
-
-app.delete('/api/godowns/:id', async (req, res) => {
-  try {
-    await prisma.godown.delete({ where: { id: parseInt(req.params.id) } });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete godown' });
-  }
-});
 
 // ==============================
 // GST SEARCH API (WhiteBooks Live)
@@ -1692,7 +612,14 @@ app.get('/api/gcs', async (req, res) => {
           orderBy: { id: 'desc' },
           skip,
           take: limit,
-          include: { consignor: true, consignee: true, goods: true, gdm: { include: { vehicle: true } }, trackingLogs: { orderBy: { timestamp: 'desc' } } }
+          relationLoadStrategy: 'join',
+          include: { 
+            consignor: { select: { id: true, name: true, city: true, gstin: true, phone: true } }, 
+            consignee: { select: { id: true, name: true, city: true, gstin: true, phone: true } }, 
+            goods: true, 
+            gdm: { select: { id: true, gdmNumber: true, vehicle: { select: { vehicleNumber: true } } } }, 
+            trackingLogs: { orderBy: { timestamp: 'desc' } } 
+          }
         }),
         prisma.gC.count({ where: whereClause })
       ]);
@@ -1704,12 +631,13 @@ app.get('/api/gcs', async (req, res) => {
       where: whereClause,
       orderBy: { id: 'desc' },
       take: limit,
+      relationLoadStrategy: 'join',
       include: {
-        consignor: true,
-        consignee: true,
+        consignor: { select: { id: true, name: true, city: true, gstin: true, phone: true } },
+        consignee: { select: { id: true, name: true, city: true, gstin: true, phone: true } },
         goods: true,
         gdm: {
-          include: { vehicle: true }
+          select: { id: true, gdmNumber: true, vehicle: { select: { vehicleNumber: true } } }
         },
         trackingLogs: {
           orderBy: { timestamp: 'desc' }
@@ -2060,9 +988,16 @@ app.get('/api/gdms', async (req, res) => {
           orderBy: { id: 'desc' },
           skip,
           take: limit,
+          relationLoadStrategy: 'join',
           include: {
-            vehicle: true,
-            gcs: { include: { consignor: true, consignee: true, goods: true } }
+            vehicle: { select: { id: true, vehicleNumber: true } },
+            gcs: { 
+              include: { 
+                consignor: { select: { name: true, city: true } }, 
+                consignee: { select: { name: true, city: true } }, 
+                goods: true 
+              } 
+            }
           }
         }),
         prisma.gDM.count({ where: whereClause })
@@ -2075,12 +1010,13 @@ app.get('/api/gdms', async (req, res) => {
       where: whereClause,
       orderBy: { id: 'desc' },
       take: limit || 50,
+      relationLoadStrategy: 'join',
       include: {
-        vehicle: true,
+        vehicle: { select: { id: true, vehicleNumber: true } },
         gcs: {
           include: {
-            consignor: true,
-            consignee: true,
+            consignor: { select: { name: true, city: true } },
+            consignee: { select: { name: true, city: true } },
             goods: true
           }
         }
@@ -3971,6 +2907,17 @@ app.get('/api/admin/backup', authorizeAdmin, async (req, res) => {
     console.error('Backup Error:', error);
     res.status(500).json({ error: 'Failed to generate backup' });
   }
+});
+
+// Global Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('[Global Error Logger] Unhandled Exception:', err);
+  const status = err.status || 500;
+  res.status(status).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred. Our team has been notified.',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
 });
 
 server.listen(PORT, '0.0.0.0', () => {
