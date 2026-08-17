@@ -109,7 +109,11 @@ app.use(cors({
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'super-secret-key-change-me' : null);
+if (!JWT_SECRET) {
+  console.error("FATAL ERROR: JWT_SECRET environment variable is strictly required in production to secure tokens.");
+  process.exit(1);
+}
 
 const globalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
@@ -148,22 +152,16 @@ app.use('/api', globalLimiter);
 
 
 // ==============================
-// MODULARIZED ROUTES
+// PUBLIC MODULARIZED ROUTES
 // ==============================
 const authRoutes = require('./routes/auth');
-app.use('/api', authRoutes);
+app.use('/api', authRoutes); // /api/login must be public
 
+// Load protected route modules (will be mounted after auth middleware)
 const systemRoutes = require('./routes/system');
-app.use('/api', systemRoutes);
-
 const mastersRoutes = require('./routes/masters');
-app.use('/api', mastersRoutes);
-
 const freightRoutes = require('./routes/freight');
-app.use('/api', freightRoutes);
-
 const warehouseRoutes = require('./routes/warehouse');
-app.use('/api', warehouseRoutes);
 
 
 const authenticate = async (req, res, next) => {
@@ -252,6 +250,14 @@ app.use('/api', (req, res, next) => {
   
   next();
 });
+
+// ==============================
+// PROTECTED MODULARIZED ROUTES
+// ==============================
+app.use('/api', systemRoutes);
+app.use('/api', mastersRoutes);
+app.use('/api', freightRoutes);
+app.use('/api', warehouseRoutes);
 
 
 const appyflowRoutes = require('./routes/appyflow');
