@@ -6,42 +6,63 @@ import toast, { Toaster } from 'react-hot-toast';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './api/queryClient';
 
-// Lazy load all pages to drastically reduce the initial bundle size
-const SystemBoot = React.lazy(() => import('./pages/SystemBoot'));
-const NewGcEntry = React.lazy(() => import('./pages/NewGcEntry'));
-const AccordionGcEntry = React.lazy(() => import('./pages/AccordionGcEntry'));
-const WarehouseEntry = React.lazy(() => import('./pages/WarehouseEntry'));
-const WarehouseStatement = React.lazy(() => import('./pages/WarehouseStatement'));
-const ConsignorMaster = React.lazy(() => import('./pages/ConsignorMaster'));
-const ConsigneeMaster = React.lazy(() => import('./pages/ConsigneeMaster'));
-const VehicleMaster = React.lazy(() => import('./pages/VehicleMaster'));
-const LorryHire = React.lazy(() => import('./pages/LorryHire'));
-const FreightEntry = React.lazy(() => import('./pages/FreightEntry'));
-const LegacyRapidEntry = React.lazy(() => import('./pages/LegacyRapidEntry'));
-const GdmEntry = React.lazy(() => import('./pages/GdmEntry'));
-const Reports = React.lazy(() => import('./pages/Reports'));
-const CompanyMaster = React.lazy(() => import('./pages/CompanyMaster'));
-const DriverMaster = React.lazy(() => import('./pages/DriverMaster'));
-const GodownMaster = React.lazy(() => import('./pages/GodownMaster'));
-const GcPrint = React.lazy(() => import('./pages/GcPrint'));
-const GdmPrint = React.lazy(() => import('./pages/GdmPrint'));
-const CewbPrint = React.lazy(() => import('./pages/CewbPrint'));
-const CombinedGdmPrint = React.lazy(() => import('./pages/CombinedGdmPrint'));
-const PrintHub = React.lazy(() => import('./pages/PrintHub'));
-const UnitMaster = React.lazy(() => import('./pages/UnitMaster'));
-const HSNMaster = React.lazy(() => import('./pages/HSNMaster'));
-const Login = React.lazy(() => import('./pages/Login'));
-const PartyAccounts = React.lazy(() => import('./pages/PartyAccounts'));
-const TechnologyUsage = React.lazy(() => import('./pages/TechnologyUsage'));
-const TripSettlement = React.lazy(() => import('./pages/TripSettlement'));
-const DailyAccounts = React.lazy(() => import('./pages/DailyAccounts'));
-const GodownPlanner = React.lazy(() => import('./pages/GodownPlanner'));
-const RemoteScanner = React.lazy(() => import('./pages/RemoteScanner'));
-const LegacyViewer = React.lazy(() => import('./pages/LegacyViewer'));
-const AuditLogs = React.lazy(() => import('./pages/AuditLogs'));
-const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
-const QrDemo = React.lazy(() => import('./pages/QrDemo'));
-const GovtCompliance = React.lazy(() => import('./pages/GovtCompliance'));
+// Custom lazy loader that automatically reloads the page if a chunk fails to load
+// This prevents the "Failed to fetch dynamically imported module" error after a deployment
+const lazyWithRetry = (componentImport) =>
+  React.lazy(async () => {
+    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+    );
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasAlreadyBeenForceRefreshed) {
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+        window.location.reload();
+        return new Promise(() => {}); // Pause promise while reloading
+      }
+      throw error;
+    }
+  });
+
+// Lazy load all pages using the retry wrapper
+const SystemBoot = lazyWithRetry(() => import('./pages/SystemBoot'));
+const NewGcEntry = lazyWithRetry(() => import('./pages/NewGcEntry'));
+const AccordionGcEntry = lazyWithRetry(() => import('./pages/AccordionGcEntry'));
+const WarehouseEntry = lazyWithRetry(() => import('./pages/WarehouseEntry'));
+const WarehouseStatement = lazyWithRetry(() => import('./pages/WarehouseStatement'));
+const ConsignorMaster = lazyWithRetry(() => import('./pages/ConsignorMaster'));
+const ConsigneeMaster = lazyWithRetry(() => import('./pages/ConsigneeMaster'));
+const VehicleMaster = lazyWithRetry(() => import('./pages/VehicleMaster'));
+const LorryHire = lazyWithRetry(() => import('./pages/LorryHire'));
+const FreightEntry = lazyWithRetry(() => import('./pages/FreightEntry'));
+const LegacyRapidEntry = lazyWithRetry(() => import('./pages/LegacyRapidEntry'));
+const GdmEntry = lazyWithRetry(() => import('./pages/GdmEntry'));
+const Reports = lazyWithRetry(() => import('./pages/Reports'));
+const CompanyMaster = lazyWithRetry(() => import('./pages/CompanyMaster'));
+const DriverMaster = lazyWithRetry(() => import('./pages/DriverMaster'));
+const GodownMaster = lazyWithRetry(() => import('./pages/GodownMaster'));
+const GcPrint = lazyWithRetry(() => import('./pages/GcPrint'));
+const GdmPrint = lazyWithRetry(() => import('./pages/GdmPrint'));
+const CewbPrint = lazyWithRetry(() => import('./pages/CewbPrint'));
+const CombinedGdmPrint = lazyWithRetry(() => import('./pages/CombinedGdmPrint'));
+const PrintHub = lazyWithRetry(() => import('./pages/PrintHub'));
+const UnitMaster = lazyWithRetry(() => import('./pages/UnitMaster'));
+const HSNMaster = lazyWithRetry(() => import('./pages/HSNMaster'));
+const Login = lazyWithRetry(() => import('./pages/Login'));
+const PartyAccounts = lazyWithRetry(() => import('./pages/PartyAccounts'));
+const TechnologyUsage = lazyWithRetry(() => import('./pages/TechnologyUsage'));
+const TripSettlement = lazyWithRetry(() => import('./pages/TripSettlement'));
+const DailyAccounts = lazyWithRetry(() => import('./pages/DailyAccounts'));
+const GodownPlanner = lazyWithRetry(() => import('./pages/GodownPlanner'));
+const RemoteScanner = lazyWithRetry(() => import('./pages/RemoteScanner'));
+const LegacyViewer = lazyWithRetry(() => import('./pages/LegacyViewer'));
+const AuditLogs = lazyWithRetry(() => import('./pages/AuditLogs'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
+const QrDemo = lazyWithRetry(() => import('./pages/QrDemo'));
+const GovtCompliance = lazyWithRetry(() => import('./pages/GovtCompliance'));
 
 const SystemStatus = () => {
   const [dbStatus, setDbStatus] = useState('idle'); // idle, waking, ready, error
