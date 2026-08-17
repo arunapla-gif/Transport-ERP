@@ -450,34 +450,31 @@ function App() {
     };
   }, [role]);
 
-  if (!role) {
-    return (
-      <React.Suspense fallback={
-        <div className="fixed inset-0 flex items-center justify-center bg-[#1c1917] z-[9999]">
-          <div className="w-10 h-10 border-4 border-white/10 border-t-indigo-500 rounded-full animate-spin"></div>
-        </div>
-      }>
-        <Login onLogin={handleLogin} />
-      </React.Suspense>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Toaster position="top-right" toastOptions={{ duration: 3000, style: { fontWeight: 'bold' } }} />
-        <Layout role={role} onLogout={handleLogout}>
-          <React.Suspense fallback={
-            <div className="flex items-center justify-center min-h-[50vh]">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-stone-200 border-t-stone-800"></div>
-            </div>
-          }>
-            <Routes>
-              <Route path="/print/gc/:id" element={<GcPrint />} />
-              <Route path="/print/gdm/:id" element={<GdmPrint />} />
-              <Route path="/print/cewb/:id" element={<CewbPrint />} />
-              <Route path="/print/gdm-combined/:id" element={<CombinedGdmPrint />} />
-              <Route path="/" element={<SystemBoot />} />
+      <Toaster position="top-right" toastOptions={{ duration: 3000, style: { fontWeight: 'bold' } }} />
+      {!role ? (
+        <React.Suspense fallback={
+          <div className="fixed inset-0 flex items-center justify-center bg-[#1c1917] z-[9999]">
+            <div className="w-10 h-10 border-4 border-white/10 border-t-indigo-500 rounded-full animate-spin"></div>
+          </div>
+        }>
+          <Login onLogin={handleLogin} />
+        </React.Suspense>
+      ) : (
+        <Router>
+          <Layout role={role} onLogout={handleLogout}>
+            <React.Suspense fallback={
+              <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-stone-200 border-t-stone-800"></div>
+              </div>
+            }>
+              <Routes>
+                <Route path="/print/gc/:id" element={<GcPrint />} />
+                <Route path="/print/gdm/:id" element={<GdmPrint />} />
+                <Route path="/print/cewb/:id" element={<CewbPrint />} />
+                <Route path="/print/gdm-combined/:id" element={<CombinedGdmPrint />} />
+                <Route path="/" element={<SystemBoot />} />
               <Route path="/new-gc" element={<NewGcEntry />} />
               <Route path="/acc-gc" element={<AccordionGcEntry />} />
               <Route path="/legacy-rapid-entry" element={<LegacyRapidEntry />} />
@@ -513,7 +510,8 @@ function App() {
             </Routes>
           </React.Suspense>
         </Layout>
-      </Router>
+        </Router>
+      )}
     </QueryClientProvider>
   );
 }
