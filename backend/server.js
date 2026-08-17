@@ -92,11 +92,17 @@ app.use(cors({
       return callback(null, true); // Allow local development
     }
     
-    if (frontendUrl && origin === frontendUrl) {
-      return callback(null, true); // Allow production frontend
+    // Automatically allow Vercel preview/production deployments
+    if (origin.endsWith('.vercel.app') || origin.endsWith('.railway.app')) {
+      return callback(null, true);
     }
     
-    return callback(new Error('Not allowed by CORS'));
+    if (frontendUrl && origin === frontendUrl) {
+      return callback(null, true); // Allow configured production frontend
+    }
+    
+    // Return false instead of Error to prevent 500 Internal Server Error crashes
+    return callback(null, false);
   }
 }));
 
