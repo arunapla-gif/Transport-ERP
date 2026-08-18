@@ -2755,9 +2755,14 @@ app.get('/api/admin/users', authorizeAdmin, async (req, res) => {
 
 app.post('/api/admin/users', authorizeAdmin, async (req, res) => {
   try {
+    const bcrypt = require('bcryptjs');
     const { username, pin, role, branch, permissions } = req.body;
+    
+    // Hash the PIN before saving
+    const hashedPin = bcrypt.hashSync(pin, 10);
+    
     const user = await prisma.user.create({
-      data: { username, pin, role, branch, permissions }
+      data: { username, pin: hashedPin, role, branch, permissions }
     });
     res.json(user);
   } catch (error) {
@@ -2768,10 +2773,19 @@ app.post('/api/admin/users', authorizeAdmin, async (req, res) => {
 
 app.put('/api/admin/users/:id', authorizeAdmin, async (req, res) => {
   try {
+    const bcrypt = require('bcryptjs');
     const { username, pin, role, branch, status, permissions } = req.body;
+    
+    const dataToUpdate = { username, role, branch, status, permissions };
+    
+    // Only update and hash the PIN if a new one was provided
+    if (pin && pin.length >= 4 && !pin.startsWith('$2')) {
+      dataToUpdate.pin = bcrypt.hashSync(pin, 10);
+    }
+
     const user = await prisma.user.update({
       where: { id: parseInt(req.params.id) },
-      data: { username, pin, role, branch, status, permissions }
+      data: dataToUpdate
     });
     res.json(user);
   } catch (error) {
