@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Root package.json for Railway deployment",
   "scripts": {
+    "dev": "node boot.js",
+    "mobile:start": "cd mobile && npm start",
     "build": "cd backend && npm install && npx prisma generate",
     "vercel-build": "cd frontend && npm install && npm run build && rm -rf ../dist && cp -R dist ../dist",
     "start": "cd backend && npm start"

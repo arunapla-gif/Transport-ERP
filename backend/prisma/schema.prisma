@@ -29,6 +29,7 @@ model Consignor {
   addresses Json? @default("[]")
   tradeNames Json? @default("[]")
   legalName  String?
+  panNumber  String?
   isActive   Boolean? @default(true)
   branch     String? @default("MAIN")
   gcs      GC[]
@@ -56,6 +57,7 @@ model Consignee {
   addresses Json? @default("[]")
   tradeNames Json? @default("[]")
   legalName  String?
+  panNumber  String?
   isActive   Boolean? @default(true)
   branch     String? @default("MAIN")
   
@@ -144,9 +146,11 @@ model GC {
   
   consignorId    Int?
   consignor      Consignor? @relation(fields: [consignorId], references: [id])
+  senderContactPhone String?
   
   consigneeId    Int?
   consignee      Consignee? @relation(fields: [consigneeId], references: [id])
+  receiverContactPhone String?
   
   invoiceDate    DateTime?
   invoiceNumber  String?
@@ -456,6 +460,7 @@ model UnitMaster {
 model AuditLog {
   id          Int      @id @default(autoincrement())
   createdAt   DateTime @default(now())
+  username    String?  @default("System")
   userRole    String
   userBranch  String
   action      String

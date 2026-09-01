@@ -14,8 +14,12 @@ async function test() {
        return;
     }
 
-    const authUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-    const authResponse = await fetch(authUrl, {
+    // With OAuth 2.0 Client Credentials, /authenticate is deprecated.
+    // Testing direct EWB fetch instead.
+    const ewaybillno = "552028120315";
+    const ewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=${ewaybillno}`;
+    
+    const ewbResponse = await fetch(ewbUrl, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -26,8 +30,8 @@ async function test() {
       }
     });
     
-    const authData = await authResponse.json();
-    console.log(JSON.stringify(authData, null, 2));
+    const ewbData = await ewbResponse.json();
+    console.log(JSON.stringify(ewbData, null, 2));
   } catch (e) {
     console.error(e);
   }

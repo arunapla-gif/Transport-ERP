@@ -1,6 +1,10 @@
 {
+  "buildCommand": "cd frontend && npm install && npm run build && rm -rf ../dist && cp -R dist ../dist",
+  "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/remote-scanner", "destination": "/scanner.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

@@ -30,7 +30,7 @@ export default function ConsignorMaster() {
 
   const [consignors, setConsignors] = useState([]);
   const [formData, setFormData] = useState({
-    id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: []
+    id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', panNumber: '', phone: '', email: '', group: '', addresses: [], isRetail: false
   });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -106,11 +106,12 @@ export default function ConsignorMaster() {
   }, [hasMore, loading]);
 
   const handleVerifyGST = async () => {
-    if (!formData.gstin) return toast.error('Please enter a GSTIN to verify');
+    const trimmedGstin = (formData.gstin || '').trim();
+    if (!trimmedGstin) return toast.error('Please enter a GSTIN to verify');
     setLoading(true);
     
     try {
-      const data = await api.verifyGST(formData.gstin);
+      const data = await api.verifyGST(trimmedGstin);
       const info = data.taxpayerInfo;
       if (!info) throw new Error('Invalid GSTIN details');
       const addr = info.pradr?.addr || {};
@@ -165,7 +166,8 @@ export default function ConsignorMaster() {
           state: rawState || prev.state,
           stateCode: mappedStateCode || rawState,
           pincode: addr.pncd || addr.pincode || prev.pincode,
-          addresses: additionalAddresses
+          addresses: additionalAddresses,
+          migrationType: 'GST_VERIFIED'
         };
       });
       toast.success('GST verified and details auto-filled!');
@@ -180,10 +182,29 @@ export default function ConsignorMaster() {
     e.preventDefault();
     if (!formData.name) return toast.error("Name is required");
     
+    if (formData.isRetail) {
+      if (!formData.phone) return toast.error("Phone Number is required for Retail Customers");
+    } else if (formData.gstin === 'URP') {
+      if (!formData.panNumber) return toast.error("PAN / Aadhaar is mandatory for Unregistered Dealers (URD)");
+      if (!formData.address) return toast.error("Full Address is mandatory for URD");
+      if (!formData.city) return toast.error("City is mandatory for URD");
+      if (!formData.state || !formData.stateCode) return toast.error("State and State Code are mandatory for URD");
+      if (!formData.pincode) return toast.error("Pincode is mandatory for URD");
+    }
+    
     setLoading(true);
     
     try {
-      const payload = { ...formData, branch, migrationType: 'GST_VERIFIED' };
+      const payload = { 
+        ...formData, 
+        gstin: formData.isRetail ? null : (formData.gstin === 'URP' ? 'URP' : (formData.gstin || '').trim()),
+        branch, 
+        migrationType: formData.isRetail ? 'RETAIL_WITH_PHONE' : 'GST_VERIFIED' 
+      };
+      
+      // Clean up isRetail before sending to API
+      delete payload.isRetail;
+      
       if (formData.id) {
         await api.put(`/consignors/${formData.id}`, payload);
         toast.success('Consignor updated successfully');
@@ -192,7 +213,7 @@ export default function ConsignorMaster() {
         await api.post('/consignors', dataToCreate);
         toast.success('Consignor created successfully');
       }
-      setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [] });
+      setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', panNumber: '', phone: '', email: '', group: '', addresses: [], isRetail: false });
       fetchConsignors();
     } catch (err) {
       toast.error('Failed to save record: ' + (err.message || 'Unknown error'));
@@ -206,7 +227,8 @@ export default function ConsignorMaster() {
       id: consignor.id,
       name: consignor.name || '', address: consignor.address || '', city: consignor.city || '', 
       district: consignor.district || '', state: consignor.state || '', stateCode: consignor.stateCode || '', pincode: consignor.pincode || '', 
-      gstin: consignor.gstin || '', phone: consignor.phone || '', email: consignor.email || '', group: consignor.group || '', addresses: consignor.addresses || []
+      gstin: consignor.gstin || '', panNumber: consignor.panNumber || '', phone: consignor.phone || '', email: consignor.email || '', group: consignor.group || '', addresses: consignor.addresses || [],
+      isRetail: consignor.migrationType === 'RETAIL_WITH_PHONE'
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -232,20 +254,9 @@ export default function ConsignorMaster() {
     }
   };
 
-  const apiOnlyCount = consignors.filter(c => !c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED').length;
-  const oldDataCount = consignors.filter(c => c.migrationType === 'OLD_DATA_ONLY').length;
-  const mergedCount = consignors.filter(c => c.migrationType === 'MERGED_NAME').length;
-
   const filteredConsignors = useMemo(() => {
-    return consignors.filter(c => {
-      // The search query is now handled by the server (debouncedSearch).
-      // We only use this local filter for the TABS (API_ONLY, etc) to avoid refetching on tab switch.
-      if (activeTab === 'API_ONLY') return (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED');
-      if (activeTab === 'OLD_DATA_ONLY') return c.migrationType === 'OLD_DATA_ONLY';
-      if (activeTab === 'MERGED_NAME') return c.migrationType === 'MERGED_NAME';
-      return false;
-    });
-  }, [consignors, activeTab]);
+    return consignors;
+  }, [consignors]);
 
   // Memoize heavy table row rendering to prevent typing lag
   const desktopTableRows = useMemo(() => {

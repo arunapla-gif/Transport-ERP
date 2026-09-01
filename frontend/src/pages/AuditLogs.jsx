@@ -28,6 +28,7 @@ export default function AuditLogs() {
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = 
+      (log.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (log.entity || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (log.entityId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (log.details || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -143,11 +144,11 @@ export default function AuditLogs() {
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5 text-sm font-bold text-slate-700">
                           <User size={14} className={log.userRole === 'admin' ? 'text-indigo-500' : 'text-emerald-500'} />
-                          {log.userRole.toUpperCase()}
+                          {log.username || log.userRole?.toUpperCase() || 'SYSTEM'}
                         </div>
                         <div className="flex items-center gap-1 text-xs font-bold text-slate-500">
                           <GitBranch size={12} />
-                          {log.userBranch}
+                          {log.userBranch} ({log.userRole?.toUpperCase()})
                         </div>
                       </div>
                     </td>

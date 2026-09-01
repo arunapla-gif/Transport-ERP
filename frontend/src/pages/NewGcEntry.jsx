@@ -613,10 +613,6 @@ export default function NewGcEntry() {
     <FormProvider {...methods}>
       <div className="flex flex-col flex-1 w-full max-w-[1600px] mx-auto overflow-hidden bg-slate-50/50 relative" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
         
-        {/* AMBIENT MESH BACKGROUND */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-300/20 rounded-full blur-[120px] pointer-events-none z-0" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-violet-300/20 rounded-full blur-[120px] pointer-events-none z-0" />
-      
         {/* HEADER RIBBON */}
         <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 p-3 flex justify-between items-center shrink-0 z-20 shadow-sm relative">
           <div className="flex items-center gap-4">

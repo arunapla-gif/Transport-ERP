@@ -25,6 +25,8 @@ const WarehouseInwardForm = memo(({
   loading,
   consignorName,
   setConsignorName,
+  consignorPhone,
+  setConsignorPhone,
   consigneeName,
   setConsigneeName,
   consigneeCity,
@@ -39,6 +41,7 @@ const WarehouseInwardForm = memo(({
   consigneeOptions,
   godowns,
   consignees,
+  consignors,
   handleInward,
   cancelEdit
 }) => {
@@ -53,9 +56,20 @@ const WarehouseInwardForm = memo(({
           label="Consignor Name *" 
           options={consignorOptions}
           value={consignorName} 
-          onChange={val => setConsignorName(val)} 
+          onChange={val => {
+            setConsignorName(val);
+            const found = consignors?.find(c => c.name === val);
+            if (found && found.phone) setConsignorPhone(found.phone);
+          }} 
           placeholder="Search Consignor..."
           className="[&>div:nth-of-type(1)]:h-12 [&>div:nth-of-type(1)]:md:h-10 [&>div:nth-of-type(1)]:bg-white/70 [&>div:nth-of-type(1)]:md:bg-white/50 [&>label]:text-[11px] md:[&>label]:text-[10px] [&_input]:text-base md:[&_input]:text-sm [&>div:nth-of-type(1)]:rounded-xl [&>div:nth-of-type(1)]:md:rounded-lg"
+        />
+        <DenseInput 
+          label="Consignor WhatsApp / Mobile No." 
+          placeholder="10-digit phone number" 
+          value={consignorPhone || ''} 
+          onChange={e => setConsignorPhone(e.target.value)} 
+          type="tel"
         />
         <SearchableSelect 
           label="Consignee Name *" 

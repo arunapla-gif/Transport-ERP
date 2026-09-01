@@ -283,9 +283,12 @@ const { logApiUsage } = require('./utils/logger');
 const insertAuditLog = async (req, action, entity, entityId, details) => {
   try {
     const role = req.user?.role || 'System';
-    const branch = req.user?.branch || 'System';
+    const branch = req.user?.branch || 'MAIN';
+    const username = req.user?.username || req.user?.name || req.user?.role || 'System';
+
     await prisma.auditLog.create({
       data: {
+        username,
         userRole: role,
         userBranch: branch,
         action,
@@ -298,7 +301,6 @@ const insertAuditLog = async (req, action, entity, entityId, details) => {
     console.error('Failed to insert audit log:', err);
   }
 };
-
 
 // Generic Audit Log Middleware for all mutations
 app.use((req, res, next) => {
@@ -313,12 +315,22 @@ app.use((req, res, next) => {
         if (req.method === 'POST') action = 'CREATE';
         if (req.method === 'DELETE') action = 'DELETE';
         
-        let entityId = body?.id || body?.gcNumber || body?.gdmNumber || body?.tripNumber || req.body?.id || 'N/A';
+        let entityId = body?.id || body?.gcNumber || body?.gdmNumber || body?.receiptNo || body?.tripNumber || req.body?.id || req.body?.gcNumber || 'N/A';
         if (pathParts[2] && !isNaN(parseInt(pathParts[2]))) {
            entityId = pathParts[2];
         }
 
-        let details = `${action} operation on ${entityPart}`;
+        let details = `${action} on ${entityPart.toUpperCase()}`;
+        if (req.body) {
+          const diffs = [];
+          if (req.body.freightTotal !== undefined) diffs.push(`Freight: ₹${req.body.freightTotal}`);
+          if (req.body.articles !== undefined) diffs.push(`Articles: ${req.body.articles}`);
+          if (req.body.consignorName) diffs.push(`From: ${req.body.consignorName}`);
+          if (req.body.consigneeName) diffs.push(`To: ${req.body.consigneeName}`);
+          if (req.body.status) diffs.push(`Status: ${req.body.status}`);
+          if (diffs.length > 0) details += ` (${diffs.join(', ')})`;
+        }
+
         insertAuditLog(req, action, entityPart.toUpperCase(), entityId, details);
       }
       return originalJson.call(this, body);
@@ -377,23 +389,8 @@ app.get('/api/gst-search/:gstin', paidApiLimiter, async (req, res) => {
       throw new Error("Missing WhiteBooks Production Credentials in .env (including Email and GSTIN)");
     }
 
-    // 1. Authenticate (Session mapped automatically by WhiteBooks)
-    const authUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-    const authResponse = await fetch(authUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "client_id": clientId,
-        "client_secret": clientSecret,
-        "gstin": gstin,
-        "ip_address": "127.0.0.1"
-      }
-    });
-    
-    const authData = await authResponse.json();
-    if (!authResponse.ok || authData.status_cd === "0") {
-       const errMsg = authData.error ? authData.error.message : (authData.message || "Failed to authenticate with WhiteBooks.");
-       throw new Error(`Authentication Failed: ${errMsg}`);
+    if (!clientId || !clientSecret || !email || !gstin) {
+      throw new Error("Missing WhiteBooks Production Credentials in .env (including Email and GSTIN)");
     }
 
     // 2. Fetch GST Details from E-Way Bill Gateway
@@ -1287,20 +1284,8 @@ app.get('/api/ewaybill/:ewaybillno', paidApiLimiter, async (req, res) => {
         gstin = process.env.WHITEBOOKS_GSTIN?.trim() || process.env.TRANSPORTER_GSTIN?.trim();
       }
 
-      if (!username || !password || !gstin) {
+      if (!gstin) {
         throw new Error(`Missing WhiteBooks Credentials for ${isBell ? 'BELL' : 'AP'}`);
-      }
-
-      // 1. Authenticate
-      const authUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-      const authResponse = await fetch(authUrl, {
-        method: "GET",
-        headers: { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" }
-      });
-      
-      const authData = await authResponse.json();
-      if (!authResponse.ok || authData.status_cd === "0") {
-         throw new Error(`Auth Failed for ${isBell ? 'BELL' : 'AP'}`);
       }
 
       // 2. Fetch E-Way Bill
@@ -1371,43 +1356,30 @@ app.get('/api/ewaybill/:ewaybillno', paidApiLimiter, async (req, res) => {
   }
 });
 
-async function getWhitebooksAuth(companyStr) {
+function getWhitebooksAuth(companyStr) {
   const clientId = process.env.WHITEBOOKS_CLIENT_ID?.trim();
   const clientSecret = process.env.WHITEBOOKS_CLIENT_SECRET?.trim();
   const email = process.env.WHITEBOOKS_EMAIL?.trim();
 
-  let username, password, gstin;
+  let gstin;
   if (companyStr === 'BELL') {
-    username = process.env.BELL_WHITEBOOKS_USERNAME?.trim();
-    password = process.env.BELL_WHITEBOOKS_PASSWORD?.trim();
     gstin = process.env.BELL_WHITEBOOKS_GSTIN?.trim();
   } else {
-    username = process.env.WHITEBOOKS_USERNAME?.trim();
-    password = process.env.WHITEBOOKS_PASSWORD?.trim();
     gstin = process.env.WHITEBOOKS_GSTIN?.trim() || process.env.TRANSPORTER_GSTIN?.trim();
   }
   
-  if (!username || !password || !gstin || !clientId || !clientSecret || !email) {
+  if (!gstin || !clientId || !clientSecret || !email) {
     throw new Error(`Missing WhiteBooks Credentials for ${companyStr}`);
   }
 
-  const authUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-  const authResponse = await fetch(authUrl, {
-    method: "GET",
-    headers: { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" }
-  });
-  const authData = await authResponse.json();
-  if (!authResponse.ok || authData.status_cd === "0") {
-     throw new Error(`Auth Failed for ${companyStr}`);
-  }
-  return { authData, gstin, clientId, clientSecret, email };
+  return { gstin, clientId, clientSecret, email };
 }
 
 app.post('/api/ewaybill/generate', paidApiLimiter, async (req, res) => {
   try {
     const { company, gcData, taxInfo, vehicleNo } = req.body;
     const companyStr = req.query.company || company || 'AP';
-    const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
+    const { gstin, clientId, clientSecret, email } = getWhitebooksAuth(companyStr);
     
     // Convert dates to NIC dd/mm/yyyy
     const formatDateNIC = (dateStr) => {
@@ -1511,7 +1483,7 @@ app.post('/api/ewaybill/regenerate', paidApiLimiter, async (req, res) => {
   try {
     const { company, ewbRawData, vehicleNo } = req.body;
     const companyStr = req.query.company || company || 'AP';
-    const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
+    const { gstin, clientId, clientSecret, email } = getWhitebooksAuth(companyStr);
     
     if (!ewbRawData) throw new Error("No raw data provided for regeneration.");
 
@@ -1622,7 +1594,7 @@ app.post('/api/ewaybill/bulk-verify', paidApiLimiter, async (req, res) => {
       }
       
       try {
-        const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(item.company || 'AP');
+        const { gstin, clientId, clientSecret, email } = getWhitebooksAuth(item.company || 'AP');
         
         logApiUsage('WhiteBooks', 'Bulk Verify E-Way Bill (NIC)', 'Success', 0.10);
         const ewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=${cleanEwbNo}`;
@@ -1928,7 +1900,7 @@ app.post('/api/ewaybill/update-part-b', paidApiLimiter, async (req, res) => {
   try {
     const { company, ewbNo, vehicleNo } = req.body;
     const companyStr = req.query.company || company || 'AP';
-    const { authData, gstin, clientId, clientSecret, email } = await getWhitebooksAuth(companyStr);
+    const { gstin, clientId, clientSecret, email } = getWhitebooksAuth(companyStr);
 
     const updUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/vehewb?email=${encodeURIComponent(email)}`;
     
@@ -1995,19 +1967,8 @@ app.post('/api/ewaybill/reassign', paidApiLimiter, async (req, res) => {
       targetGstin = process.env.WHITEBOOKS_GSTIN?.trim() || process.env.TRANSPORTER_GSTIN?.trim();
     }
 
-    if (!username || !password || !gstin || !targetGstin) {
+    if (!gstin || !targetGstin) {
       throw new Error(`Missing WhiteBooks Credentials for reassignment`);
-    }
-
-    // 1. Authenticate with CURRENT company credentials
-    const authUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-    const authResponse = await fetch(authUrl, {
-      method: "GET",
-      headers: { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" }
-    });
-    const authData = await authResponse.json();
-    if (!authResponse.ok || authData.status_cd === "0") {
-       throw new Error(`Auth Failed for ${currentCompany}`);
     }
 
     // 2. Reassign to TARGET company GSTIN
@@ -2055,26 +2016,8 @@ app.post('/api/ewaybill/cewb', paidApiLimiter, async (req, res) => {
       gstin = process.env.WHITEBOOKS_GSTIN?.trim() || process.env.TRANSPORTER_GSTIN?.trim();
     }
 
-    if (!clientId || !clientSecret || !username || !password || !email || !gstin) {
+    if (!clientId || !clientSecret || !email || !gstin) {
       throw new Error(`Missing WhiteBooks Credentials for ${isBell ? 'BELL' : 'AP'}`);
-    }
-
-    // 1. Authenticate
-    const authUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-    const authResponse = await fetch(authUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "client_id": clientId,
-        "client_secret": clientSecret,
-        "gstin": gstin,
-        "ip_address": "127.0.0.1"
-      }
-    });
-    
-    const authData = await authResponse.json();
-    if (!authResponse.ok || authData.status_cd === "0") {
-       throw new Error("Authentication Failed: " + (authData.error?.message || "Check credentials."));
     }
 
     // 2. Build CEWB Payload

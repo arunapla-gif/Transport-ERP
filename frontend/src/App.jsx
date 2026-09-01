@@ -31,6 +31,7 @@ const lazyWithRetry = (componentImport) =>
 const SystemBoot = lazyWithRetry(() => import('./pages/SystemBoot'));
 const NewGcEntry = lazyWithRetry(() => import('./pages/NewGcEntry'));
 const AccordionGcEntry = lazyWithRetry(() => import('./pages/AccordionGcEntry'));
+const RetailGcEntry = lazyWithRetry(() => import('./pages/RetailGcEntry'));
 const WarehouseEntry = lazyWithRetry(() => import('./pages/WarehouseEntry'));
 const WarehouseStatement = lazyWithRetry(() => import('./pages/WarehouseStatement'));
 const ConsignorMaster = lazyWithRetry(() => import('./pages/ConsignorMaster'));
@@ -180,6 +181,14 @@ function Layout({ children, role, onLogout }) {
                    <div>
                      <h4 className="text-xs font-black text-slate-800">GC Entry</h4>
                      <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">Create Consignments</p>
+                   </div>
+                 </Link>
+
+                 <Link onClick={closeMenu} to="/retail-gc" className="group flex items-start gap-3 p-2.5 hover:bg-emerald-50 rounded-xl transition-all border border-transparent hover:border-emerald-100 hover:shadow-sm">
+                   <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-colors shadow-sm"><FileText size={16}/></div>
+                   <div>
+                     <h4 className="text-xs font-black text-emerald-900">Retail GC Entry</h4>
+                     <p className="text-[10px] font-medium text-emerald-600 mt-0.5 leading-tight">Fast-lane Retail Billing</p>
                    </div>
                  </Link>
 
@@ -498,6 +507,7 @@ function App() {
                 <Route path="/" element={<SystemBoot />} />
               <Route path="/new-gc" element={<NewGcEntry />} />
               <Route path="/acc-gc" element={<AccordionGcEntry />} />
+              <Route path="/retail-gc" element={<RetailGcEntry />} />
               <Route path="/legacy-rapid-entry" element={<LegacyRapidEntry />} />
               <Route path="/warehouse-entry" element={<WarehouseEntry />} />
               <Route path="/warehouse-statement" element={<WarehouseStatement />} />

@@ -9,23 +9,6 @@ async function run() {
     const clientId = process.env.WHITEBOOKS_CLIENT_ID?.trim();
     const clientSecret = process.env.WHITEBOOKS_CLIENT_SECRET?.trim();
 
-    const authUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/authenticate?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-    
-    console.log("Fetching auth...");
-    const authResponse = await fetch(authUrl, {
-      method: "GET",
-      headers: { "Content-Type": "application/json", "client_id": clientId, "client_secret": clientSecret, "gstin": gstin, "ip_address": "127.0.0.1" }
-    });
-    
-    const authData = await authResponse.json();
-    console.log("Auth Data:", authData);
-    
-    if (!authResponse.ok || authData.status_cd === "0") {
-       throw new Error(`Auth Failed`);
-    }
-
-    const token = authData.authtoken || authData.data?.authtoken || authData.AuthToken || '';
-    
     const ewaybillno = "552028120315";
     const ewbUrl = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=${ewaybillno}`;
     
@@ -37,8 +20,7 @@ async function run() {
         "client_id": clientId, 
         "client_secret": clientSecret, 
         "gstin": gstin, 
-        "ip_address": "127.0.0.1",
-        "AuthToken": token
+        "ip_address": "127.0.0.1"
       }
     });
 

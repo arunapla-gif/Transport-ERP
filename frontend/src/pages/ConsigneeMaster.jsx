@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../api';
 import toast from 'react-hot-toast';
 import { useKeyboardFlow } from '../hooks/useKeyboardFlow';
@@ -28,7 +28,7 @@ export default function ConsigneeMaster() {
 
   const [consignees, setConsignees] = useState([]);
   const [formData, setFormData] = useState({
-    id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [], parentId: ''
+    id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', panNumber: '', phone: '', email: '', group: '', addresses: [], parentId: '', isRetail: false
   });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -112,11 +112,12 @@ export default function ConsigneeMaster() {
   };
 
   const handleVerifyGST = async () => {
-    if (!formData.gstin) return toast.error('Please enter a GSTIN to verify');
+    const trimmedGstin = (formData.gstin || '').trim();
+    if (!trimmedGstin) return toast.error('Please enter a GSTIN to verify');
     setLoading(true);
     
     try {
-      const data = await api.verifyGST(formData.gstin);
+      const data = await api.verifyGST(trimmedGstin);
       const info = data.taxpayerInfo;
       if (!info) throw new Error('Invalid GSTIN details');
       const addr = info.pradr?.addr || {};
@@ -140,7 +141,7 @@ export default function ConsigneeMaster() {
         
         return joined;
       };
-
+        
       const additionalAddresses = (info.adadr || []).map(a => {
         const adr = a.addr || {};
         return {
@@ -172,7 +173,8 @@ export default function ConsigneeMaster() {
           state: rawState || prev.state,
           stateCode: mappedStateCode || rawState,
           pincode: addr.pncd || addr.pincode || prev.pincode,
-          addresses: additionalAddresses
+          addresses: additionalAddresses,
+          migrationType: 'GST_VERIFIED'
         };
       });
       toast.success('GST verified and details auto-filled!');
@@ -186,11 +188,29 @@ export default function ConsigneeMaster() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) return toast.error('Consignee Name is required');
+    
+    if (formData.isRetail) {
+      if (!formData.phone) return toast.error("Phone Number is required for Retail Customers");
+    } else if (formData.gstin === 'URP') {
+      if (!formData.panNumber) return toast.error("PAN / Aadhaar is mandatory for Unregistered Dealers (URD)");
+      if (!formData.address) return toast.error("Full Address is mandatory for URD");
+      if (!formData.city) return toast.error("City is mandatory for URD");
+      if (!formData.state || !formData.stateCode) return toast.error("State and State Code are mandatory for URD");
+      if (!formData.pincode) return toast.error("Pincode is mandatory for URD");
+    }
+    
     setLoading(true);
     try {
       const dataToCreate = { ...formData };
       delete dataToCreate.id;
-      const payload = { ...dataToCreate, migrationType: 'GST_VERIFIED', branch, parentId: formData.parentId || null };
+      delete dataToCreate.isRetail;
+      const payload = { 
+        ...dataToCreate, 
+        gstin: formData.isRetail ? null : (dataToCreate.gstin === 'URP' ? 'URP' : (dataToCreate.gstin || '').trim()),
+        migrationType: formData.isRetail ? 'RETAIL_WITH_PHONE' : 'GST_VERIFIED', 
+        branch, 
+        parentId: formData.parentId || null 
+      };
       if (formData.id) {
         await api.put(`/consignees/${formData.id}`, { ...payload, id: formData.id });
         toast.success('Updated successfully');
@@ -198,8 +218,8 @@ export default function ConsigneeMaster() {
         await api.post('/consignees', payload);
         toast.success('Added successfully');
       }
-      setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', phone: '', email: '', group: '', addresses: [], parentId: '' });
-      fetchConsignees(1);
+      setFormData({ id: null, name: '', address: '', city: '', district: '', state: '', stateCode: '', pincode: '', gstin: '', panNumber: '', phone: '', email: '', group: '', addresses: [], parentId: '', isRetail: false });
+      fetchConsignees(1, true);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Operation failed');
     } finally {
@@ -212,8 +232,9 @@ export default function ConsigneeMaster() {
       id: consignee.id,
       name: consignee.name || '', legalName: consignee.legalName || '', address: consignee.address || '', city: consignee.city || '', 
       district: consignee.district || '', state: consignee.state || '', stateCode: consignee.stateCode || '', pincode: consignee.pincode || '', 
-      gstin: consignee.gstin || '', phone: consignee.phone || '', email: consignee.email || '', group: consignee.group || '', 
-      addresses: consignee.addresses || [], parentId: consignee.parentId || ''
+      gstin: consignee.gstin || '', panNumber: consignee.panNumber || '', phone: consignee.phone || '', email: consignee.email || '', group: consignee.group || '', 
+      addresses: consignee.addresses || [], parentId: consignee.parentId || '',
+      isRetail: consignee.migrationType === 'RETAIL_WITH_PHONE'
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -239,22 +260,17 @@ export default function ConsigneeMaster() {
     }
   };
 
-  const apiOnlyCount = consignees.filter(c => !c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED').length;
-  const oldDataCount = consignees.filter(c => c.migrationType === 'OLD_DATA_ONLY').length;
   const retailPhoneCount = consignees.filter(c => c.migrationType === 'RETAIL_WITH_PHONE').length;
-  const retailNoPhoneCount = consignees.filter(c => c.migrationType === 'RETAIL_NO_PHONE').length;
 
-  const filteredConsignees = consignees.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-    if (activeTab === 'API_ONLY') return matchesSearch && (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED');
-    if (activeTab === 'OLD_DATA_ONLY') return matchesSearch && c.migrationType === 'OLD_DATA_ONLY';
-    if (activeTab === 'RETAIL_WITH_PHONE') return matchesSearch && c.migrationType === 'RETAIL_WITH_PHONE';
-    if (activeTab === 'RETAIL_NO_PHONE') return matchesSearch && c.migrationType === 'RETAIL_NO_PHONE';
-    return false;
-  });
+  const filteredConsignees = useMemo(() => {
+    return consignees.filter(c => {
+      // The search query is now handled by the server. 
+      // This local filter is just for tabs.
+      if (activeTab === 'API_ONLY') return (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED');
+      if (activeTab === 'RETAIL_WITH_PHONE') return c.migrationType === 'RETAIL_WITH_PHONE';
+      return false;
+    });
+  }, [consignees, activeTab]);
 
   return (
     <div className="space-y-4 max-w-[1200px] mx-auto pb-10" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>

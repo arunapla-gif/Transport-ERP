@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Button } from '../ui/Button';
-import { Edit3, Printer } from 'lucide-react';
+import { Edit3, Printer, MessageCircle } from 'lucide-react';
 
 const GlassCard = ({ children, className = "" }) => (
   <div className={`bg-white/90 backdrop-blur-2xl border border-white/60 rounded-xl p-4 md:p-5 shadow-[0_4px_20px_rgb(79,70,229,0.04)] relative transition-all duration-300 hover:shadow-[0_4px_20px_rgb(79,70,229,0.06)] ${className}`}>
@@ -12,7 +12,8 @@ const GlassCard = ({ children, className = "" }) => (
 const WarehouseRecentCard = memo(({
   recentEntry,
   handleEditRecent,
-  handlePrintRecent
+  handlePrintRecent,
+  handleWhatsAppRecent
 }) => {
   if (!recentEntry) return null;
 
@@ -28,6 +29,15 @@ const WarehouseRecentCard = memo(({
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="icon" 
+            onClick={() => handleWhatsAppRecent && handleWhatsAppRecent(recentEntry)} 
+            className="px-3 py-1.5 h-9 text-emerald-700 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 rounded-lg shadow-sm" 
+            title="Send WhatsApp Receipt"
+          >
+            <MessageCircle size={16} className="text-emerald-600 fill-emerald-600" />
+            <span className="hidden sm:inline">WhatsApp Receipt</span>
+          </Button>
           <Button variant="icon" onClick={handleEditRecent} className="p-2 w-9 h-9 text-blue-600 bg-blue-50 hover:bg-blue-100 bg-transparent flex items-center justify-center" title="Edit">
             <Edit3 size={16} />
           </Button>

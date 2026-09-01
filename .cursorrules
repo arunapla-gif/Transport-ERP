@@ -1,0 +1,26 @@
+# Transport ERP Workspace Rules & Guidelines
+
+## 1. Codebase Context
+- **Workspace**: Transport ERP (Logistics & Fleet Management System)
+- **Frontend Stack**: React 18, Vite, Tailwind CSS, Lucide React Icons
+- **Backend Stack**: Node.js, Express, Prisma ORM, PostgreSQL on Supabase
+- **Integrations**: WhiteBooks OAuth 2.0 (E-Way Bills), ULIP Vahan/DL, Fastag, ESC/POS Thermal Printing
+
+---
+
+## 2. Critical Project Safeguards
+
+### ⌨️ Keyboard Navigation & Speed Entry:
+- Never break `Enter` key focus movement (`useKeyboardFlow.js`) across form components (`AccordionGcEntry.jsx`, `GdmEntry.jsx`, `WarehouseEntry.jsx`).
+- Form inputs must support auto-focus and auto-selection on focus for ultra-fast typing.
+
+### 🏢 Master Data & Walk-in Customer Isolation:
+- Walk-in retail billing (`RetailGcEntry.jsx`) sender/receiver contact details must NEVER mutate or pollute wholesale master company tables (`consignors.js`, `consignees.js`).
+
+### 🧮 Data Integrity & Ledger Protection:
+- Never alter legacy GC calculation formulas or delete historical transactions.
+- Accounting calculations in `TripSettlement.jsx`, `LorryHire.jsx`, and `DailyAccounts.jsx` must balance (`Hire Rate - Advance - Diesel - Fastag = Net Payout`).
+
+### ⚙️ API & Error Handling Standards:
+- All Express API endpoints in `backend/server.js` and `backend/routes/` must return structured JSON `{ success: boolean, data?: any, error?: string }`.
+- WhiteBooks OAuth tokens must auto-refresh upon HTTP 401 response without throwing unhandled exceptions.

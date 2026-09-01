@@ -19,30 +19,23 @@ export default function ConsigneeTable({
   handleRestore
 }) {
   const apiOnlyCount = consignees.filter(c => !c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED').length;
-  const oldDataCount = consignees.filter(c => c.migrationType === 'OLD_DATA_ONLY').length;
   const retailPhoneCount = consignees.filter(c => c.migrationType === 'RETAIL_WITH_PHONE').length;
-  const retailNoPhoneCount = consignees.filter(c => c.migrationType === 'RETAIL_NO_PHONE').length;
-
   const filteredConsignees = consignees.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (c.gstin && c.gstin.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (c.city && c.city.toLowerCase().includes(searchTerm.toLowerCase()));
       
     if (activeTab === 'API_ONLY') return matchesSearch && (!c.migrationType || c.migrationType === 'API_ONLY' || c.migrationType === 'MANUAL' || c.migrationType === 'EWB_LITE' || c.migrationType === 'GST_VERIFIED');
-    if (activeTab === 'OLD_DATA_ONLY') return matchesSearch && c.migrationType === 'OLD_DATA_ONLY';
     if (activeTab === 'RETAIL_WITH_PHONE') return matchesSearch && c.migrationType === 'RETAIL_WITH_PHONE';
-    if (activeTab === 'RETAIL_NO_PHONE') return matchesSearch && c.migrationType === 'RETAIL_NO_PHONE';
     return false;
   });
 
   return (
     <GlassCard className="!p-0 mt-4">
       <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-slate-50/50">
-        <div className="flex bg-slate-200/50 p-1 rounded-lg w-full md:w-auto">
+        <div className="flex bg-slate-200/50 p-1 rounded-lg w-full md:w-auto overflow-x-auto whitespace-nowrap">
             <Button variant="custom" onClick={() => setActiveTab('API_ONLY')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'API_ONLY' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>API Data ({apiOnlyCount})</Button>
-            <Button variant="custom" onClick={() => setActiveTab('OLD_DATA_ONLY')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'OLD_DATA_ONLY' ? 'bg-white text-rose-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Kept Old Data ({oldDataCount})</Button>
             <Button variant="custom" onClick={() => setActiveTab('RETAIL_WITH_PHONE')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'RETAIL_WITH_PHONE' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Retail (Has Phone) ({retailPhoneCount})</Button>
-            <Button variant="custom" onClick={() => setActiveTab('RETAIL_NO_PHONE')} className={`flex-1 md:flex-none px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'RETAIL_NO_PHONE' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>Retail (No Phone) ({retailNoPhoneCount})</Button>
         </div>
         <div className="relative w-full md:w-auto">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 md:w-3.5 md:h-3.5" />

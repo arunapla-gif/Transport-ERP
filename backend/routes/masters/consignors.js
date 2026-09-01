@@ -11,14 +11,29 @@ router.get('/', cacheMiddleware(3600), async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit) : 50;
     const q = req.query.q || '';
     
-    let whereClause = { branch };
-    if (q) {
-      whereClause.OR = [
-        { name: { contains: q, mode: 'insensitive' } },
-        { gstin: { contains: q, mode: 'insensitive' } },
-        { city: { contains: q, mode: 'insensitive' } }
-      ];
+    const conditions = [];
+
+    if (branch && branch !== 'ALL') {
+      conditions.push({
+        OR: [
+          { branch: branch },
+          { branch: 'ALL' },
+          { branch: null }
+        ]
+      });
     }
+
+    if (q) {
+      conditions.push({
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { gstin: { contains: q, mode: 'insensitive' } },
+          { city: { contains: q, mode: 'insensitive' } }
+        ]
+      });
+    }
+
+    const whereClause = conditions.length > 0 ? { AND: conditions } : {};
 
     if (!page) {
       const consignors = await prisma.consignor.findMany({ 
@@ -84,6 +99,9 @@ router.post('/', async (req, res) => {
     res.json(consignor);
   } catch (error) {
     console.error("Error creating consignor:", error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A Consignor with this Name already exists in this branch.' });
+    }
     res.status(500).json({ error: error.message || 'Failed to create consignor' });
   }
 });
@@ -100,6 +118,9 @@ router.put('/:id', async (req, res) => {
     res.json(consignor);
   } catch (error) {
     console.error("Error updating consignor:", error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A Consignor with this verified Name already exists in this branch. Please delete this duplicate old record and use the existing one.' });
+    }
     res.status(500).json({ error: error.message || 'Failed to update consignor' });
   }
 });

@@ -43,6 +43,7 @@ export default function WarehouseEntry() {
 
   // Form Fields
   const [consignorName, setConsignorName] = useState('');
+  const [consignorPhone, setConsignorPhone] = useState('');
   const [consigneeName, setConsigneeName] = useState('');
   const [consigneeCity, setConsigneeCity] = useState('');
   const [articles, setArticles] = useState('');
@@ -221,6 +222,7 @@ export default function WarehouseEntry() {
     const payload = {
       ewayBillNo,
       consignorName,
+      consignorPhone,
       consigneeName,
       consigneeCity,
       articles: parseInt(articles) || 0,
@@ -240,6 +242,7 @@ export default function WarehouseEntry() {
         // Clear form
         setEwayBillNo('');
         setConsignorName('');
+        setConsignorPhone('');
         setConsigneeName('');
         setConsigneeCity('');
         setArticles('');
@@ -265,6 +268,7 @@ export default function WarehouseEntry() {
       // 2. Instantly clear the form for the next scan
       setEwayBillNo('');
       setConsignorName('');
+      setConsignorPhone('');
       setConsigneeName('');
       setConsigneeCity('');
       setArticles('');
@@ -288,6 +292,7 @@ export default function WarehouseEntry() {
     setEditingId(recentEntry.id);
     setEwayBillNo(recentEntry.ewayBillNo || '');
     setConsignorName(recentEntry.consignorName || '');
+    setConsignorPhone(recentEntry.consignorPhone || '');
     setConsigneeName(recentEntry.consigneeName || '');
     setConsigneeCity(recentEntry.consigneeCity || '');
     setArticles(recentEntry.articles?.toString() || '');
@@ -298,6 +303,37 @@ export default function WarehouseEntry() {
 
   const handlePrintRecent = () => {
     window.print();
+  };
+
+  const handleWhatsAppRecent = (entry) => {
+    if (!entry) return;
+    const receiptNo = entry.receiptNo || 'N/A';
+    const consignor = entry.consignorName || 'N/A';
+    const consignee = entry.consigneeName || 'N/A';
+    const city = entry.consigneeCity ? `(${entry.consigneeCity})` : '';
+    const articlesCount = entry.articles || 0;
+    const godown = entry.godownNo || 'N/A';
+    const ewb = entry.ewayBillNo || '';
+    const dateStr = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN');
+
+    const text = 
+`📦 *ARUNACHALAM TRANSPORT ERP*
+*Warehouse Inward Receipt #${receiptNo}*
+----------------------------------------
+📅 *Date*: ${dateStr}
+🏢 *From*: ${consignor}
+👤 *To*: ${consignee} ${city}
+📦 *Total Articles*: *${articlesCount} Box(es)*
+${ewb ? `📄 *E-Way Bill*: ${ewb}\n` : ''}----------------------------------------
+✅ *Inward Stock Received at Warehouse*
+⚠️ *Note: Final confirmation subject to office verification.*`;
+
+    const cleanPhone = consignorPhone ? consignorPhone.replace(/\D/g, '') : '';
+    const waUrl = cleanPhone 
+      ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}` 
+      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+    window.open(waUrl, '_blank');
   };
 
   return (
@@ -371,6 +407,8 @@ export default function WarehouseEntry() {
         loading={loading}
         consignorName={consignorName}
         setConsignorName={setConsignorName}
+        consignorPhone={consignorPhone}
+        setConsignorPhone={setConsignorPhone}
         consigneeName={consigneeName}
         setConsigneeName={setConsigneeName}
         consigneeCity={consigneeCity}
@@ -385,10 +423,11 @@ export default function WarehouseEntry() {
         consigneeOptions={consigneeOptions}
         godowns={godowns}
         consignees={consignees}
+        consignors={consignors}
         handleInward={handleInward}
         cancelEdit={() => {
           setEditingId(null);
-          setEwayBillNo(''); setConsignorName(''); setConsigneeName(''); setConsigneeCity(''); setArticles(''); setGodownNo(''); setRemarks('');
+          setEwayBillNo(''); setConsignorName(''); setConsignorPhone(''); setConsigneeName(''); setConsigneeCity(''); setArticles(''); setGodownNo(''); setRemarks('');
         }}
       />
 
@@ -397,6 +436,7 @@ export default function WarehouseEntry() {
         recentEntry={recentEntry}
         handleEditRecent={handleEditRecent}
         handlePrintRecent={handlePrintRecent}
+        handleWhatsAppRecent={handleWhatsAppRecent}
       />
 
       {/* Print Layout for Single Slip (3.5in x 5in) */}
