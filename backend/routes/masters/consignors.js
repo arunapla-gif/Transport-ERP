@@ -9,59 +9,49 @@ router.get('/', cacheMiddleware(3600), async (req, res) => {
     const branch = req.query.branch || 'MAIN';
     const page = req.query.page ? parseInt(req.query.page) : null;
     const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-    const q = req.query.q || '';
+    const q = req.query.q ? req.query.q.trim().toLowerCase() : '';
     
-    const conditions = [];
+    const branchCondition = (branch && branch !== 'ALL') ? {
+      OR: [
+        { branch: branch },
+        { branch: 'ALL' },
+        { branch: null }
+      ]
+    } : {};
 
-    if (branch && branch !== 'ALL') {
-      conditions.push({
-        OR: [
-          { branch: branch },
-          { branch: 'ALL' },
-          { branch: null }
-        ]
-      });
-    }
+    let consignors = await prisma.consignor.findMany({ 
+      where: branchCondition,
+      orderBy: { id: 'desc' },
+      take: 1000
+    });
 
     if (q) {
-      conditions.push({
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { gstin: { contains: q, mode: 'insensitive' } },
-          { city: { contains: q, mode: 'insensitive' } }
-        ]
+      consignors = consignors.filter(c => {
+        const nameStr = (c.name || '').toLowerCase();
+        const cityStr = (c.city || '').toLowerCase();
+        const gstinStr = (c.gstin || '').toLowerCase();
+        const addrStr = JSON.stringify(c.addresses || []).toLowerCase();
+        return nameStr.includes(q) || cityStr.includes(q) || gstinStr.includes(q) || addrStr.includes(q);
       });
     }
 
-    const whereClause = conditions.length > 0 ? { AND: conditions } : {};
+    const total = consignors.length;
 
     if (!page) {
-      const consignors = await prisma.consignor.findMany({ 
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        take: 500
-      });
       return res.json(consignors);
     }
 
     const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      prisma.consignor.findMany({
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.consignor.count({ where: whereClause })
-    ]);
+    const paginatedData = consignors.slice(skip, skip + limit);
 
     res.json({
-      data,
+      data: paginatedData,
       total,
-      hasMore: (skip + data.length) < total,
-      nextCursor: (skip + data.length) < total ? page + 1 : null
+      hasMore: (skip + paginatedData.length) < total,
+      nextCursor: (skip + paginatedData.length) < total ? page + 1 : null
     });
   } catch (error) {
+    console.error('Error fetching consignors:', error);
     res.status(500).json({ error: 'Failed to fetch consignors' });
   }
 });

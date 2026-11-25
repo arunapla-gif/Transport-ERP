@@ -38,29 +38,33 @@ const io = new Server(server, {
   }
 });
 
-// Setup socket connection
+// Setup socket connection with input validation & sanitization
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
   socket.on('join-room', (roomId) => {
+    // Validate roomId is safe alphanumeric (3-32 chars)
+    if (!roomId || typeof roomId !== 'string' || !/^[A-Za-z0-9_-]{3,32}$/.test(roomId)) {
+      return socket.emit('error-msg', { message: 'Invalid Room ID' });
+    }
     socket.join(roomId);
-    console.log(`Socket ${socket.id} joined room ${roomId}`);
   });
 
   socket.on('mobile-joined', (roomId) => {
-    // Notify room that scanner is connected
+    if (!roomId || typeof roomId !== 'string' || !/^[A-Za-z0-9_-]{3,32}$/.test(roomId)) return;
     socket.to(roomId).emit('scanner-status', { connected: true });
   });
 
   socket.on('scan-data', ({ roomId, data }) => {
-    console.log(`Data received in room ${roomId}:`, data);
-    // Send data only to others in the room (the PC)
-    socket.to(roomId).emit('scan-received', data);
+    if (!roomId || typeof roomId !== 'string' || !/^[A-Za-z0-9_-]{3,32}$/.test(roomId)) return;
+    if (!data || typeof data !== 'string') return;
+    
+    // Sanitize scan text: max 500 chars, strip ASCII control characters
+    const cleanData = data.trim().slice(0, 500).replace(/[\x00-\x1F\x7F]/g, '');
+    if (cleanData.length === 0) return;
+
+    socket.to(roomId).emit('scan-received', cleanData);
   });
 
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
+  socket.on('disconnect', () => {});
 });
 const prisma = new PrismaClient();
 
@@ -109,9 +113,9 @@ app.use(cors({
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'super-secret-key-change-me' : null);
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'c7e954fa0f3a61c77843d1a3b83ef69b46e387c9d7495b5fa0b467ecbc337894' : null);
 if (!JWT_SECRET) {
-  console.error("FATAL ERROR: JWT_SECRET environment variable is strictly required in production to secure tokens.");
+  console.error("FATAL ERROR: JWT_SECRET environment variable is strictly required.");
   process.exit(1);
 }
 
@@ -341,27 +345,62 @@ app.use((req, res, next) => {
 
 
 
-// --- Remote Mobile Scanner API ---
-const remoteScans = {};
+// --- Remote Mobile Scanner API (Hardened with Validation & Expiration) ---
+const remoteScans = new Map();
+
+// Periodic cleanup of stale scan buffers (older than 3 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, item] of remoteScans.entries()) {
+    if (now - item.timestamp > 180000) {
+      remoteScans.delete(code);
+    }
+  }
+}, 60000);
+
+const scannerPushLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60, // Max 60 barcode pushes per minute
+  message: { error: 'Too many scan submissions. Please slow down.' }
+});
 
 app.get('/api/scanner/poll', (req, res) => {
   const { code } = req.query;
-  if (!code) return res.status(400).json({ error: 'Code required' });
+  if (!code || typeof code !== 'string' || !/^[A-Za-z0-9_-]{4,16}$/.test(code)) {
+    return res.status(400).json({ error: 'Valid pairing code required (4-16 alphanumeric)' });
+  }
   
-  if (remoteScans[code]) {
-    const data = remoteScans[code];
-    delete remoteScans[code];
-    return res.json({ status: 'success', data });
+  if (remoteScans.has(code)) {
+    const entry = remoteScans.get(code);
+    remoteScans.delete(code);
+    return res.json({ status: 'success', data: entry.data });
   }
   
   return res.json({ status: 'waiting' });
 });
 
-app.post('/api/scanner/push', (req, res) => {
+app.post('/api/scanner/push', scannerPushLimiter, (req, res) => {
   const { code, data } = req.body;
-  if (!code || !data) return res.status(400).json({ error: 'Code and data required' });
+  if (!code || typeof code !== 'string' || !/^[A-Za-z0-9_-]{4,16}$/.test(code)) {
+    return res.status(400).json({ error: 'Valid pairing code required (4-16 alphanumeric)' });
+  }
+  if (!data || typeof data !== 'string') {
+    return res.status(400).json({ error: 'Valid scan payload data required' });
+  }
+
+  // Sanitize: max 500 characters, strip control characters
+  const cleanData = data.trim().slice(0, 500).replace(/[\x00-\x1F\x7F]/g, '');
+  if (cleanData.length === 0) {
+    return res.status(400).json({ error: 'Scan data cannot be empty' });
+  }
+
+  // Cap memory size to max 1000 active pairing codes
+  if (remoteScans.size > 1000) {
+    const oldestKey = remoteScans.keys().next().value;
+    remoteScans.delete(oldestKey);
+  }
   
-  remoteScans[code] = data;
+  remoteScans.set(code, { data: cleanData, timestamp: Date.now() });
   res.json({ success: true });
 });
 
@@ -542,26 +581,36 @@ async function mapGstResponse(data, originalGstin, res) {
 // Endpoint to calculate the next GC Number for a specific company mode
 app.get('/api/gcs/next-number', async (req, res) => {
   try {
-    const mode = req.query.mode || 'A';
+    const mode = (req.query.mode || 'A').toString().toUpperCase();
     const branch = req.query.branch || 'MAIN';
-    const prefix = mode === 'A' ? 'AP-' : 'BELL-';
+    let prefix = 'AP-';
+    let startNumber = 5000;
+
+    if (mode === 'B' || mode === 'BELL') {
+      prefix = 'BELL-';
+      startNumber = 5000;
+    } else if (mode === 'RET' || mode === 'RETAIL') {
+      prefix = 'RET-';
+      startNumber = 1001;
+    }
     
-    // Find all GC numbers starting with the prefix for this branch
+    // Find recent GC numbers starting with the prefix for this branch
     const gcs = await prisma.gC.findMany({
       where: {
         branch,
         gcNumber: { startsWith: prefix }
       },
-      select: { gcNumber: true }
+      select: { gcNumber: true },
+      orderBy: { id: 'desc' },
+      take: 200
     });
 
     if (gcs.length === 0) {
-      // If no GCs exist yet for this company, start from 5000
-      return res.json({ nextNumber: '5000' });
+      return res.json({ nextNumber: startNumber.toString(), fullNumber: `${prefix}${startNumber}` });
     }
 
     // Extract the numeric part and find the max
-    let maxNumber = 4999;
+    let maxNumber = startNumber - 1;
     for (const gc of gcs) {
       const numStr = gc.gcNumber.replace(prefix, '');
       const num = parseInt(numStr, 10);
@@ -570,8 +619,8 @@ app.get('/api/gcs/next-number', async (req, res) => {
       }
     }
 
-    // The next number is the max + 1
-    res.json({ nextNumber: (maxNumber + 1).toString() });
+    const nextSeq = (maxNumber + 1).toString();
+    res.json({ nextNumber: nextSeq, fullNumber: `${prefix}${nextSeq}` });
   } catch (error) {
     console.error("Error calculating next GC number:", error);
     res.status(500).json({ error: 'Failed to calculate next GC number' });
@@ -749,19 +798,52 @@ app.put('/api/gcs/:id/ewb', async (req, res) => {
   }
 });
 
+function recalculateAndValidateGcFinancials(gcData, goods) {
+  const freightRate = Math.max(0, parseFloat(gcData.freightRate) || 0);
+  let freightTotal = Math.max(0, parseFloat(gcData.freightTotal) || 0);
+  let advancePaid = Math.max(0, parseFloat(gcData.advancePaid) || 0);
+  let balanceFreight = Math.max(0, parseFloat(gcData.balanceFreight) || 0);
+
+  // If per-article rate is configured, auto-calculate if freightTotal was unset
+  if (gcData.freightFixed === 'No' && Array.isArray(goods) && goods.length > 0) {
+    const totalArticles = goods.reduce((sum, item) => sum + (parseInt(item.articles || item.articleCount) || 0), 0);
+    if (freightRate > 0 && freightTotal === 0) {
+      freightTotal = totalArticles * freightRate;
+    }
+  }
+
+  const freightType = (gcData.freightType || '').trim();
+  if (freightType === 'Paid') {
+    advancePaid = freightTotal;
+    balanceFreight = 0;
+  } else if (freightType === 'To Pay' || freightType === 'ToPay') {
+    advancePaid = 0;
+    balanceFreight = freightTotal;
+  } else {
+    // T.B.B. or partial advance
+    if (advancePaid > freightTotal) {
+      advancePaid = freightTotal;
+    }
+    balanceFreight = Math.max(0, freightTotal - advancePaid);
+  }
+
+  gcData.freightRate = freightRate;
+  gcData.freightTotal = freightTotal;
+  gcData.advancePaid = advancePaid;
+  gcData.balanceFreight = balanceFreight;
+  if (gcData.invoiceValue) gcData.invoiceValue = Math.max(0, parseFloat(gcData.invoiceValue) || 0);
+  if (gcData.date) gcData.date = new Date(gcData.date);
+  if (gcData.invoiceDate) gcData.invoiceDate = new Date(gcData.invoiceDate);
+  return gcData;
+}
+
 app.post('/api/gcs', async (req, res) => {
   try {
     let { goods, consignorGstin, consigneeGstin, consignorAddressPreview, consigneeAddressPreview, branch = 'MAIN', ...gcData } = req.body;
     if (req.user && req.user.role !== 'admin') branch = req.user.branch;
 
-    // Parse numeric fields properly before saving
-    if (gcData.freightRate) gcData.freightRate = parseFloat(gcData.freightRate);
-    if (gcData.freightTotal) gcData.freightTotal = parseFloat(gcData.freightTotal);
-    if (gcData.advancePaid) gcData.advancePaid = parseFloat(gcData.advancePaid);
-    if (gcData.balanceFreight) gcData.balanceFreight = parseFloat(gcData.balanceFreight);
-    if (gcData.invoiceValue) gcData.invoiceValue = parseFloat(gcData.invoiceValue);
-    if (gcData.date) gcData.date = new Date(gcData.date);
-    if (gcData.invoiceDate) gcData.invoiceDate = new Date(gcData.invoiceDate);
+    // Apply strict server-side calculation & consistency rules
+    recalculateAndValidateGcFinancials(gcData, goods);
 
     const gc = await prisma.gC.create({
       data: {
@@ -808,14 +890,8 @@ app.put('/api/gcs/:id', async (req, res) => {
   try {
     const { goods, consignorId, consigneeId, consignorGstin, consigneeGstin, consignorAddressPreview, consigneeAddressPreview, ...gcData } = req.body;
     
-    // Parse numeric fields properly before saving
-    if (gcData.freightRate) gcData.freightRate = parseFloat(gcData.freightRate);
-    if (gcData.freightTotal) gcData.freightTotal = parseFloat(gcData.freightTotal);
-    if (gcData.advancePaid) gcData.advancePaid = parseFloat(gcData.advancePaid);
-    if (gcData.balanceFreight) gcData.balanceFreight = parseFloat(gcData.balanceFreight);
-    if (gcData.invoiceValue) gcData.invoiceValue = parseFloat(gcData.invoiceValue);
-    if (gcData.date) gcData.date = new Date(gcData.date);
-    if (gcData.invoiceDate) gcData.invoiceDate = new Date(gcData.invoiceDate);
+    // Apply strict server-side calculation & consistency rules
+    recalculateAndValidateGcFinancials(gcData, goods);
 
     const gc = await prisma.gC.update({
       where: { id: parseInt(req.params.id) },
@@ -2206,6 +2282,21 @@ app.get('/api/trips', async (req, res) => {
 app.post('/api/trips/:id/settle', async (req, res) => {
   try {
     const tripId = parseInt(req.params.id);
+    if (isNaN(tripId) || tripId <= 0) {
+      return res.status(400).json({ error: 'Valid Trip ID is required.' });
+    }
+
+    const existingTrip = await prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { id: true, status: true, tripNumber: true }
+    });
+    if (!existingTrip) {
+      return res.status(404).json({ error: 'Trip not found.' });
+    }
+    if (existingTrip.status === 'Settled') {
+      return res.status(400).json({ error: `Trip ${existingTrip.tripNumber} is already settled and closed.` });
+    }
+
     const { gdmIds, allocations, crossingAmount, returnAmount } = req.body;
 
     const transactionOps = [];
@@ -2263,18 +2354,34 @@ app.post('/api/trips/:id/settle', async (req, res) => {
 // ==========================================
 
 // Log a lump sum payment
+// Log a lump sum payment
 app.post('/api/party-payments', async (req, res) => {
   try {
     const { partyType, partyId, amount, paymentMode, reference, remarks, date } = req.body;
     
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({ error: 'Payment amount must be greater than zero.' });
+    }
+
+    const parsedPartyId = parseInt(partyId);
+    if (isNaN(parsedPartyId) || parsedPartyId <= 0) {
+      return res.status(400).json({ error: 'Valid Party ID is required.' });
+    }
+
+    const rawType = (partyType || '').toLowerCase();
+    const normalizedType = rawType.startsWith('consignee') ? 'Consignee' : 'Consignor';
+    const branch = req.user?.branch || req.headers['x-branch-id'] || 'MAIN';
+
     const payment = await prisma.partyPayment.create({
       data: {
-        partyType,
-        partyId: parseInt(partyId),
-        amount: parseFloat(amount),
-        paymentMode,
-        reference,
-        remarks,
+        partyType: normalizedType,
+        partyId: parsedPartyId,
+        amount: parsedAmount,
+        paymentMode: paymentMode || 'Cash',
+        reference: reference || null,
+        remarks: remarks || null,
+        branch,
         date: date ? new Date(date) : new Date()
       }
     });
@@ -2286,15 +2393,20 @@ app.post('/api/party-payments', async (req, res) => {
   }
 });
 
-// Fetch running ledger for a party
+// Fetch running ledger for a party (Normalized for Consignee / Consignor)
 app.get('/api/party-ledger/:partyType/:partyId', async (req, res) => {
   try {
-    const partyType = req.params.partyType; // 'Consignee' or 'Consignor'
+    const rawType = (req.params.partyType || '').toLowerCase();
+    const isConsignee = rawType.startsWith('consignee');
     const partyId = parseInt(req.params.partyId);
+
+    if (isNaN(partyId) || partyId <= 0) {
+      return res.status(400).json({ error: 'Invalid Party ID' });
+    }
 
     // 1. Fetch all GCs for this party to build GC Debits & Credits
     const gcs = await prisma.gC.findMany({
-      where: partyType === 'Consignee' ? { consigneeId: partyId } : { consignorId: partyId },
+      where: isConsignee ? { consigneeId: partyId } : { consignorId: partyId },
       include: {
         gdm: {
           include: { trip: true }
@@ -2309,8 +2421,8 @@ app.get('/api/party-ledger/:partyType/:partyId', async (req, res) => {
       const freight = parseFloat(gc.freightTotal) || 0;
       if (freight > 0) {
         let shouldDebit = false;
-        if (partyType === 'Consignor' && gc.freightType === 'T.B.B.') shouldDebit = true;
-        if (partyType === 'Consignee' && gc.freightType === 'To Pay') shouldDebit = true;
+        if (!isConsignee && (gc.freightType === 'T.B.B.' || gc.freightType === 'To Be Billed')) shouldDebit = true;
+        if (isConsignee && (gc.freightType === 'To Pay' || gc.freightType === 'ToPay')) shouldDebit = true;
         
         if (shouldDebit) {
           ledgerEntries.push({
@@ -2321,6 +2433,19 @@ app.get('/api/party-ledger/:partyType/:partyId', async (req, res) => {
             reference: `GC: ${gc.gcNumber}`,
             remarks: 'Freight Charges'
           });
+
+          // If Consignor paid an advance at booking, credit it to ledger
+          const advancePaid = parseFloat(gc.advancePaid) || 0;
+          if (advancePaid > 0) {
+            ledgerEntries.push({
+              id: `gc-adv-${gc.id}`,
+              date: gc.date || new Date(),
+              type: 'CREDIT',
+              amount: advancePaid,
+              reference: `GC Advance: ${gc.gcNumber}`,
+              remarks: 'Advance Paid at Booking'
+            });
+          }
         }
       }
 
@@ -2351,9 +2476,16 @@ app.get('/api/party-ledger/:partyType/:partyId', async (req, res) => {
       }
     });
 
-    // 2. Fetch all direct payments
+    // 2. Fetch all direct payments (supporting plural or singular casing in DB)
     const payments = await prisma.partyPayment.findMany({
-      where: { partyType, partyId }
+      where: {
+        partyType: {
+          in: isConsignee 
+            ? ['Consignee', 'consignee', 'consignees', 'CONSIGNEE']
+            : ['Consignor', 'consignor', 'consignors', 'CONSIGNOR']
+        },
+        partyId
+      }
     });
 
     payments.forEach(payment => {
@@ -2495,7 +2627,7 @@ app.post('/api/scan-ewb', async (req, res) => {
 
 app.post('/api/godown-ai', async (req, res) => {
   try {
-    const { audioData, mimeType, stockContext } = req.body;
+    const { audioData, queryText, mimeType, stockContext } = req.body;
     
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ reply: 'Gemini API key is missing in backend.' });
@@ -2504,13 +2636,13 @@ app.post('/api/godown-ai', async (req, res) => {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // The prompt instructs the AI how to act and enforces JSON output
+    const hasAudio = audioData && typeof audioData === 'string' && audioData.trim().length > 0;
     const prompt = `
       You are a helpful Tamil warehouse assistant for a 70-year-old owner.
-      He will ask a question about the pending godown stock (in the attached Tamil audio).
+      He will ask a question about the pending godown stock (${hasAudio ? 'in the attached Tamil audio' : `text query: "${queryText || ''}"`}).
       Here is the current live stock data: ${JSON.stringify(stockContext)}
       
-      Listen to the audio. Figure out which consignee or total he is asking about.
+      Figure out which consignee or total he is asking about.
       You MUST reply ONLY with a JSON object in this exact format. Do not use markdown blocks (\`\`\`json):
       {
         "reply": "The short, natural, polite Tamil sentence answering his question. Use numbers clearly.",
@@ -2519,15 +2651,17 @@ app.post('/api/godown-ai', async (req, res) => {
       Rule: 'filteredConsignees' should be an array of the exact consigneeName strings from the data that match his query. Leave it empty [] if he asks for total/all.
     `;
 
-    // Convert base64 audio to Gemini Part object
-    const audioPart = {
-      inlineData: {
-        data: audioData.split(',')[1] || audioData, // strip "data:audio/webm;base64,"
-        mimeType: mimeType || 'audio/webm'
-      }
-    };
+    let parts = [prompt];
+    if (hasAudio) {
+      parts.push({
+        inlineData: {
+          data: audioData.split(',')[1] || audioData,
+          mimeType: mimeType || 'audio/webm'
+        }
+      });
+    }
 
-    const result = await model.generateContent([prompt, audioPart]);
+    const result = await model.generateContent(parts);
     const response = await result.response;
     let responseText = response.text().trim();
     
@@ -2643,15 +2777,29 @@ app.get('/api/daily-transactions', async (req, res) => {
 app.post('/api/daily-transactions', async (req, res) => {
   try {
     const { date, type, category, amount, paymentMode, description, reference } = req.body;
+    
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({ error: 'Transaction amount must be greater than zero.' });
+    }
+
+    const normalizedType = (type || '').toUpperCase();
+    if (normalizedType !== 'INCOME' && normalizedType !== 'EXPENSE') {
+      return res.status(400).json({ error: 'Transaction type must be INCOME or EXPENSE.' });
+    }
+
+    const branch = req.user?.branch || req.headers['x-branch-id'] || 'MAIN';
+
     const transaction = await prisma.dailyTransaction.create({
       data: {
         date: date ? new Date(date) : new Date(),
-        type,
-        category,
-        amount: parseFloat(amount) || 0,
-        paymentMode,
-        description,
-        reference
+        type: normalizedType,
+        category: category || 'Other',
+        amount: parsedAmount,
+        paymentMode: paymentMode || 'Cash',
+        description: description ? description.toString().slice(0, 500) : null,
+        reference: reference ? reference.toString().slice(0, 100) : null,
+        branch
       }
     });
     res.json(transaction);
@@ -2663,11 +2811,22 @@ app.post('/api/daily-transactions', async (req, res) => {
 // Delete a daily transaction
 app.delete('/api/daily-transactions/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    await prisma.dailyTransaction.delete({
-      where: { id: parseInt(id) }
+    const parsedId = parseInt(req.params.id);
+    if (isNaN(parsedId) || parsedId <= 0) {
+      return res.status(400).json({ error: 'Valid Transaction ID required.' });
+    }
+
+    const existing = await prisma.dailyTransaction.findUnique({
+      where: { id: parsedId }
     });
-    res.json({ message: 'Transaction deleted successfully' });
+    if (!existing) {
+      return res.status(404).json({ error: 'Transaction not found.' });
+    }
+
+    await prisma.dailyTransaction.delete({
+      where: { id: parsedId }
+    });
+    res.json({ message: 'Transaction deleted successfully', deleted: existing });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete transaction' });
   }

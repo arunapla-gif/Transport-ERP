@@ -9,60 +9,49 @@ router.get('/', cacheMiddleware(3600), async (req, res) => {
     const branch = req.query.branch || 'MAIN';
     const page = req.query.page ? parseInt(req.query.page) : null;
     const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-    const q = req.query.q || '';
+    const q = req.query.q ? req.query.q.trim().toLowerCase() : '';
     
-    const conditions = [];
+    const branchCondition = (branch && branch !== 'ALL') ? {
+      OR: [
+        { branch: branch },
+        { branch: 'ALL' },
+        { branch: null }
+      ]
+    } : {};
 
-    if (branch && branch !== 'ALL') {
-      conditions.push({
-        OR: [
-          { branch: branch },
-          { branch: 'ALL' },
-          { branch: null }
-        ]
-      });
-    }
+    let consignees = await prisma.consignee.findMany({ 
+      where: branchCondition,
+      orderBy: { id: 'desc' },
+      take: 1000
+    });
 
     if (q) {
-      conditions.push({
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { gstin: { contains: q, mode: 'insensitive' } },
-          { city: { contains: q, mode: 'insensitive' } }
-        ]
+      consignees = consignees.filter(c => {
+        const nameStr = (c.name || '').toLowerCase();
+        const cityStr = (c.city || '').toLowerCase();
+        const gstinStr = (c.gstin || '').toLowerCase();
+        const addrStr = JSON.stringify(c.addresses || []).toLowerCase();
+        return nameStr.includes(q) || cityStr.includes(q) || gstinStr.includes(q) || addrStr.includes(q);
       });
     }
 
-    const whereClause = conditions.length > 0 ? { AND: conditions } : {};
+    const total = consignees.length;
 
     if (!page) {
-      const consignees = await prisma.consignee.findMany({ 
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        take: 500
-      });
       return res.json(consignees);
     }
 
     const skip = (page - 1) * limit;
-    
-    const [data, total] = await Promise.all([
-      prisma.consignee.findMany({
-        where: whereClause,
-        orderBy: { id: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.consignee.count({ where: whereClause })
-    ]);
+    const paginatedData = consignees.slice(skip, skip + limit);
 
     res.json({
-      data,
+      data: paginatedData,
       total,
-      hasMore: (skip + data.length) < total,
-      nextCursor: (skip + data.length) < total ? page + 1 : null
+      hasMore: (skip + paginatedData.length) < total,
+      nextCursor: (skip + paginatedData.length) < total ? page + 1 : null
     });
   } catch (error) {
+    console.error('Error fetching consignees:', error);
     res.status(500).json({ error: 'Failed to fetch consignees' });
   }
 });

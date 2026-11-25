@@ -9,7 +9,12 @@ const prisma = new PrismaClient();
 router.get('/warehouse-inward', async (req, res) => {
   try {
     const { date } = req.query;
+    const branch = req.user?.branch || req.headers['x-branch-id'] || 'MAIN';
     let whereClause = {};
+
+    if (branch && branch !== 'ALL') {
+      whereClause.branch = branch;
+    }
     
     if (date) {
       const startOfDay = new Date(date);
@@ -48,7 +53,8 @@ router.get('/warehouse-inward', async (req, res) => {
 
     const inwards = await prisma.warehouseInward.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: limit
     });
     res.json(inwards);
   } catch (error) {
@@ -59,15 +65,47 @@ router.get('/warehouse-inward', async (req, res) => {
 
 router.post('/warehouse-inward', async (req, res) => {
   try {
-    const lastEntry = await prisma.warehouseInward.findFirst({
-      orderBy: { receiptNo: 'desc' },
-      where: { receiptNo: { not: null } }
-    });
-    const nextReceiptNo = lastEntry && lastEntry.receiptNo ? lastEntry.receiptNo + 1 : 1;
+    const branch = req.user?.branch || req.headers['x-branch-id'] || 'MAIN';
+    const { consignorName, consigneeName, articles, godownNo, ewayBillNo, remarks, consigneeCity } = req.body;
 
-    const inward = await prisma.warehouseInward.create({ 
-      data: { ...req.body, receiptNo: nextReceiptNo } 
-    });
+    if (!consignorName || !consigneeName || !articles || !godownNo) {
+      return res.status(400).json({ error: 'Consignor, Consignee, Articles, and Godown are required.' });
+    }
+
+    // Auto-retry with incremented receipt number to prevent concurrent collision
+    let attempts = 0;
+    let inward = null;
+    while (attempts < 3) {
+      try {
+        const lastEntry = await prisma.warehouseInward.findFirst({
+          orderBy: { receiptNo: 'desc' },
+          where: { receiptNo: { not: null } }
+        });
+        const nextReceiptNo = lastEntry && lastEntry.receiptNo ? lastEntry.receiptNo + 1 : 1;
+
+        inward = await prisma.warehouseInward.create({ 
+          data: {
+            consignorName,
+            consigneeName,
+            consigneeCity: consigneeCity || null,
+            articles: parseInt(articles) || 1,
+            godownNo,
+            ewayBillNo: ewayBillNo || null,
+            remarks: remarks || null,
+            branch,
+            receiptNo: nextReceiptNo
+          } 
+        });
+        break;
+      } catch (createErr) {
+        if (createErr.code === 'P2002' && attempts < 2) {
+          attempts++;
+          continue;
+        }
+        throw createErr;
+      }
+    }
+
     res.json(inward);
   } catch (error) {
     console.error(error);
@@ -78,14 +116,33 @@ router.post('/warehouse-inward', async (req, res) => {
 router.put('/warehouse-inward/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const { receiptNo, ...allowedUpdates } = req.body; // Protect receiptNo from arbitrary tampering
     const inward = await prisma.warehouseInward.update({
       where: { id: parseInt(id) },
-      data: req.body
+      data: allowedUpdates
     });
     res.json(inward);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update inward entry' });
+  }
+});
+
+router.delete('/warehouse-inward/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const parsedId = parseInt(id);
+    if (isNaN(parsedId) || parsedId <= 0) {
+      return res.status(400).json({ error: 'Valid Inward ID is required' });
+    }
+
+    const deleted = await prisma.warehouseInward.delete({
+      where: { id: parsedId }
+    });
+    res.json({ message: 'Warehouse inward entry deleted successfully', deleted });
+  } catch (error) {
+    console.error('Failed to delete warehouse inward:', error);
+    res.status(500).json({ error: 'Failed to delete inward entry' });
   }
 });
 

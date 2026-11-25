@@ -5,6 +5,29 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // ==============================
+// APP VERSION & AUTO-UPDATER
+// ==============================
+router.get(['/app-version', '/system/app-version'], (req, res) => {
+  res.json({
+    status: 'ok',
+    android: {
+      version: "1.0.0",
+      buildNumber: 1,
+      downloadUrl: "https://transport-erp-production.up.railway.app/downloads/transport-erp-operator.apk",
+      forceUpdate: false,
+      releaseNotes: "• Initial Release: Warehouse Inward Scanner & Goods Consignment Entry\n• 1-Tap WhatsApp receipt delivery\n• Offline-tolerant caching"
+    },
+    windows: {
+      version: "1.0.0",
+      buildNumber: 1,
+      downloadUrl: "https://transport-erp-production.up.railway.app/downloads/TransportERP-Office-Setup.exe",
+      forceUpdate: false,
+      releaseNotes: "• Initial Release: Main Office Billing & Lorry Accounts\n• Direct thermal/continuous printing integration\n• Trip Settlement & P&L Analysis"
+    }
+  });
+});
+
+// ==============================
 // HEALTH & BOOT ENDPOINT
 // ==============================
 router.get('/health', async (req, res) => {
