@@ -225,9 +225,9 @@ const requirePermission = (action) => {
   };
 };
 
-// Protect all /api routes EXCEPT the ones specified below (which include health and scanner polling)
+// Protect all /api routes EXCEPT the ones specified below (which include health, app-version, and scanner polling)
 app.use('/api', (req, res, next) => {
-  const excludedPaths = ['/health', '/scanner/poll', '/scanner/push'];
+  const excludedPaths = ['/health', '/app-version', '/system/app-version', '/scanner/poll', '/scanner/push'];
   // Also exclude /login because it was defined above this middleware, but just in case:
   if (excludedPaths.some(p => req.path.startsWith(p)) || req.path === '/login') {
     return next();
@@ -3036,6 +3036,32 @@ app.get('/api/admin/backup', authorizeAdmin, async (req, res) => {
     res.status(500).json({ error: 'Failed to generate backup' });
   }
 });
+
+// ==============================
+// FLUTTER WEB & UPDATER STATIC HOSTING
+// ==============================
+const path = require('path');
+const fs = require('fs');
+const downloadsDir = path.join(__dirname, 'downloads');
+const flutterWebDir = path.join(__dirname, 'public');
+
+if (fs.existsSync(downloadsDir)) {
+  app.use('/downloads', express.static(downloadsDir));
+}
+
+if (fs.existsSync(flutterWebDir)) {
+  app.use(express.static(flutterWebDir, { maxAge: '1h' }));
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/downloads') && !req.path.startsWith('/socket.io')) {
+      const indexHtml = path.join(flutterWebDir, 'index.html');
+      if (fs.existsSync(indexHtml)) {
+        res.setHeader('Cache-Control', 'no-cache');
+        return res.sendFile(indexHtml);
+      }
+    }
+    next();
+  });
+}
 
 // Global Error Handling Middleware
 app.use((err, req, res, next) => {

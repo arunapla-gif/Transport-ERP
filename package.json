@@ -6,6 +6,7 @@
     "dev": "node boot.js",
     "mobile:start": "cd mobile && npm start",
     "build": "cd backend && npm install && npx prisma generate",
+    "build:flutter-web": "cd flutter_app && flutter build web --release --no-wasm-dry-run && rm -rf ../backend/public && cp -R build/web ../backend/public",
     "vercel-build": "cd frontend && npm install && npm run build && rm -rf ../dist && cp -R dist ../dist",
     "start": "cd backend && npm start"
   },
