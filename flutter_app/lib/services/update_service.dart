@@ -5,61 +5,113 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api_service.dart';
+import 'web_reload_stub.dart' if (dart.library.html) 'web_reload_web.dart';
 
 class UpdateService {
-  /// Checks for application updates on Android and Windows clients.
-  /// Web clients auto-update on page refresh and are skipped.
-  static Future<void> checkForUpdate(BuildContext context) async {
-    if (kIsWeb) return;
+  // Compiled into the app bundle so open Web tabs know their exact running build.
+  static const String appVersion = '1.0.1';
+  static const int appBuildNumber = 2;
+  static String get buildLabel => 'v$appVersion (b$appBuildNumber)';
 
+  /// Checks for application updates on Web, Android, and Windows clients.
+  static Future<void> checkForUpdate(BuildContext context,
+      {bool manual = false}) async {
     try {
       final url = Uri.parse('${ApiService.baseUrl}/app-version');
       final response = await http.get(url).timeout(const Duration(seconds: 5));
 
-      if (response.statusCode != 200) return;
-
-      final data = jsonDecode(response.body);
-      final packageInfo = await PackageInfo.fromPlatform();
-      final currentBuildNumber = int.tryParse(packageInfo.buildNumber) ?? 1;
-      final currentVersion = packageInfo.version;
-
-      Map<String, dynamic>? platformConfig;
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        platformConfig = data['android'];
-      } else if (defaultTargetPlatform == TargetPlatform.windows) {
-        platformConfig = data['windows'];
+      if (response.statusCode != 200) {
+        if (manual && context.mounted) {
+          _showStatusSnackBar(context, 'Could not check for updates right now.',
+              isError: true);
+        }
+        return;
       }
 
-      if (platformConfig == null) return;
+      final data = jsonDecode(response.body);
+      int currentBuildNumber = appBuildNumber;
+      String currentVersion = appVersion;
+
+      if (!kIsWeb) {
+        final packageInfo = await PackageInfo.fromPlatform();
+        currentBuildNumber =
+            int.tryParse(packageInfo.buildNumber) ?? appBuildNumber;
+        currentVersion = packageInfo.version;
+      }
+
+      Map<String, dynamic>? platformConfig;
+      if (kIsWeb) {
+        platformConfig = data['web'] as Map<String, dynamic>?;
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
+        platformConfig = data['android'] as Map<String, dynamic>?;
+      } else if (defaultTargetPlatform == TargetPlatform.windows) {
+        platformConfig = data['windows'] as Map<String, dynamic>?;
+      }
+
+      if (platformConfig == null) {
+        if (manual && context.mounted) {
+          _showStatusSnackBar(
+              context, 'You are on the latest version ($buildLabel).');
+        }
+        return;
+      }
 
       final latestBuildNumber = platformConfig['buildNumber'] as int? ?? 1;
       final latestVersion = platformConfig['version'] as String? ?? '1.0.0';
       final downloadUrl = platformConfig['downloadUrl'] as String? ?? '';
       final forceUpdate = platformConfig['forceUpdate'] as bool? ?? false;
-      final releaseNotes = platformConfig['releaseNotes'] as String? ?? 
+      final releaseNotes = platformConfig['releaseNotes'] as String? ??
           'New features, bug fixes, and performance improvements.';
 
-      // Trigger update popup if remote build is strictly newer
       if (latestBuildNumber > currentBuildNumber && context.mounted) {
         _showUpdateDialog(
           context,
           currentVersion: currentVersion,
           latestVersion: latestVersion,
+          latestBuildNumber: latestBuildNumber,
           releaseNotes: releaseNotes,
           downloadUrl: downloadUrl,
           forceUpdate: forceUpdate,
         );
+      } else if (manual && context.mounted) {
+        _showStatusSnackBar(
+          context,
+          'You are on the latest version (v$currentVersion • b$currentBuildNumber).',
+        );
       }
     } catch (e) {
-      // Non-blocking: If network fails or server is spinning up, app proceeds normally
       debugPrint('Update check skipped: $e');
+      if (manual && context.mounted) {
+        _showStatusSnackBar(context, 'Update check failed: $e', isError: true);
+      }
     }
+  }
+
+  static void _showStatusSnackBar(BuildContext context, String message,
+      {bool isError = false}) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          backgroundColor:
+              isError ? const Color(0xFFE11D48) : const Color(0xFF059669),
+          behavior: SnackBarBehavior.floating,
+          width: 420,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
   }
 
   static void _showUpdateDialog(
     BuildContext context, {
     required String currentVersion,
     required String latestVersion,
+    required int latestBuildNumber,
     required String releaseNotes,
     required String downloadUrl,
     required bool forceUpdate,
@@ -70,19 +122,22 @@ class UpdateService {
       builder: (ctx) => PopScope(
         canPop: !forceUpdate,
         child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           actionsPadding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
           title: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.system_update_rounded, color: Color(0xFF2563EB), size: 28),
+                child: const Icon(Icons.system_update_rounded,
+                    color: Color(0xFF2563EB), size: 28),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -91,11 +146,17 @@ class UpdateService {
                   children: [
                     const Text(
                       'Update Available',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A)),
                     ),
                     Text(
-                      'v$currentVersion ➔ v$latestVersion',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      'v$currentVersion ➔ v$latestVersion (b$latestBuildNumber)',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
@@ -108,7 +169,10 @@ class UpdateService {
             children: [
               const Text(
                 'Release Highlights:',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF475569)),
               ),
               const SizedBox(height: 6),
               Container(
@@ -121,19 +185,24 @@ class UpdateService {
                 ),
                 child: Text(
                   releaseNotes,
-                  style: const TextStyle(color: Color(0xFF1E293B), fontSize: 13, height: 1.4),
+                  style: const TextStyle(
+                      color: Color(0xFF1E293B), fontSize: 13, height: 1.4),
                 ),
               ),
               if (forceUpdate) ...[
                 const SizedBox(height: 12),
-                Row(
-                  children: const [
-                    Icon(Icons.warning_amber_rounded, color: Colors.red, size: 16),
+                const Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.red, size: 16),
                     SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'This update is required to keep syncing with the main office.',
-                        style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -145,18 +214,31 @@ class UpdateService {
             if (!forceUpdate)
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Later', style: TextStyle(color: Color(0xFF64748B))),
+                child: const Text('Later',
+                    style: TextStyle(color: Color(0xFF64748B))),
               ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              icon: const Icon(Icons.download_rounded, size: 18),
-              label: const Text('Download & Update', style: TextStyle(fontWeight: FontWeight.w600)),
+              icon: kIsWeb
+                  ? const Icon(Icons.refresh_rounded, size: 18)
+                  : const Icon(Icons.download_rounded, size: 18),
+              label: kIsWeb
+                  ? const Text('Reload Now',
+                      style: TextStyle(fontWeight: FontWeight.w600))
+                  : const Text('Download & Update',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
               onPressed: () async {
+                if (kIsWeb) {
+                  reloadWebApp();
+                  return;
+                }
                 if (downloadUrl.isNotEmpty) {
                   final uri = Uri.parse(downloadUrl);
                   if (await canLaunchUrl(uri)) {
@@ -171,4 +253,3 @@ class UpdateService {
     );
   }
 }
-
