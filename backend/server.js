@@ -3050,7 +3050,20 @@ if (fs.existsSync(downloadsDir)) {
 }
 
 if (fs.existsSync(flutterWebDir)) {
-  app.use(express.static(flutterWebDir, { maxAge: '1h' }));
+  app.use(express.static(flutterWebDir, {
+    maxAge: '1h',
+    setHeaders: (res, filePath) => {
+      if (
+        filePath.endsWith('.html') ||
+        filePath.endsWith('flutter_bootstrap.js') ||
+        filePath.endsWith('flutter_service_worker.js') ||
+        filePath.endsWith('main.dart.js') ||
+        filePath.endsWith('version.json')
+      ) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    }
+  }));
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/downloads') && !req.path.startsWith('/socket.io')) {
       const indexHtml = path.join(flutterWebDir, 'index.html');

@@ -735,6 +735,26 @@ class ApiService {
     }
   }
 
+  static Future<void> updateHsn(int id, Map<String, dynamic> payload) async {
+    await _ensureAuth();
+    final uri = Uri.parse('$baseUrl/hsn/$id');
+    final response = await http.put(uri, headers: _headers, body: jsonEncode(payload));
+    if (response.statusCode != 200) {
+      final decoded = jsonDecode(response.body);
+      throw Exception(decoded['error'] ?? 'Failed to update HSN');
+    }
+  }
+
+  static Future<void> deleteHsn(int id) async {
+    await _ensureAuth();
+    final uri = Uri.parse('$baseUrl/hsn/$id');
+    final response = await http.delete(uri, headers: _headers);
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final decoded = jsonDecode(response.body);
+      throw Exception(decoded['error'] ?? 'Failed to delete HSN');
+    }
+  }
+
   static Future<Map<String, dynamic>> settleTrip(int tripId, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/trips/$tripId/settle');

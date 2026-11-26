@@ -33,4 +33,35 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  try {
+    const { hsnCode, description, gstRate } = req.body;
+    const hsn = await prisma.hSNMaster.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        hsnCode,
+        description,
+        gstRate: parseFloat(gstRate),
+      },
+    });
+    res.json(hsn);
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'HSN Code already exists' });
+    }
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    await prisma.hSNMaster.delete({
+      where: { id: parseInt(req.params.id) },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Failed to delete HSN' });
+  }
+});
+
 module.exports = router;
