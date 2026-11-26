@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'services/auth_service.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SemanticsBinding.instance.ensureSemantics(); // expose UI tree for accessibility & automated testing
   runApp(const TransportErpApp());
 }
 
