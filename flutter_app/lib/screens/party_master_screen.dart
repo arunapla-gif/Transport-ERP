@@ -108,10 +108,14 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
   bool get _canDelete => AuthService.isAdmin;
 
   // Exact React color accents: Indigo for Consignor, Emerald for Consignee
-  Color get _accent => _isConsignor ? const Color(0xFF4F46E5) : const Color(0xFF059669);
-  Color get _accentSoftBg => _isConsignor ? const Color(0xFFEEF2FF) : const Color(0xFFECFDF5);
-  Color get _accentSoftBorder => _isConsignor ? const Color(0xFFE0E7FF) : const Color(0xFFD1FAE5);
-  Color get _accentDarkText => _isConsignor ? const Color(0xFF312E81) : const Color(0xFF064E3B);
+  Color get _accent =>
+      _isConsignor ? const Color(0xFF4F46E5) : const Color(0xFF059669);
+  Color get _accentSoftBg =>
+      _isConsignor ? const Color(0xFFEEF2FF) : const Color(0xFFECFDF5);
+  Color get _accentSoftBorder =>
+      _isConsignor ? const Color(0xFFE0E7FF) : const Color(0xFFD1FAE5);
+  Color get _accentDarkText =>
+      _isConsignor ? const Color(0xFF312E81) : const Color(0xFF064E3B);
 
   @override
   void initState() {
@@ -157,7 +161,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
 
   Future<void> _loadParentCandidates() async {
     try {
-      final res = await ApiService.getPartiesPaginated('consignees', page: 1, limit: 2000);
+      final res = await ApiService.getPartiesPaginated('consignees',
+          page: 1, limit: 2000);
       final raw = res['data'] as List<dynamic>;
       if (mounted) {
         setState(() {
@@ -228,13 +233,15 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
     if (companyName.trim().isEmpty) return joined;
 
     try {
-      final cleanName = companyName.replaceAll(RegExp(r'[^a-zA-Z0-9 ]'), '').trim();
+      final cleanName =
+          companyName.replaceAll(RegExp(r'[^a-zA-Z0-9 ]'), '').trim();
       if (cleanName.isNotEmpty) {
         final pattern = cleanName
             .split(RegExp(r'\s+'))
             .map(RegExp.escape)
             .join(r'\s*[^a-zA-Z0-9]*\s*');
-        final regex = RegExp('^$pattern\\s*[^a-zA-Z0-9]*\\s*', caseSensitive: false);
+        final regex =
+            RegExp('^$pattern\\s*[^a-zA-Z0-9]*\\s*', caseSensitive: false);
         joined = joined.replaceFirst(regex, '');
       }
     } catch (_) {}
@@ -256,17 +263,18 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         throw Exception('Invalid GSTIN details');
       }
 
-      final Map<String, dynamic> addr = info['pradr'] is Map && info['pradr']['addr'] is Map
-          ? Map<String, dynamic>.from(info['pradr']['addr'])
-          : {};
+      final Map<String, dynamic> addr =
+          info['pradr'] is Map && info['pradr']['addr'] is Map
+              ? Map<String, dynamic>.from(info['pradr']['addr'])
+              : {};
 
       final String companyName =
           (info['tradeNam']?.toString().trim().isNotEmpty == true
-                  ? info['tradeNam']
-                  : info['lgnm'])
-              ?.toString()
-              .trim() ??
-          '';
+                      ? info['tradeNam']
+                      : info['lgnm'])
+                  ?.toString()
+                  .trim() ??
+              '';
       final String legalName = info['lgnm']?.toString().trim() ?? '';
 
       final List<Map<String, dynamic>> additionalAddresses = [];
@@ -310,13 +318,16 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         if (trimmedGstin.length >= 12) {
           _panNumberController.text = trimmedGstin.substring(2, 12);
         }
-        if (cleanedPrimaryAddr.isNotEmpty) _addressController.text = cleanedPrimaryAddr;
+        if (cleanedPrimaryAddr.isNotEmpty) {
+          _addressController.text = cleanedPrimaryAddr;
+        }
         final loc = (addr['loc'] ?? addr['city'] ?? '').toString();
         if (loc.isNotEmpty) _cityController.text = loc;
         final dst = (addr['dst'] ?? '').toString();
         if (dst.isNotEmpty) _districtController.text = dst;
         if (rawState.isNotEmpty) _stateController.text = rawState;
-        _stateCodeController.text = mappedStateCode.isNotEmpty ? mappedStateCode : rawState;
+        _stateCodeController.text =
+            mappedStateCode.isNotEmpty ? mappedStateCode : rawState;
         final pin = (addr['pncd'] ?? addr['pincode'] ?? '').toString();
         if (pin.isNotEmpty) _pincodeController.text = pin;
         _addresses = additionalAddresses;
@@ -344,12 +355,14 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
     // Exact React validations (Retail vs URD)
     if (_isRetail) {
       if (_phoneController.text.trim().isEmpty) {
-        _showToast('Phone Number is required for Retail Customers', isError: true);
+        _showToast('Phone Number is required for Retail Customers',
+            isError: true);
         return;
       }
     } else if (rawGstin == 'URP') {
       if (_panNumberController.text.trim().isEmpty) {
-        _showToast('PAN / Aadhaar is mandatory for Unregistered Dealers (URD)', isError: true);
+        _showToast('PAN / Aadhaar is mandatory for Unregistered Dealers (URD)',
+            isError: true);
         return;
       }
       if (_addressController.text.trim().isEmpty) {
@@ -360,7 +373,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         _showToast('City is mandatory for URD', isError: true);
         return;
       }
-      if (_stateController.text.trim().isEmpty || _stateCodeController.text.trim().isEmpty) {
+      if (_stateController.text.trim().isEmpty ||
+          _stateCodeController.text.trim().isEmpty) {
         _showToast('State and State Code are mandatory for URD', isError: true);
         return;
       }
@@ -388,7 +402,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         'state': _stateController.text.trim(),
         'stateCode': _stateCodeController.text.trim(),
         'pincode': _pincodeController.text.trim(),
-        'gstin': _isRetail ? null : (rawGstin == 'URP' ? 'URP' : (rawGstin.isEmpty ? null : rawGstin)),
+        'gstin': _isRetail
+            ? null
+            : (rawGstin == 'URP'
+                ? 'URP'
+                : (rawGstin.isEmpty ? null : rawGstin)),
         'panNumber': _panNumberController.text.trim().toUpperCase(),
         'phone': _phoneController.text.trim(),
         'email': _emailController.text.trim(),
@@ -400,7 +418,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
       };
 
       if (_id != null) {
-        await ApiService.updateParty(widget.endpoint, _id!, {...payload, 'id': _id});
+        await ApiService.updateParty(
+            widget.endpoint, _id!, {...payload, 'id': _id});
         _showToast('${widget.title} updated successfully');
       } else {
         await ApiService.createParty(widget.endpoint, payload);
@@ -413,7 +432,9 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         _loadParentCandidates();
       }
     } catch (e) {
-      _showToast('Failed to save record: ${e.toString().replaceFirst('Exception: ', '')}', isError: true);
+      _showToast(
+          'Failed to save record: ${e.toString().replaceFirst('Exception: ', '')}',
+          isError: true);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -464,7 +485,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: Text(
           'Archive ${widget.title}?',
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF1E293B)),
+          style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: Color(0xFF1E293B)),
         ),
         content: Text(
           'Are you sure you want to archive "${p.name}"? You can restore this record anytime.',
@@ -473,7 +497,9 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+            child: const Text('Cancel',
+                style: TextStyle(
+                    color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -481,9 +507,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               backgroundColor: const Color(0xFFE11D48),
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Archive', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text('Archive',
+                style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -548,11 +576,15 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          backgroundColor: isError ? const Color(0xFFE11D48) : const Color(0xFF0F172A),
+          content: Text(message,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          backgroundColor:
+              isError ? const Color(0xFFE11D48) : const Color(0xFF0F172A),
           behavior: SnackBarBehavior.floating,
           width: 420,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -585,7 +617,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
 
   // --- UI PRIMITIVES (React GlassCard + DenseInput parity) ---
 
-  Widget _glassCard({required Widget child, EdgeInsetsGeometry? padding, Color? borderColor}) {
+  Widget _glassCard(
+      {required Widget child,
+      EdgeInsetsGeometry? padding,
+      Color? borderColor}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -618,22 +653,30 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF64748B),
-            letterSpacing: 0.6,
+        SizedBox(
+          height: 18,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF64748B),
+                letterSpacing: 0.5,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         TextField(
           controller: controller,
           readOnly: readOnly,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          textCapitalization: uppercase ? TextCapitalization.characters : TextCapitalization.none,
+          textCapitalization: uppercase
+              ? TextCapitalization.characters
+              : TextCapitalization.none,
           onChanged: (val) {
             if (uppercase && val != val.toUpperCase()) {
               controller.value = controller.value.copyWith(
@@ -644,7 +687,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
             onChanged?.call(uppercase ? val.toUpperCase() : val);
           },
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: boldAccentText ? FontWeight.w700 : FontWeight.w500,
             color: readOnly
                 ? const Color(0xFF94A3B8)
@@ -652,11 +695,15 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
           ),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
+            hintStyle: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF94A3B8),
+                fontWeight: FontWeight.w400),
             isDense: true,
             filled: true,
             fillColor: readOnly ? const Color(0xFFF8FAFC) : Colors.white,
-            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: maxLines > 1 ? 10 : 10),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -667,7 +714,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5),
+              borderSide:
+                  const BorderSide(color: Color(0xFF10B981), width: 1.5),
             ),
           ),
         ),
@@ -676,7 +724,9 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
   }
 
   Widget _buildGstinControl() {
-    final bool isVerified = _migrationType == 'GST_VERIFIED' && !_isUrp && _gstinController.text.trim().isNotEmpty;
+    final bool isVerified = _migrationType == 'GST_VERIFIED' &&
+        !_isUrp &&
+        _gstinController.text.trim().isNotEmpty;
     final bool disableVerify = _isVerifyingGst ||
         _isSaving ||
         _isUrp ||
@@ -687,74 +737,84 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'GSTIN',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF64748B),
-                letterSpacing: 0.6,
-              ),
-            ),
-            InkWell(
-              borderRadius: BorderRadius.circular(4),
-              onTap: _isRetail
-                  ? null
-                  : () {
-                      setState(() {
-                        if (_isUrp) {
-                          _gstinController.clear();
-                        } else {
-                          _gstinController.text = 'URP';
-                          _migrationType = 'MANUAL';
-                        }
-                      });
-                    },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: Checkbox(
-                        value: _isUrp,
-                        activeColor: const Color(0xFF059669),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                        side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.3),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-                        onChanged: _isRetail
-                            ? null
-                            : (checked) {
-                                setState(() {
-                                  if (checked == true) {
-                                    _gstinController.text = 'URP';
-                                    _migrationType = 'MANUAL';
-                                  } else {
-                                    _gstinController.clear();
-                                  }
-                                });
-                              },
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    const Text(
-                      'Unregistered (URD)',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
-                    ),
-                  ],
+        SizedBox(
+            height: 18,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'GSTIN',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
+                InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: _isRetail
+                      ? null
+                      : () {
+                          setState(() {
+                            if (_isUrp) {
+                              _gstinController.clear();
+                            } else {
+                              _gstinController.text = 'URP';
+                              _migrationType = 'MANUAL';
+                            }
+                          });
+                        },
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: Checkbox(
+                            value: _isUrp,
+                            activeColor: const Color(0xFF059669),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                            side: const BorderSide(
+                                color: Color(0xFFCBD5E1), width: 1.3),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(3)),
+                            onChanged: _isRetail
+                                ? null
+                                : (checked) {
+                                    setState(() {
+                                      if (checked == true) {
+                                        _gstinController.text = 'URP';
+                                        _migrationType = 'MANUAL';
+                                      } else {
+                                        _gstinController.clear();
+                                      }
+                                    });
+                                  },
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        const Text(
+                          'Unregistered (URD)',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF475569)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            )),
+        const SizedBox(height: 6),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: TextField(
@@ -776,18 +836,27 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   });
                 },
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   fontFamily: 'monospace',
-                  color: (_isUrp || _isRetail) ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
+                  color: (_isUrp || _isRetail)
+                      ? const Color(0xFF94A3B8)
+                      : const Color(0xFF1E293B),
                 ),
                 decoration: InputDecoration(
-                  hintText: _isRetail ? 'Disabled for Retail' : '27AADCB2230M1Z2',
-                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontFamily: 'Inter'),
+                  hintText:
+                      _isRetail ? 'Disabled for Retail' : '27AADCB2230M1Z2',
+                  hintStyle: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF94A3B8),
+                      fontFamily: 'Inter'),
                   isDense: true,
                   filled: true,
-                  fillColor: (_isUrp || _isRetail) ? const Color(0xFFF8FAFC) : Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  fillColor: (_isUrp || _isRetail)
+                      ? const Color(0xFFF8FAFC)
+                      : Colors.white,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -798,14 +867,15 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF10B981), width: 1.5),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 8),
             SizedBox(
-              height: 36,
+              height: 44,
               child: OutlinedButton(
                 onPressed: disableVerify ? null : _handleVerifyGST,
                 style: OutlinedButton.styleFrom(
@@ -827,24 +897,32 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                         : const Color(0xFFA7F3D0),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 child: _isVerifyingGst
                     ? const SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF047857)),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Color(0xFF047857)),
                       )
                     : isVerified
                         ? const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.check_circle_outline_rounded, size: 14, color: Color(0xFF047857)),
+                              Icon(Icons.check_circle_outline_rounded,
+                                  size: 14, color: Color(0xFF047857)),
                               SizedBox(width: 4),
-                              Text('Verified', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                              Text('Verified',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700)),
                             ],
                           )
-                        : const Text('Verify', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                        : const Text('Verify',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w700)),
               ),
             ),
           ],
@@ -874,7 +952,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
           children: [
             const Text(
               'Retail / Walk-in Customer',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF475569)),
             ),
             const SizedBox(width: 8),
             AnimatedContainer(
@@ -886,7 +967,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                 color: _isRetail ? _accent : const Color(0xFFE2E8F0),
                 borderRadius: BorderRadius.circular(20),
               ),
-              alignment: _isRetail ? Alignment.centerRight : Alignment.centerLeft,
+              alignment:
+                  _isRetail ? Alignment.centerRight : Alignment.centerLeft,
               child: Container(
                 width: 16,
                 height: 16,
@@ -904,7 +986,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
 
   Widget _buildParentGroupDropdown() {
     final options = _allParentCandidates.where((c) => c.id != _id).toList();
-    final bool validParent = _parentId != null && options.any((c) => c.id == _parentId);
+    final bool validParent =
+        _parentId != null && options.any((c) => c.id == _parentId);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -924,7 +1007,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
             isDense: true,
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -939,11 +1023,15 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               value: validParent ? _parentId : null,
               isExpanded: true,
               isDense: true,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF1E293B)),
               items: [
                 const DropdownMenuItem<int?>(
                   value: null,
-                  child: Text('-- No Parent Group --', style: TextStyle(color: Color(0xFF64748B))),
+                  child: Text('-- No Parent Group --',
+                      style: TextStyle(color: Color(0xFF64748B))),
                 ),
                 ...options.map(
                   (c) => DropdownMenuItem<int?>(
@@ -982,12 +1070,18 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                     children: [
                       Text(
                         'KYC Required for Unregistered Dealers',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF78350F)),
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF78350F)),
                       ),
                       SizedBox(height: 2),
                       Text(
                         'Please provide their PAN or Aadhaar number for compliance.',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFFB45309)),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFFB45309)),
                       ),
                     ],
                   ),
@@ -1009,12 +1103,18 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               children: [
                 const Text(
                   'KYC Required for Unregistered Dealers',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF78350F)),
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF78350F)),
                 ),
                 const SizedBox(height: 2),
                 const Text(
                   'Please provide their PAN or Aadhaar number for compliance.',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFFB45309)),
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFB45309)),
                 ),
                 const SizedBox(height: 10),
                 _denseField(
@@ -1030,6 +1130,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
 
   Widget _buildFormCard() {
     return _glassCard(
+      padding: const EdgeInsets.all(24),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final bool isDesktop = constraints.maxWidth >= 780;
@@ -1050,7 +1151,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(
                 flex: 1,
                 child: _denseField(
@@ -1081,12 +1182,16 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       children: [
                         const Text(
                           'Customer Details',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1E293B)),
                         ),
                         if (_id != null) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: _accentSoftBg,
                               borderRadius: BorderRadius.circular(10),
@@ -1094,7 +1199,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             ),
                             child: Text(
                               'Editing #$_id',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _accent),
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: _accent),
                             ),
                           ),
                         ],
@@ -1171,21 +1279,27 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                 _buildGstinControl(),
               ],
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
               _denseField(
                 label: 'Full Address$urpStar',
                 controller: _addressController,
                 maxLines: 2,
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: _denseField(label: 'City$urpStar', controller: _cityController)),
+                    Expanded(
+                        child: _denseField(
+                            label: 'City$urpStar',
+                            controller: _cityController)),
                     const SizedBox(width: 20),
-                    Expanded(child: _denseField(label: 'District', controller: _districtController)),
+                    Expanded(
+                        child: _denseField(
+                            label: 'District',
+                            controller: _districtController)),
                     const SizedBox(width: 20),
                     Expanded(child: stateAndCodeRow),
                   ],
@@ -1198,7 +1312,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                 stateAndCodeRow,
               ],
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1280,31 +1394,43 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                         backgroundColor: const Color(0xFFF1F5F9),
                         foregroundColor: const Color(0xFF1E293B),
                         side: const BorderSide(color: Color(0xFFE2E8F0)),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: const Text('Clear', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                      child: const Text('Clear',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w600)),
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton.icon(
-                      onPressed: (_isSaving || (_id != null && !_canEdit)) ? null : _handleSave,
+                      onPressed: (_isSaving || (_id != null && !_canEdit))
+                          ? null
+                          : _handleSave,
                       icon: _isSaving
                           ? const SizedBox(
                               width: 14,
                               height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.save_outlined, size: 15),
                       label: Text(
-                        _id != null ? 'Update ${widget.title}' : 'Save ${widget.title}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                        _id != null
+                            ? 'Update ${widget.title}'
+                            : 'Save ${widget.title}',
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _accent,
                         foregroundColor: Colors.white,
                         elevation: 1,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                   ],
@@ -1332,7 +1458,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: _accentSoftBg.withValues(alpha: 0.6),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(11)),
                 border: Border(bottom: BorderSide(color: _accentSoftBorder)),
               ),
               child: Row(
@@ -1341,18 +1468,25 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   const SizedBox(width: 6),
                   Text(
                     'Additional Places of Business',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _accentDarkText),
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _accentDarkText),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
                       color: _accentSoftBorder,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${_addresses.length}',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _accent),
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: _accent),
                     ),
                   ),
                 ],
@@ -1365,7 +1499,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                 runSpacing: 8,
                 children: List.generate(_addresses.length, (idx) {
                   final addr = _addresses[idx];
-                  final locParts = [addr['city'], addr['district'], addr['state']]
+                  final locParts = [
+                    addr['city'],
+                    addr['district'],
+                    addr['state']
+                  ]
                       .where((e) => e != null && e.toString().trim().isNotEmpty)
                       .map((e) => e.toString())
                       .join(' • ');
@@ -1386,24 +1524,39 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  (addr['address']?.toString().trim().isNotEmpty == true)
+                                  (addr['address']
+                                              ?.toString()
+                                              .trim()
+                                              .isNotEmpty ==
+                                          true)
                                       ? addr['address'].toString()
                                       : 'No Street Address',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF334155)),
                                 ),
                                 if (locParts.isNotEmpty) ...[
                                   const SizedBox(height: 3),
-                                  Text(locParts, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                                  Text(locParts,
+                                      style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Color(0xFF64748B))),
                                 ],
-                                if (addr['pincode'] != null && addr['pincode'].toString().isNotEmpty) ...[
+                                if (addr['pincode'] != null &&
+                                    addr['pincode'].toString().isNotEmpty) ...[
                                   const SizedBox(height: 3),
-                                  Text('PIN: ${addr['pincode']}', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                                  Text('PIN: ${addr['pincode']}',
+                                      style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Color(0xFF94A3B8))),
                                 ],
                               ],
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFF94A3B8)),
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 15, color: Color(0xFF94A3B8)),
                             tooltip: 'Remove address',
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.all(4),
@@ -1439,7 +1592,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
           ),
           child: const Text(
             'ARCHIVED',
-            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF334155)),
+            style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF334155)),
           ),
         ),
       );
@@ -1457,7 +1613,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFFA7F3D0)),
             ),
-            child: const Text('✓', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF059669))),
+            child: const Text('✓',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF059669))),
           ),
         ),
       );
@@ -1473,7 +1633,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
           ),
           child: Text(
             _isConsignor ? '⚠️ Lite' : '⚠️ EWB Lite',
-            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
+            style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFB45309)),
           ),
         ),
       );
@@ -1486,7 +1649,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
     final Set<String> distinct = {
       if (c.name.trim().isNotEmpty) c.name.trim(),
       ...c.tradeNames.map((t) => t.trim()).where((t) => t.isNotEmpty),
-      if (c.legalName != null && c.legalName!.trim().isNotEmpty) c.legalName!.trim(),
+      if (c.legalName != null && c.legalName!.trim().isNotEmpty)
+        c.legalName!.trim(),
     };
     final allNames = distinct.toList();
     if (allNames.length > 1) {
@@ -1495,7 +1659,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Trade: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF64748B))),
+            const Text('Trade: ',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B))),
             Container(
               height: 24,
               padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1506,9 +1674,14 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: allNames.contains(c.name.trim()) ? c.name.trim() : allNames.first,
+                  value: allNames.contains(c.name.trim())
+                      ? c.name.trim()
+                      : allNames.first,
                   isDense: true,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF1E293B),
+                      fontWeight: FontWeight.w600),
                   items: allNames
                       .map((n) => DropdownMenuItem<String>(
                             value: n,
@@ -1534,7 +1707,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         padding: const EdgeInsets.only(top: 3),
         child: Text(
           'Trade: ${c.tradeNames.join(', ')}',
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
+          style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF64748B)),
         ),
       );
     }
@@ -1549,32 +1725,58 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         if (_canEdit)
           OutlinedButton.icon(
             onPressed: () => _handleEdit(c),
-            icon: Icon(Icons.edit_outlined, size: 12, color: _isConsignor ? const Color(0xFF4F46E5) : const Color(0xFF2563EB)),
-            label: const Text('Edit', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            icon: Icon(Icons.edit_outlined,
+                size: 12,
+                color: _isConsignor
+                    ? const Color(0xFF4F46E5)
+                    : const Color(0xFF2563EB)),
+            label: const Text('Edit',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
             style: OutlinedButton.styleFrom(
-              backgroundColor: _isConsignor ? Colors.white : const Color(0xFFEFF6FF),
-              foregroundColor: _isConsignor ? const Color(0xFF4F46E5) : const Color(0xFF2563EB),
-              side: BorderSide(color: _isConsignor ? const Color(0xFFE0E7FF) : const Color(0xFFBFDBFE)),
-              padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 6),
+              backgroundColor:
+                  _isConsignor ? Colors.white : const Color(0xFFEFF6FF),
+              foregroundColor: _isConsignor
+                  ? const Color(0xFF4F46E5)
+                  : const Color(0xFF2563EB),
+              side: BorderSide(
+                  color: _isConsignor
+                      ? const Color(0xFFE0E7FF)
+                      : const Color(0xFFBFDBFE)),
+              padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 8 : 10, vertical: 6),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           ),
         if (_canDelete && c.isActive) ...[
           const SizedBox(width: 6),
           OutlinedButton.icon(
             onPressed: () => _handleArchive(c),
-            icon: Icon(Icons.delete_outline_rounded, size: 12, color: _isConsignor ? const Color(0xFFE11D48) : const Color(0xFFD97706)),
-            label: const Text('Archive', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            icon: Icon(Icons.delete_outline_rounded,
+                size: 12,
+                color: _isConsignor
+                    ? const Color(0xFFE11D48)
+                    : const Color(0xFFD97706)),
+            label: const Text('Archive',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
             style: OutlinedButton.styleFrom(
-              backgroundColor: _isConsignor ? Colors.white : const Color(0xFFFFFBEB),
-              foregroundColor: _isConsignor ? const Color(0xFFE11D48) : const Color(0xFFD97706),
-              side: BorderSide(color: _isConsignor ? const Color(0xFFFFE4E6) : const Color(0xFFFDE68A)),
-              padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 6),
+              backgroundColor:
+                  _isConsignor ? Colors.white : const Color(0xFFFFFBEB),
+              foregroundColor: _isConsignor
+                  ? const Color(0xFFE11D48)
+                  : const Color(0xFFD97706),
+              side: BorderSide(
+                  color: _isConsignor
+                      ? const Color(0xFFFFE4E6)
+                      : const Color(0xFFFDE68A)),
+              padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 8 : 10, vertical: 6),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           ),
         ],
@@ -1586,12 +1788,15 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               backgroundColor: const Color(0xFFECFDF5),
               foregroundColor: const Color(0xFF059669),
               side: const BorderSide(color: Color(0xFFA7F3D0)),
-              padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 8 : 10, vertical: 6),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Restore', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            child: const Text('Restore',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
           ),
         ],
       ],
@@ -1608,7 +1813,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
             c.migrationType == 'EWB_LITE' ||
             c.migrationType == 'GST_VERIFIED')
         .length;
-    final int retailPhoneCount = _parties.where((c) => c.migrationType == 'RETAIL_WITH_PHONE').length;
+    final int retailPhoneCount =
+        _parties.where((c) => c.migrationType == 'RETAIL_WITH_PHONE').length;
 
     return _glassCard(
       padding: EdgeInsets.zero,
@@ -1647,14 +1853,16 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                               label: 'API Data ($apiOnlyCount)',
                               selected: _activeTab == 'API_ONLY',
                               activeColor: const Color(0xFF047857),
-                              onTap: () => setState(() => _activeTab = 'API_ONLY'),
+                              onTap: () =>
+                                  setState(() => _activeTab = 'API_ONLY'),
                             ),
                             const SizedBox(width: 4),
                             _tabButton(
                               label: 'Retail (Has Phone) ($retailPhoneCount)',
                               selected: _activeTab == 'RETAIL_WITH_PHONE',
                               activeColor: const Color(0xFF4338CA),
-                              onTap: () => setState(() => _activeTab = 'RETAIL_WITH_PHONE'),
+                              onTap: () => setState(
+                                  () => _activeTab = 'RETAIL_WITH_PHONE'),
                             ),
                           ],
                         ),
@@ -1662,7 +1870,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                     else
                       Text(
                         'Showing ${_parties.length} of $_totalRecords consignors',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B)),
                       ),
                     SizedBox(
                       width: isMobile ? double.infinity : 260,
@@ -1670,14 +1881,20 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       child: TextField(
                         controller: _searchController,
                         onChanged: _onSearchChanged,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF1E293B)),
                         decoration: InputDecoration(
                           hintText: 'Search party...',
-                          hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                          prefixIcon: const Icon(Icons.search_rounded, size: 15, color: Color(0xFF94A3B8)),
+                          hintStyle: const TextStyle(
+                              fontSize: 12, color: Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.search_rounded,
+                              size: 15, color: Color(0xFF94A3B8)),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                  icon: const Icon(Icons.close_rounded,
+                                      size: 14, color: Color(0xFF94A3B8)),
                                   padding: EdgeInsets.zero,
                                   onPressed: () {
                                     _searchController.clear();
@@ -1688,14 +1905,17 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                           filled: true,
                           fillColor: Colors.white,
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE2E8F0)),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            borderSide:
+                                const BorderSide(color: Color(0xFFE2E8F0)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -1711,7 +1931,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               // Empty State
               if (rows.isEmpty && !_isLoading)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
                   child: Column(
                     children: [
                       Container(
@@ -1722,18 +1943,23 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: const Color(0xFFF1F5F9)),
                         ),
-                        child: Icon(Icons.search_rounded, size: 26, color: _accent.withValues(alpha: 0.35)),
+                        child: Icon(Icons.search_rounded,
+                            size: 26, color: _accent.withValues(alpha: 0.35)),
                       ),
                       const SizedBox(height: 12),
                       const Text(
                         'No records found',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF334155)),
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF334155)),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'We couldn\'t find any ${widget.title.toLowerCase()}s matching your current filters or search criteria.',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF94A3B8)),
                       ),
                     ],
                   ),
@@ -1745,17 +1971,21 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   child: ListView.separated(
                     controller: _tableScrollController,
                     itemCount: rows.length + (_hasMore ? 1 : 0),
-                    separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: Color(0xFFF1F5F9)),
                     itemBuilder: (context, index) {
                       if (index == rows.length) {
                         return _buildLoadMoreFooter();
                       }
                       final c = rows[index];
-                      final parentName = !_isConsignor ? _resolveParentName(c.parentId) : null;
+                      final parentName =
+                          !_isConsignor ? _resolveParentName(c.parentId) : null;
                       return Opacity(
                         opacity: c.isActive ? 1.0 : 0.6,
                         child: Container(
-                          color: c.isActive ? Colors.white : const Color(0xFFF8FAFC),
+                          color: c.isActive
+                              ? Colors.white
+                              : const Color(0xFFF8FAFC),
                           padding: const EdgeInsets.all(14),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1765,51 +1995,76 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Wrap(
                                           spacing: 6,
                                           runSpacing: 4,
-                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
                                           children: [
                                             Text(
                                               '${index + 1}.',
-                                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
+                                              style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Color(0xFF94A3B8)),
                                             ),
                                             Text(
                                               c.name,
-                                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+                                              style: const TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Color(0xFF1E293B)),
                                             ),
                                             ..._buildStatusBadges(c),
                                           ],
                                         ),
-                                        if (c.legalName != null && c.legalName!.isNotEmpty && c.legalName != c.name)
+                                        if (c.legalName != null &&
+                                            c.legalName!.isNotEmpty &&
+                                            c.legalName != c.name)
                                           Padding(
-                                            padding: const EdgeInsets.only(top: 3),
+                                            padding:
+                                                const EdgeInsets.only(top: 3),
                                             child: Text(
                                               'Legal: ${c.legalName}',
-                                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                                              style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF64748B)),
                                             ),
                                           ),
                                         if (parentName != null)
                                           Padding(
-                                            padding: const EdgeInsets.only(top: 3),
+                                            padding:
+                                                const EdgeInsets.only(top: 3),
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: const Color(0xFFEEF2FF),
-                                                borderRadius: BorderRadius.circular(4),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
                                               ),
                                               child: Text(
                                                 'Parent: $parentName',
-                                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF4F46E5)),
+                                                style: const TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xFF4F46E5)),
                                               ),
                                             ),
                                           ),
                                         _buildTradeNameSubline(c),
                                         const SizedBox(height: 4),
                                         Text(
-                                          (c.gstin != null && c.gstin!.trim().isNotEmpty) ? c.gstin! : 'NO GSTIN',
+                                          (c.gstin != null &&
+                                                  c.gstin!.trim().isNotEmpty)
+                                              ? c.gstin!
+                                              : 'NO GSTIN',
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w800,
@@ -1819,17 +2074,27 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                         ),
                                         if (c.addresses.isNotEmpty)
                                           Padding(
-                                            padding: const EdgeInsets.only(top: 4),
+                                            padding:
+                                                const EdgeInsets.only(top: 4),
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: const Color(0xFFFFFBEB),
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: Border.all(color: const Color(0xFFFDE68A)),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                                border: Border.all(
+                                                    color: const Color(
+                                                        0xFFFDE68A)),
                                               ),
                                               child: Text(
                                                 '+${c.addresses.length} Addr',
-                                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
+                                                style: const TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xFFD97706)),
                                               ),
                                             ),
                                           ),
@@ -1842,24 +2107,34 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                               ),
                               const SizedBox(height: 10),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                                  border: Border.all(
+                                      color: const Color(0xFFF1F5F9)),
                                 ),
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: Row(
                                         children: [
-                                          const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFF94A3B8)),
+                                          const Icon(Icons.location_on_outlined,
+                                              size: 14,
+                                              color: Color(0xFF94A3B8)),
                                           const SizedBox(width: 4),
                                           Expanded(
                                             child: Text(
-                                              (c.city?.trim().isNotEmpty == true) ? c.city! : '-',
+                                              (c.city?.trim().isNotEmpty ==
+                                                      true)
+                                                  ? c.city!
+                                                  : '-',
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Color(0xFF475569)),
                                             ),
                                           ),
                                         ],
@@ -1868,13 +2143,21 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                     Expanded(
                                       child: Row(
                                         children: [
-                                          const Icon(Icons.phone_outlined, size: 14, color: Color(0xFF94A3B8)),
+                                          const Icon(Icons.phone_outlined,
+                                              size: 14,
+                                              color: Color(0xFF94A3B8)),
                                           const SizedBox(width: 4),
                                           Expanded(
                                             child: Text(
-                                              (c.phone?.trim().isNotEmpty == true) ? c.phone! : '-',
+                                              (c.phone?.trim().isNotEmpty ==
+                                                      true)
+                                                  ? c.phone!
+                                                  : '-',
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Color(0xFF475569)),
                                             ),
                                           ),
                                         ],
@@ -1895,10 +2178,12 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                 Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                       decoration: const BoxDecoration(
                         color: Color(0xFFF8FAFC),
-                        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                        border: Border(
+                            bottom: BorderSide(color: Color(0xFFE2E8F0))),
                       ),
                       child: Row(
                         children: [
@@ -1907,35 +2192,55 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             child: Text(
                               _isConsignor ? '#' : 'S.NO',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF64748B),
+                                  letterSpacing: 0.5),
                             ),
                           ),
                           Expanded(
                             flex: 4,
                             child: Text(
                               _isConsignor ? 'CONSIGNOR DETAILS' : 'NAME',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF64748B),
+                                  letterSpacing: 0.5),
                             ),
                           ),
                           Expanded(
                             flex: 2,
                             child: Text(
                               _isConsignor ? 'LOCATION' : 'CITY',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF64748B),
+                                  letterSpacing: 0.5),
                             ),
                           ),
                           Expanded(
                             flex: 2,
                             child: Text(
                               _isConsignor ? 'TAX ID (GSTIN)' : 'GSTIN',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF64748B),
+                                  letterSpacing: 0.5),
                             ),
                           ),
                           Expanded(
                             flex: 2,
                             child: Text(
                               _isConsignor ? 'CONTACT' : 'PHONE',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF64748B),
+                                  letterSpacing: 0.5),
                             ),
                           ),
                           const SizedBox(
@@ -1943,7 +2248,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             child: Text(
                               'ACTIONS',
                               textAlign: TextAlign.right,
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF64748B),
+                                  letterSpacing: 0.5),
                             ),
                           ),
                         ],
@@ -1954,13 +2263,16 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       child: ListView.separated(
                         controller: _tableScrollController,
                         itemCount: rows.length + (_hasMore ? 1 : 0),
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1, color: Color(0xFFF1F5F9)),
                         itemBuilder: (context, index) {
                           if (index == rows.length) {
                             return _buildLoadMoreFooter();
                           }
                           final c = rows[index];
-                          final parentName = !_isConsignor ? _resolveParentName(c.parentId) : null;
+                          final parentName = !_isConsignor
+                              ? _resolveParentName(c.parentId)
+                              : null;
                           final bool isEven = index.isEven;
 
                           return Opacity(
@@ -1968,8 +2280,12 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             child: Container(
                               color: !c.isActive
                                   ? const Color(0xFFF1F5F9)
-                                  : (isEven ? Colors.white : const Color(0xFFF8FAFC).withValues(alpha: 0.6)),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  : (isEven
+                                      ? Colors.white
+                                      : const Color(0xFFF8FAFC)
+                                          .withValues(alpha: 0.6)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
                               child: Row(
                                 children: [
                                   SizedBox(
@@ -1977,7 +2293,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                     child: Text(
                                       '${index + 1}',
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF94A3B8)),
                                     ),
                                   ),
                                   Expanded(
@@ -1985,38 +2304,53 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                     child: Padding(
                                       padding: const EdgeInsets.only(right: 12),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Wrap(
                                             spacing: 6,
                                             runSpacing: 4,
-                                            crossAxisAlignment: WrapCrossAlignment.center,
+                                            crossAxisAlignment:
+                                                WrapCrossAlignment.center,
                                             children: [
                                               Text(
                                                 c.name,
                                                 style: TextStyle(
                                                   fontSize: 13,
-                                                  fontWeight: _isConsignor ? FontWeight.w700 : FontWeight.w600,
-                                                  color: const Color(0xFF1E293B),
+                                                  fontWeight: _isConsignor
+                                                      ? FontWeight.w700
+                                                      : FontWeight.w600,
+                                                  color:
+                                                      const Color(0xFF1E293B),
                                                 ),
                                               ),
                                               ..._buildStatusBadges(c),
                                             ],
                                           ),
-                                          if (c.legalName != null && c.legalName!.isNotEmpty && c.legalName != c.name)
+                                          if (c.legalName != null &&
+                                              c.legalName!.isNotEmpty &&
+                                              c.legalName != c.name)
                                             Padding(
-                                              padding: const EdgeInsets.only(top: 2),
+                                              padding:
+                                                  const EdgeInsets.only(top: 2),
                                               child: Text(
                                                 'Legal: ${c.legalName}',
-                                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                                                style: const TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFF64748B)),
                                               ),
                                             ),
                                           if (parentName != null)
                                             Padding(
-                                              padding: const EdgeInsets.only(top: 2),
+                                              padding:
+                                                  const EdgeInsets.only(top: 2),
                                               child: Text(
                                                 'Parent: $parentName',
-                                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF4F46E5)),
+                                                style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xFF4F46E5)),
                                               ),
                                             ),
                                           _buildTradeNameSubline(c),
@@ -2027,36 +2361,56 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                   Expanded(
                                     flex: 2,
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
                                             if (_isConsignor) ...[
-                                              const Icon(Icons.location_on_outlined, size: 12, color: Color(0xFF94A3B8)),
+                                              const Icon(
+                                                  Icons.location_on_outlined,
+                                                  size: 12,
+                                                  color: Color(0xFF94A3B8)),
                                               const SizedBox(width: 4),
                                             ],
                                             Expanded(
                                               child: Text(
-                                                (c.city?.trim().isNotEmpty == true) ? c.city! : '-',
+                                                (c.city?.trim().isNotEmpty ==
+                                                        true)
+                                                    ? c.city!
+                                                    : '-',
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Color(0xFF475569)),
                                               ),
                                             ),
                                           ],
                                         ),
                                         if (c.addresses.isNotEmpty)
                                           Padding(
-                                            padding: const EdgeInsets.only(top: 3),
+                                            padding:
+                                                const EdgeInsets.only(top: 3),
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 1),
                                               decoration: BoxDecoration(
                                                 color: const Color(0xFFFFFBEB),
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: Border.all(color: const Color(0xFFFEF3C7)),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                                border: Border.all(
+                                                    color: const Color(
+                                                        0xFFFEF3C7)),
                                               ),
                                               child: Text(
                                                 '+${c.addresses.length} ${_isConsignor ? 'ADDR' : 'Addr'}',
-                                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFD97706)),
+                                                style: const TextStyle(
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: Color(0xFFD97706)),
                                               ),
                                             ),
                                           ),
@@ -2066,7 +2420,9 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                   Expanded(
                                     flex: 2,
                                     child: Text(
-                                      (c.gstin?.trim().isNotEmpty == true) ? c.gstin!.toUpperCase() : '-',
+                                      (c.gstin?.trim().isNotEmpty == true)
+                                          ? c.gstin!.toUpperCase()
+                                          : '-',
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontFamily: 'monospace',
@@ -2079,8 +2435,13 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                   Expanded(
                                     flex: 2,
                                     child: Text(
-                                      (c.phone?.trim().isNotEmpty == true) ? c.phone! : '-',
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                                      (c.phone?.trim().isNotEmpty == true)
+                                          ? c.phone!
+                                          : '-',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color(0xFF475569)),
                                     ),
                                   ),
                                   SizedBox(
@@ -2153,15 +2514,23 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                     SizedBox(
                       width: 15,
                       height: 15,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: _accent),
                     ),
                     const SizedBox(width: 8),
-                    const Text('Loading more...', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                    const Text('Loading more...',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B))),
                   ],
                 )
               : Text(
                   'Scroll for more (${_parties.length} of $_totalRecords loaded)',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B)),
                 ),
         ),
       ),
@@ -2172,7 +2541,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
   Widget build(BuildContext context) {
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyS, control: true): _handleSave,
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true):
+            _handleSave,
         const SingleActivator(LogicalKeyboardKey.keyS, meta: true): _handleSave,
       },
       child: Focus(
@@ -2201,7 +2571,9 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                               border: Border.all(color: _accentSoftBorder),
                             ),
                             child: Icon(
-                              _isConsignor ? Icons.business_rounded : Icons.location_on_outlined,
+                              _isConsignor
+                                  ? Icons.business_rounded
+                                  : Icons.location_on_outlined,
                               size: 20,
                               color: _accent,
                             ),
@@ -2235,7 +2607,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: _accentSoftBg,
                               borderRadius: BorderRadius.circular(8),
@@ -2243,7 +2616,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             ),
                             child: Text(
                               '$_totalRecords Total',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _accent),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: _accent),
                             ),
                           ),
                         ],
