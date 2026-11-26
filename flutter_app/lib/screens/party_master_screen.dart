@@ -1,274 +1,421 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import 'package:flutter/services.dart';
 import '../models/consignor.dart';
+import '../services/api_service.dart';
+import '../services/auth_service.dart';
 
-// We reuse Consignor model for both Consignor and Consignee as they share the same schema.
+const Map<String, String> _stateNameToCode = {
+  'jammu and kashmir': '01',
+  'himachal pradesh': '02',
+  'punjab': '03',
+  'chandigarh': '04',
+  'uttarakhand': '05',
+  'haryana': '06',
+  'delhi': '07',
+  'rajasthan': '08',
+  'uttar pradesh': '09',
+  'bihar': '10',
+  'sikkim': '11',
+  'arunachal pradesh': '12',
+  'nagaland': '13',
+  'manipur': '14',
+  'mizoram': '15',
+  'tripura': '16',
+  'meghalaya': '17',
+  'assam': '18',
+  'west bengal': '19',
+  'jharkhand': '20',
+  'odisha': '21',
+  'chhattisgarh': '22',
+  'madhya pradesh': '23',
+  'gujarat': '24',
+  'daman and diu': '25',
+  'dadra and nagar haveli and daman and diu': '26',
+  'maharashtra': '27',
+  'andhra pradesh': '28',
+  'karnataka': '29',
+  'goa': '30',
+  'lakshadweep': '31',
+  'kerala': '32',
+  'tamil nadu': '33',
+  'puducherry': '34',
+  'andaman and nicobar islands': '35',
+  'telangana': '36',
+  'ladakh': '38',
+};
+
 class PartyMasterScreen extends StatefulWidget {
-  final String endpoint; // "consignors" or "consignees"
-  final String title;
+  final String endpoint; // 'consignors' or 'consignees'
+  final String title; // 'Consignor' or 'Consignee'
 
-  const PartyMasterScreen({super.key, required this.endpoint, required this.title});
+  const PartyMasterScreen({
+    super.key,
+    required this.endpoint,
+    required this.title,
+  });
 
   @override
   State<PartyMasterScreen> createState() => _PartyMasterScreenState();
 }
 
 class _PartyMasterScreenState extends State<PartyMasterScreen> {
+  // Pagination & List State
   List<Consignor> _parties = [];
+  List<Consignor> _allParentCandidates = [];
   bool _isLoading = false;
+  bool _isSaving = false;
+  bool _isVerifyingGst = false;
   int _page = 1;
+  int _totalRecords = 0;
   bool _hasMore = true;
-  final ScrollController _scrollController = ScrollController();
-  
-  String _searchTerm = '';
-  final TextEditingController _searchController = TextEditingController();
-  bool _isFetchingGst = false;
-  bool _gstVerified = false;
 
-  // Form State
+  final ScrollController _pageScrollController = ScrollController();
+  final ScrollController _tableScrollController = ScrollController();
+
+  // Search & Tabs (matching React ConsignorTable / ConsigneeTable)
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  String _debouncedSearch = '';
+  String _activeTab = 'API_ONLY'; // 'API_ONLY' | 'RETAIL_WITH_PHONE'
+
+  // Form State (matching React formData 1-to-1)
   int? _id;
+  bool _isRetail = false;
+  String _migrationType = 'MANUAL';
+  int? _parentId;
+  List<Map<String, dynamic>> _addresses = [];
+
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _legalNameController = TextEditingController();
   final TextEditingController _gstinController = TextEditingController();
   final TextEditingController _panNumberController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _districtController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
+  final TextEditingController _stateCodeController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _groupController = TextEditingController();
 
   bool get _isConsignor => widget.endpoint == 'consignors';
+  bool get _isUrp => _gstinController.text.trim().toUpperCase() == 'URP';
 
-  List<Color> get _themeGradient => _isConsignor
-      ? const [Color(0xFF2563EB), Color(0xFF1D4ED8)]
-      : const [Color(0xFF0D9488), Color(0xFF0F766E)];
+  // Permissions parity with React usePermissions()
+  bool get _canEdit => true;
+  bool get _canDelete => AuthService.isAdmin;
 
-  Color get _themePrimary => _isConsignor ? const Color(0xFF2563EB) : const Color(0xFF0D9488);
+  // Exact React color accents: Indigo for Consignor, Emerald for Consignee
+  Color get _accent => _isConsignor ? const Color(0xFF4F46E5) : const Color(0xFF059669);
+  Color get _accentSoftBg => _isConsignor ? const Color(0xFFEEF2FF) : const Color(0xFFECFDF5);
+  Color get _accentSoftBorder => _isConsignor ? const Color(0xFFE0E7FF) : const Color(0xFFD1FAE5);
+  Color get _accentDarkText => _isConsignor ? const Color(0xFF312E81) : const Color(0xFF064E3B);
 
   @override
   void initState() {
     super.initState();
     _fetchParties(1);
-    _scrollController.addListener(_onScroll);
+    if (!_isConsignor) {
+      _loadParentCandidates();
+    }
+    _tableScrollController.addListener(_onTableScroll);
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _searchDebounce?.cancel();
+    _pageScrollController.dispose();
+    _tableScrollController.dispose();
     _searchController.dispose();
     _nameController.dispose();
+    _legalNameController.dispose();
     _gstinController.dispose();
     _panNumberController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
     _addressController.dispose();
     _cityController.dispose();
     _districtController.dispose();
     _stateController.dispose();
+    _stateCodeController.dispose();
     _pincodeController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
     _groupController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 &&
-        !_isLoading && _hasMore) {
+  void _onTableScroll() {
+    if (_tableScrollController.hasClients &&
+        _tableScrollController.position.pixels >=
+            _tableScrollController.position.maxScrollExtent - 250 &&
+        !_isLoading &&
+        _hasMore) {
       _fetchParties(_page + 1);
     }
   }
 
-  Future<void> _fetchParties(int pageNum) async {
-    setState(() => _isLoading = true);
-    
+  Future<void> _loadParentCandidates() async {
     try {
-      final res = await ApiService.getParties(widget.endpoint, page: pageNum, limit: 50, q: _searchTerm);
+      final res = await ApiService.getPartiesPaginated('consignees', page: 1, limit: 2000);
+      final raw = res['data'] as List<dynamic>;
+      if (mounted) {
+        setState(() {
+          _allParentCandidates = raw
+              .map((e) => Consignor.fromJson(Map<String, dynamic>.from(e)))
+              .where((c) => c.isActive)
+              .toList();
+        });
+      }
+    } catch (_) {}
+  }
+
+  void _onSearchChanged(String val) {
+    setState(() {});
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      _debouncedSearch = val.trim();
+      _fetchParties(1);
+    });
+  }
+
+  Future<void> _fetchParties(int pageNum) async {
+    if (_isLoading && pageNum > 1) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final res = await ApiService.getPartiesPaginated(
+        widget.endpoint,
+        page: pageNum,
+        limit: 50,
+        q: _debouncedSearch,
+      );
+      final List<dynamic> rawList = res['data'] as List<dynamic>;
+      final List<Consignor> fetched = rawList
+          .map((e) => Consignor.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+
       if (mounted) {
         setState(() {
           _page = pageNum;
-          final List<Consignor> newEntries = res.map((e) => Consignor.fromJson(e)).toList();
+          _totalRecords = (res['total'] as int?) ?? fetched.length;
+          _hasMore = res['hasMore'] == true;
           if (pageNum == 1) {
-            _parties = newEntries;
+            _parties = fetched;
           } else {
-            _parties.addAll(newEntries);
+            final existingIds = _parties.map((p) => p.id).toSet();
+            for (final item in fetched) {
+              if (!existingIds.contains(item.id)) {
+                _parties.add(item);
+              }
+            }
           }
-          _hasMore = newEntries.length >= 50;
         });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load ${widget.title.toLowerCase()} records: $e'),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
-      }
+      _showToast('Failed to fetch data: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  String _cleanAddressParts(List<dynamic> parts, String companyName) {
+    String joined = parts
+        .where((p) => p != null && p.toString().trim().isNotEmpty)
+        .map((p) => p.toString().trim())
+        .join(', ');
+    if (companyName.trim().isEmpty) return joined;
+
+    try {
+      final cleanName = companyName.replaceAll(RegExp(r'[^a-zA-Z0-9 ]'), '').trim();
+      if (cleanName.isNotEmpty) {
+        final pattern = cleanName
+            .split(RegExp(r'\s+'))
+            .map(RegExp.escape)
+            .join(r'\s*[^a-zA-Z0-9]*\s*');
+        final regex = RegExp('^$pattern\\s*[^a-zA-Z0-9]*\\s*', caseSensitive: false);
+        joined = joined.replaceFirst(regex, '');
+      }
+    } catch (_) {}
+    return joined;
+  }
+
   Future<void> _handleVerifyGST() async {
-    final gstin = _gstinController.text.trim().toUpperCase();
-    if (gstin.length != 15) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid 15-digit GSTIN'),
-          backgroundColor: Color(0xFFDC2626),
-        ),
-      );
+    final trimmedGstin = _gstinController.text.trim().toUpperCase();
+    if (trimmedGstin.isEmpty || trimmedGstin == 'URP') {
+      _showToast('Please enter a GSTIN to verify', isError: true);
       return;
     }
 
-    setState(() => _isFetchingGst = true);
-
+    setState(() => _isVerifyingGst = true);
     try {
-      final res = await ApiService.verifyGST(gstin);
-      final info = res['taxpayerInfo'];
-      if (info == null) throw Exception('Invalid GSTIN details returned');
+      final data = await ApiService.verifyGST(trimmedGstin);
+      final info = data['taxpayerInfo'];
+      if (info == null || info is! Map) {
+        throw Exception('Invalid GSTIN details');
+      }
 
-      final addr = info['pradr']?['addr'] ?? {};
-      final name = info['tradeNam'] ?? info['lgnm'] ?? '';
+      final Map<String, dynamic> addr = info['pradr'] is Map && info['pradr']['addr'] is Map
+          ? Map<String, dynamic>.from(info['pradr']['addr'])
+          : {};
+
+      final String companyName =
+          (info['tradeNam']?.toString().trim().isNotEmpty == true
+                  ? info['tradeNam']
+                  : info['lgnm'])
+              ?.toString()
+              .trim() ??
+          '';
+      final String legalName = info['lgnm']?.toString().trim() ?? '';
+
+      final List<Map<String, dynamic>> additionalAddresses = [];
+      if (info['adadr'] is List) {
+        for (final a in (info['adadr'] as List)) {
+          if (a is Map && a['addr'] is Map) {
+            final adr = Map<String, dynamic>.from(a['addr']);
+            additionalAddresses.add({
+              'address': _cleanAddressParts(
+                [adr['bno'], adr['bnm'], adr['st'], adr['flno']],
+                companyName,
+              ),
+              'city': (adr['loc'] ?? adr['city'] ?? '').toString(),
+              'district': (adr['dst'] ?? '').toString(),
+              'state': (adr['stcd'] ?? '').toString(),
+              'pincode': (adr['pncd'] ?? adr['pincode'] ?? '').toString(),
+            });
+          }
+        }
+      }
+
+      final String rawState = (addr['stcd'] ?? '').toString();
+      String mappedStateCode = _stateCodeController.text.trim();
+      if (rawState.isNotEmpty) {
+        final normalized = rawState.trim().toLowerCase();
+        if (_stateNameToCode.containsKey(normalized)) {
+          mappedStateCode = _stateNameToCode[normalized]!;
+        } else if (trimmedGstin.length >= 2) {
+          mappedStateCode = trimmedGstin.substring(0, 2);
+        }
+      }
+
+      final cleanedPrimaryAddr = _cleanAddressParts(
+        [addr['bno'], addr['bnm'], addr['st'], addr['flno']],
+        companyName,
+      );
 
       setState(() {
-        _nameController.text = name;
-        _panNumberController.text = gstin.substring(2, 12);
-        
-        List<String> addressParts = [];
-        if (addr['bno'] != null && addr['bno'].toString().trim().isNotEmpty) addressParts.add(addr['bno'].toString().trim());
-        if (addr['bnm'] != null && addr['bnm'].toString().trim().isNotEmpty) addressParts.add(addr['bnm'].toString().trim());
-        if (addr['st'] != null && addr['st'].toString().trim().isNotEmpty) addressParts.add(addr['st'].toString().trim());
-        
-        _addressController.text = addressParts.join(', ');
-        _cityController.text = addr['loc'] ?? addr['city'] ?? '';
-        _districtController.text = addr['dst'] ?? '';
-        _stateController.text = addr['stcd'] ?? '';
-        _pincodeController.text = addr['pncd'] ?? addr['pincode'] ?? '';
-        _gstVerified = true;
+        if (companyName.isNotEmpty) _nameController.text = companyName;
+        if (legalName.isNotEmpty) _legalNameController.text = legalName;
+        if (trimmedGstin.length >= 12) {
+          _panNumberController.text = trimmedGstin.substring(2, 12);
+        }
+        if (cleanedPrimaryAddr.isNotEmpty) _addressController.text = cleanedPrimaryAddr;
+        final loc = (addr['loc'] ?? addr['city'] ?? '').toString();
+        if (loc.isNotEmpty) _cityController.text = loc;
+        final dst = (addr['dst'] ?? '').toString();
+        if (dst.isNotEmpty) _districtController.text = dst;
+        if (rawState.isNotEmpty) _stateController.text = rawState;
+        _stateCodeController.text = mappedStateCode.isNotEmpty ? mappedStateCode : rawState;
+        final pin = (addr['pncd'] ?? addr['pincode'] ?? '').toString();
+        if (pin.isNotEmpty) _pincodeController.text = pin;
+        _addresses = additionalAddresses;
+        _migrationType = 'GST_VERIFIED';
+        _isRetail = false;
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Text('Taxpayer "$name" verified via GST portal!'),
-              ],
-            ),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
+      _showToast('GST verified and details auto-filled!');
     } catch (e) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('GST Verification Failed'),
-            content: Text(e.toString()),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK'),
-              )
-            ],
-          ),
-        );
-      }
+      _showToast(e.toString().replaceFirst('Exception: ', ''), isError: true);
     } finally {
-      if (mounted) setState(() => _isFetchingGst = false);
+      if (mounted) setState(() => _isVerifyingGst = false);
     }
   }
 
   Future<void> _handleSave() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.title} Name is required'),
-          backgroundColor: const Color(0xFFDC2626),
-        ),
-      );
+      _showToast('${widget.title} Name is required', isError: true);
       return;
     }
 
-    setState(() => _isLoading = true);
+    final rawGstin = _gstinController.text.trim().toUpperCase();
+
+    // Exact React validations (Retail vs URD)
+    if (_isRetail) {
+      if (_phoneController.text.trim().isEmpty) {
+        _showToast('Phone Number is required for Retail Customers', isError: true);
+        return;
+      }
+    } else if (rawGstin == 'URP') {
+      if (_panNumberController.text.trim().isEmpty) {
+        _showToast('PAN / Aadhaar is mandatory for Unregistered Dealers (URD)', isError: true);
+        return;
+      }
+      if (_addressController.text.trim().isEmpty) {
+        _showToast('Full Address is mandatory for URD', isError: true);
+        return;
+      }
+      if (_cityController.text.trim().isEmpty) {
+        _showToast('City is mandatory for URD', isError: true);
+        return;
+      }
+      if (_stateController.text.trim().isEmpty || _stateCodeController.text.trim().isEmpty) {
+        _showToast('State and State Code are mandatory for URD', isError: true);
+        return;
+      }
+      if (_pincodeController.text.trim().isEmpty) {
+        _showToast('Pincode is mandatory for URD', isError: true);
+        return;
+      }
+    }
+
+    setState(() => _isSaving = true);
     try {
-      final payload = {
-        if (_id != null) 'id': _id,
+      final String resolvedMigrationType = _isRetail
+          ? 'RETAIL_WITH_PHONE'
+          : (rawGstin == 'URP'
+              ? 'MANUAL'
+              : (_migrationType == 'GST_VERIFIED' ? 'GST_VERIFIED' : 'MANUAL'));
+
+      final Map<String, dynamic> payload = {
         'name': name,
-        'gstin': _gstinController.text.trim().toUpperCase(),
-        'panNumber': _panNumberController.text.trim().toUpperCase(),
-        'phone': _phoneController.text.trim(),
-        'email': _emailController.text.trim(),
+        if (_legalNameController.text.trim().isNotEmpty || !_isConsignor)
+          'legalName': _legalNameController.text.trim(),
         'address': _addressController.text.trim(),
         'city': _cityController.text.trim(),
         'district': _districtController.text.trim(),
         'state': _stateController.text.trim(),
+        'stateCode': _stateCodeController.text.trim(),
         'pincode': _pincodeController.text.trim(),
+        'gstin': _isRetail ? null : (rawGstin == 'URP' ? 'URP' : (rawGstin.isEmpty ? null : rawGstin)),
+        'panNumber': _panNumberController.text.trim().toUpperCase(),
+        'phone': _phoneController.text.trim(),
+        'email': _emailController.text.trim(),
         'group': _groupController.text.trim(),
-        'branch': 'MAIN'
+        'addresses': _addresses,
+        'branch': ApiService.activeBranch,
+        'migrationType': resolvedMigrationType,
+        if (!_isConsignor) 'parentId': _parentId,
       };
 
       if (_id != null) {
-        await ApiService.updateParty(widget.endpoint, _id!, payload);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 10),
-                  Text('${widget.title} record updated successfully!'),
-                ],
-              ),
-              backgroundColor: const Color(0xFF10B981),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-        }
+        await ApiService.updateParty(widget.endpoint, _id!, {...payload, 'id': _id});
+        _showToast('${widget.title} updated successfully');
       } else {
         await ApiService.createParty(widget.endpoint, payload);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 10),
-                  Text('New ${widget.title} profile created successfully!'),
-                ],
-              ),
-              backgroundColor: const Color(0xFF10B981),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-        }
+        _showToast('${widget.title} created successfully');
       }
 
       _clearForm();
-      _fetchParties(1);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save record: $e'),
-            backgroundColor: const Color(0xFFDC2626),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+      await _fetchParties(1);
+      if (!_isConsignor) {
+        _loadParentCandidates();
       }
+    } catch (e) {
+      _showToast('Failed to save record: ${e.toString().replaceFirst('Exception: ', '')}', isError: true);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -276,1542 +423,1846 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
     setState(() {
       _id = p.id;
       _nameController.text = p.name;
-      _gstinController.text = p.gstin ?? '';
-      _panNumberController.text = p.panNumber ?? (p.gstin != null && p.gstin!.length >= 12 ? p.gstin!.substring(2, 12) : '');
-      _phoneController.text = p.phone ?? '';
-      _emailController.text = p.email ?? '';
+      _legalNameController.text = p.legalName ?? '';
       _addressController.text = p.address ?? '';
       _cityController.text = p.city ?? '';
       _districtController.text = p.district ?? '';
       _stateController.text = p.state ?? '';
+      _stateCodeController.text = p.stateCode ??
+          (_stateNameToCode[(p.state ?? '').trim().toLowerCase()] ?? '');
       _pincodeController.text = p.pincode ?? '';
+      _gstinController.text = p.gstin ?? '';
+      _panNumberController.text = p.panNumber ??
+          ((p.gstin != null && p.gstin != 'URP' && p.gstin!.length >= 12)
+              ? p.gstin!.substring(2, 12)
+              : '');
+      _phoneController.text = p.phone ?? '';
+      _emailController.text = p.email ?? '';
       _groupController.text = p.group ?? '';
-      _gstVerified = (p.gstin?.length ?? 0) == 15;
+      _addresses = List<Map<String, dynamic>>.from(
+        p.addresses.map((a) => Map<String, dynamic>.from(a)),
+      );
+      _parentId = p.parentId;
+      _isRetail = p.migrationType == 'RETAIL_WITH_PHONE';
+      _migrationType = p.migrationType ?? 'MANUAL';
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Editing "${p.name}" (ID #${p.id})'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    if (_pageScrollController.hasClients) {
+      _pageScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
-  Future<void> _handleDelete(Consignor p) async {
+  Future<void> _handleArchive(Consignor p) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEE2E2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 22),
-            ),
-            const SizedBox(width: 12),
-            Text('Delete ${widget.title}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-          ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text(
+          'Archive ${widget.title}?',
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF1E293B)),
         ),
         content: Text(
-          'Are you sure you want to remove "${p.name}" from ${widget.title.toLowerCase()} records?\nThis action cannot be undone.',
-          style: const TextStyle(fontSize: 14, color: Color(0xFF475569), height: 1.4),
+          'Are you sure you want to archive "${p.name}"? You can restore this record anytime.',
+          style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
         ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context, false),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF64748B),
-              side: const BorderSide(color: Color(0xFFCBD5E1)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w700)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
+              backgroundColor: const Color(0xFFE11D48),
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text('Archive', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
     );
 
     if (confirm != true) return;
-
     try {
       await ApiService.deleteParty(widget.endpoint, p.id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${widget.title} record deleted'),
-            backgroundColor: const Color(0xFF0F172A),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
+      _showToast('Record archived');
       _fetchParties(1);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete: $e'),
-            backgroundColor: const Color(0xFFDC2626),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
+      _showToast('Failed to archive record', isError: true);
+    }
+  }
+
+  Future<void> _handleRestore(Consignor p) async {
+    try {
+      await ApiService.restoreParty(widget.endpoint, p.id);
+      _showToast('Record restored successfully');
+      _fetchParties(1);
+    } catch (e) {
+      _showToast('Failed to restore record', isError: true);
+    }
+  }
+
+  Future<void> _updateConsigneePrimaryName(int id, String newName) async {
+    try {
+      await ApiService.updateParty('consignees', id, {'name': newName});
+      _showToast('Primary name updated!');
+      _fetchParties(1);
+    } catch (e) {
+      _showToast('Failed to update name: $e', isError: true);
     }
   }
 
   void _clearForm() {
     setState(() {
       _id = null;
+      _isRetail = false;
+      _migrationType = 'MANUAL';
+      _parentId = null;
+      _addresses = [];
       _nameController.clear();
+      _legalNameController.clear();
       _gstinController.clear();
       _panNumberController.clear();
-      _phoneController.clear();
-      _emailController.clear();
       _addressController.clear();
       _cityController.clear();
       _districtController.clear();
       _stateController.clear();
+      _stateCodeController.clear();
       _pincodeController.clear();
+      _phoneController.clear();
+      _emailController.clear();
       _groupController.clear();
-      _gstVerified = false;
     });
   }
 
-  void _showPartyDetailModal(Consignor p) {
-    final bool hasGst = (p.gstin?.trim().length ?? 0) == 15;
+  void _showToast(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          backgroundColor: isError ? const Color(0xFFE11D48) : const Color(0xFF0F172A),
+          behavior: SnackBarBehavior.floating,
+          width: 420,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+  }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Container(
-          width: 580,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.16),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
+  List<Consignor> get _filteredParties {
+    if (_isConsignor) return _parties;
+    return _parties.where((c) {
+      if (_activeTab == 'RETAIL_WITH_PHONE') {
+        return c.migrationType == 'RETAIL_WITH_PHONE';
+      }
+      return c.migrationType == null ||
+          c.migrationType == 'API_ONLY' ||
+          c.migrationType == 'MANUAL' ||
+          c.migrationType == 'EWB_LITE' ||
+          c.migrationType == 'GST_VERIFIED';
+    }).toList();
+  }
+
+  String? _resolveParentName(int? parentId) {
+    if (parentId == null) return null;
+    for (final p in _allParentCandidates) {
+      if (p.id == parentId) return p.name;
+    }
+    for (final p in _parties) {
+      if (p.id == parentId) return p.name;
+    }
+    return '#$parentId';
+  }
+
+  // --- UI PRIMITIVES (React GlassCard + DenseInput parity) ---
+
+  Widget _glassCard({required Widget child, EdgeInsetsGeometry? padding, Color? borderColor}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor ?? const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: _themeGradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                ),
+        ],
+      ),
+      padding: padding ?? const EdgeInsets.all(16),
+      child: child,
+    );
+  }
+
+  Widget _denseField({
+    required String label,
+    required TextEditingController controller,
+    String? placeholder,
+    bool readOnly = false,
+    bool boldAccentText = false,
+    bool uppercase = false,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    ValueChanged<String>? onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF64748B),
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          readOnly: readOnly,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          textCapitalization: uppercase ? TextCapitalization.characters : TextCapitalization.none,
+          onChanged: (val) {
+            if (uppercase && val != val.toUpperCase()) {
+              controller.value = controller.value.copyWith(
+                text: val.toUpperCase(),
+                selection: TextSelection.collapsed(offset: val.length),
+              );
+            }
+            onChanged?.call(uppercase ? val.toUpperCase() : val);
+          },
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: boldAccentText ? FontWeight.w700 : FontWeight.w500,
+            color: readOnly
+                ? const Color(0xFF94A3B8)
+                : (boldAccentText ? _accentDarkText : const Color(0xFF1E293B)),
+          ),
+          decoration: InputDecoration(
+            hintText: placeholder,
+            hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
+            isDense: true,
+            filled: true,
+            fillColor: readOnly ? const Color(0xFFF8FAFC) : Colors.white,
+            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: maxLines > 1 ? 10 : 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGstinControl() {
+    final bool isVerified = _migrationType == 'GST_VERIFIED' && !_isUrp && _gstinController.text.trim().isNotEmpty;
+    final bool disableVerify = _isVerifyingGst ||
+        _isSaving ||
+        _isUrp ||
+        _isRetail ||
+        _gstinController.text.trim().isEmpty ||
+        isVerified;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'GSTIN',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF64748B),
+                letterSpacing: 0.6,
+              ),
+            ),
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: _isRetail
+                  ? null
+                  : () {
+                      setState(() {
+                        if (_isUrp) {
+                          _gstinController.clear();
+                        } else {
+                          _gstinController.text = 'URP';
+                          _migrationType = 'MANUAL';
+                        }
+                      });
+                    },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(_isConsignor ? Icons.domain_rounded : Icons.storefront_rounded, color: Colors.white, size: 24),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                '${widget.title.toUpperCase()} PROFILE',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text('ID #${p.id}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            p.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: Checkbox(
+                        value: _isUrp,
+                        activeColor: const Color(0xFF059669),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.3),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                        onChanged: _isRetail
+                            ? null
+                            : (checked) {
+                                setState(() {
+                                  if (checked == true) {
+                                    _gstinController.text = 'URP';
+                                    _migrationType = 'MANUAL';
+                                  } else {
+                                    _gstinController.clear();
+                                  }
+                                });
+                              },
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
-                      onPressed: () => Navigator.pop(ctx),
+                    const SizedBox(width: 5),
+                    const Text(
+                      'Unregistered (URD)',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
                     ),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _gstinController,
+                readOnly: _isUrp || _isRetail,
+                textCapitalization: TextCapitalization.characters,
+                onChanged: (val) {
+                  final upper = val.toUpperCase();
+                  if (val != upper) {
+                    _gstinController.value = _gstinController.value.copyWith(
+                      text: upper,
+                      selection: TextSelection.collapsed(offset: upper.length),
+                    );
+                  }
+                  setState(() {
+                    if (_migrationType == 'GST_VERIFIED') {
+                      _migrationType = 'MANUAL';
+                    }
+                  });
+                },
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'monospace',
+                  color: (_isUrp || _isRetail) ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
+                ),
+                decoration: InputDecoration(
+                  hintText: _isRetail ? 'Disabled for Retail' : '27AADCB2230M1Z2',
+                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontFamily: 'Inter'),
+                  isDense: true,
+                  filled: true,
+                  fillColor: (_isUrp || _isRetail) ? const Color(0xFFF8FAFC) : Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 36,
+              child: OutlinedButton(
+                onPressed: disableVerify ? null : _handleVerifyGST,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: (_isUrp || _isRetail)
+                      ? const Color(0xFFF1F5F9)
+                      : const Color(0xFFD1FAE5),
+                  foregroundColor: (_isUrp || _isRetail)
+                      ? const Color(0xFF94A3B8)
+                      : const Color(0xFF047857),
+                  disabledBackgroundColor: isVerified
+                      ? const Color(0xFFD1FAE5)
+                      : const Color(0xFFF1F5F9),
+                  disabledForegroundColor: isVerified
+                      ? const Color(0xFF047857)
+                      : const Color(0xFF94A3B8),
+                  side: BorderSide(
+                    color: (_isUrp || _isRetail) && !isVerified
+                        ? const Color(0xFFE2E8F0)
+                        : const Color(0xFFA7F3D0),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: _isVerifyingGst
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF047857)),
+                      )
+                    : isVerified
+                        ? const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle_outline_rounded, size: 14, color: Color(0xFF047857)),
+                              SizedBox(width: 4),
+                              Text('Verified', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                            ],
+                          )
+                        : const Text('Verify', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
-              // Body Details
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    // GST & Tax Status Card
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: hasGst ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: hasGst ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
-                        ),
+  Widget _buildRetailSwitch() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () {
+        setState(() {
+          _isRetail = !_isRetail;
+          if (_isRetail) {
+            _gstinController.clear();
+            _migrationType = 'RETAIL_WITH_PHONE';
+          } else {
+            _migrationType = 'MANUAL';
+          }
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Retail / Walk-in Customer',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+            ),
+            const SizedBox(width: 8),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 38,
+              height: 20,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: _isRetail ? _accent : const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              alignment: _isRetail ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildParentGroupDropdown() {
+    final options = _allParentCandidates.where((c) => c.id != _id).toList();
+    final bool validParent = _parentId != null && options.any((c) => c.id == _parentId);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'PARENT GROUP (MASTER CONSIGNEE)',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF64748B),
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 4),
+        InputDecorator(
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int?>(
+              value: validParent ? _parentId : null,
+              isExpanded: true,
+              isDense: true,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('-- No Parent Group --', style: TextStyle(color: Color(0xFF64748B))),
+                ),
+                ...options.map(
+                  (c) => DropdownMenuItem<int?>(
+                    value: c.id,
+                    child: Text(
+                      '${c.name}${c.city != null && c.city!.isNotEmpty ? ' (${c.city})' : ''}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (val) => setState(() => _parentId = val),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUrdKycBanner(bool isDesktop) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFEF3C7)),
+      ),
+      child: isDesktop
+          ? Row(
+              children: [
+                const Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'KYC Required for Unregistered Dealers',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF78350F)),
                       ),
-                      child: Row(
-                        children: [
+                      SizedBox(height: 2),
+                      Text(
+                        'Please provide their PAN or Aadhaar number for compliance.',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFFB45309)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 1,
+                  child: _denseField(
+                    label: 'PAN / Aadhaar *',
+                    controller: _panNumberController,
+                    placeholder: 'ABCDE1234F',
+                    uppercase: true,
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'KYC Required for Unregistered Dealers',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF78350F)),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Please provide their PAN or Aadhaar number for compliance.',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFFB45309)),
+                ),
+                const SizedBox(height: 10),
+                _denseField(
+                  label: 'PAN / Aadhaar *',
+                  controller: _panNumberController,
+                  placeholder: 'ABCDE1234F',
+                  uppercase: true,
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildFormCard() {
+    return _glassCard(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isDesktop = constraints.maxWidth >= 780;
+          final String urpStar = _isUrp ? ' *' : '';
+
+          final stateAndCodeRow = Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _denseField(
+                  label: 'State$urpStar',
+                  controller: _stateController,
+                  onChanged: (val) {
+                    final mapped = _stateNameToCode[val.trim().toLowerCase()];
+                    if (mapped != null) {
+                      _stateCodeController.text = mapped;
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 1,
+                child: _denseField(
+                  label: 'State Code$urpStar',
+                  controller: _stateCodeController,
+                ),
+              ),
+            ],
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Card Header
+              Container(
+                padding: const EdgeInsets.only(bottom: 12),
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                ),
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  runSpacing: 8,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Customer Details',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                        ),
+                        if (_id != null) ...[
+                          const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: hasGst ? const Color(0xFFDCFCE7) : const Color(0xFFE2E8F0),
-                              shape: BoxShape.circle,
+                              color: _accentSoftBg,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: _accentSoftBorder),
                             ),
-                            child: Icon(
-                              hasGst ? Icons.verified_rounded : Icons.info_outline_rounded,
-                              color: hasGst ? const Color(0xFF16A34A) : const Color(0xFF64748B),
-                              size: 20,
+                            child: Text(
+                              'Editing #$_id',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _accent),
                             ),
                           ),
-                          const SizedBox(width: 14),
+                        ],
+                      ],
+                    ),
+                    _buildRetailSwitch(),
+                  ],
+                ),
+              ),
+
+              // Row 1: Consignor vs Consignee layout matching React 1-to-1
+              if (_isConsignor) ...[
+                if (isDesktop)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: _denseField(
+                          label: 'Consignor Name *',
+                          controller: _nameController,
+                          boldAccentText: true,
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(flex: 1, child: _buildGstinControl()),
+                    ],
+                  )
+                else ...[
+                  _denseField(
+                    label: 'Consignor Name *',
+                    controller: _nameController,
+                    boldAccentText: true,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildGstinControl(),
+                ],
+              ] else ...[
+                if (isDesktop)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: _denseField(
+                          label: 'Trade Name (Primary) *',
+                          controller: _nameController,
+                          boldAccentText: true,
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        flex: 1,
+                        child: _denseField(
+                          label: 'Legal Name',
+                          controller: _legalNameController,
+                        ),
+                      ),
+                    ],
+                  )
+                else ...[
+                  _denseField(
+                    label: 'Trade Name (Primary) *',
+                    controller: _nameController,
+                    boldAccentText: true,
+                  ),
+                  const SizedBox(height: 12),
+                  _denseField(
+                    label: 'Legal Name',
+                    controller: _legalNameController,
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _buildGstinControl(),
+              ],
+
+              const SizedBox(height: 12),
+              _denseField(
+                label: 'Full Address$urpStar',
+                controller: _addressController,
+                maxLines: 2,
+              ),
+
+              const SizedBox(height: 12),
+              if (isDesktop)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _denseField(label: 'City$urpStar', controller: _cityController)),
+                    const SizedBox(width: 20),
+                    Expanded(child: _denseField(label: 'District', controller: _districtController)),
+                    const SizedBox(width: 20),
+                    Expanded(child: stateAndCodeRow),
+                  ],
+                )
+              else ...[
+                _denseField(label: 'City$urpStar', controller: _cityController),
+                const SizedBox(height: 12),
+                _denseField(label: 'District', controller: _districtController),
+                const SizedBox(height: 12),
+                stateAndCodeRow,
+              ],
+
+              const SizedBox(height: 12),
+              if (isDesktop)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _denseField(
+                        label: 'Pincode$urpStar',
+                        controller: _pincodeController,
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: _denseField(
+                        label: 'Phone Number${_isRetail ? ' *' : ''}',
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: _denseField(
+                        label: 'Email Address',
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                    ),
+                  ],
+                )
+              else ...[
+                _denseField(
+                  label: 'Pincode$urpStar',
+                  controller: _pincodeController,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                _denseField(
+                  label: 'Phone Number${_isRetail ? ' *' : ''}',
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 12),
+                _denseField(
+                  label: 'Email Address',
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ],
+
+              if (_isUrp) _buildUrdKycBanner(isDesktop),
+
+              if (!_isConsignor) ...[
+                const SizedBox(height: 12),
+                if (isDesktop)
+                  Row(
+                    children: [
+                      Expanded(flex: 2, child: _buildParentGroupDropdown()),
+                      const SizedBox(width: 20),
+                      const Expanded(flex: 1, child: SizedBox.shrink()),
+                    ],
+                  )
+                else
+                  _buildParentGroupDropdown(),
+              ],
+
+              // Bottom Action Bar
+              Container(
+                margin: const EdgeInsets.only(top: 18),
+                padding: const EdgeInsets.only(top: 14),
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      onPressed: _clearForm,
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        foregroundColor: const Color(0xFF1E293B),
+                        side: const BorderSide(color: Color(0xFFE2E8F0)),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Clear', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      onPressed: (_isSaving || (_id != null && !_canEdit)) ? null : _handleSave,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.save_outlined, size: 15),
+                      label: Text(
+                        _id != null ? 'Update ${widget.title}' : 'Save ${widget.title}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _accent,
+                        foregroundColor: Colors.white,
+                        elevation: 1,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAdditionalAddressesCard() {
+    if (_addresses.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: _glassCard(
+        padding: EdgeInsets.zero,
+        borderColor: _accentSoftBorder,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _accentSoftBg.withValues(alpha: 0.6),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                border: Border(bottom: BorderSide(color: _accentSoftBorder)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on_outlined, size: 15, color: _accent),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Additional Places of Business',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _accentDarkText),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _accentSoftBorder,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${_addresses.length}',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _accent),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: List.generate(_addresses.length, (idx) {
+                  final addr = _addresses[idx];
+                  final locParts = [addr['city'], addr['district'], addr['state']]
+                      .where((e) => e != null && e.toString().trim().isNotEmpty)
+                      .map((e) => e.toString())
+                      .join(' • ');
+                  return SizedBox(
+                    width: 360,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  hasGst ? 'GST REGISTERED TAXPAYER' : 'UNREGISTERED COMPOSITION / CONSUMER',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5,
-                                    color: hasGst ? const Color(0xFF15803D) : const Color(0xFF64748B),
-                                  ),
+                                  (addr['address']?.toString().trim().isNotEmpty == true)
+                                      ? addr['address'].toString()
+                                      : 'No Street Address',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  p.gstin?.trim().isNotEmpty == true ? p.gstin! : 'No GSTIN registered',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    fontFamily: 'monospace',
-                                    color: Color(0xFF0F172A),
-                                  ),
-                                ),
+                                if (locParts.isNotEmpty) ...[
+                                  const SizedBox(height: 3),
+                                  Text(locParts, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                                ],
+                                if (addr['pincode'] != null && addr['pincode'].toString().isNotEmpty) ...[
+                                  const SizedBox(height: 3),
+                                  Text('PIN: ${addr['pincode']}', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                                ],
                               ],
                             ),
                           ),
-                          if (p.panNumber != null && p.panNumber!.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Text('PAN NUMBER', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Color(0xFF64748B))),
-                                  Text(p.panNumber!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, fontFamily: 'monospace', color: Color(0xFF0F172A))),
-                                ],
-                              ),
-                            ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, size: 15, color: Color(0xFF94A3B8)),
+                            tooltip: 'Remove address',
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
+                            onPressed: () {
+                              setState(() {
+                                _addresses.removeAt(idx);
+                              });
+                            },
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // Address Info
-                    _buildModalInfoRow(
-                      icon: Icons.location_on_rounded,
-                      label: 'BILLING ADDRESS',
-                      value: p.address?.trim().isNotEmpty == true ? p.address! : 'Not specified',
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildModalInfoRow(
-                            icon: Icons.location_city_rounded,
-                            label: 'CITY / DISTRICT',
-                            value: [p.city, p.district].where((e) => e != null && e.isNotEmpty).join(', ').isEmpty
-                                ? 'Not specified'
-                                : [p.city, p.district].where((e) => e != null && e.isNotEmpty).join(', '),
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildModalInfoRow(
-                            icon: Icons.map_rounded,
-                            label: 'STATE & PINCODE',
-                            value: [p.state, p.pincode].where((e) => e != null && e.isNotEmpty).join(' - ').isEmpty
-                                ? 'Not specified'
-                                : [p.state, p.pincode].where((e) => e != null && e.isNotEmpty).join(' - '),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildModalInfoRow(
-                            icon: Icons.phone_rounded,
-                            label: 'PHONE / MOBILE',
-                            value: p.phone?.trim().isNotEmpty == true ? p.phone! : 'No phone',
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildModalInfoRow(
-                            icon: Icons.category_rounded,
-                            label: 'PARTY GROUP',
-                            value: p.group?.trim().isNotEmpty == true ? p.group! : 'General / Regular',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Modal Footer
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Branch: ${p.branch ?? 'MAIN'}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-                    ),
-                    Row(
-                      children: [
-                        OutlinedButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF475569),
-                            side: const BorderSide(color: Color(0xFFCBD5E1)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w700)),
-                        ),
-                        const SizedBox(width: 10),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            _handleEdit(p);
-                          },
-                          icon: const Icon(Icons.edit_rounded, size: 16),
-                          label: const Text('Edit Profile'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _themePrimary,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModalInfoRow({required IconData icon, required String label, required String value}) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 0.5)),
-                const SizedBox(height: 2),
-                Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1E293B))),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGlassCard({required Widget child, EdgeInsetsGeometry? padding}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: padding ?? const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  Widget _buildDenseInput({
-    required String label,
-    required Widget child,
-    String? tooltip,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF475569),
-                letterSpacing: 0.5,
+                  );
+                }),
               ),
             ),
-            if (tooltip != null) ...[
-              const SizedBox(width: 4),
-              Tooltip(
-                message: tooltip,
-                child: const Icon(Icons.help_outline_rounded, size: 13, color: Color(0xFF94A3B8)),
-              ),
-            ],
           ],
         ),
-        const SizedBox(height: 6),
-        child,
+      ),
+    );
+  }
+
+  List<Widget> _buildStatusBadges(Consignor c) {
+    final List<Widget> badges = [];
+    if (!c.isActive) {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: const Color(0xFFCBD5E1)),
+          ),
+          child: const Text(
+            'ARCHIVED',
+            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF334155)),
+          ),
+        ),
+      );
+    }
+    if ((c.gstin?.isNotEmpty == true) && c.migrationType == 'GST_VERIFIED') {
+      badges.add(
+        Tooltip(
+          message: 'Fully Verified',
+          child: Container(
+            width: 16,
+            height: 16,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFFD1FAE5),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFA7F3D0)),
+            ),
+            child: const Text('✓', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF059669))),
+          ),
+        ),
+      );
+    }
+    if (c.migrationType == 'EWB_LITE') {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF3C7),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: const Color(0xFFFDE68A)),
+          ),
+          child: Text(
+            _isConsignor ? '⚠️ Lite' : '⚠️ EWB Lite',
+            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
+          ),
+        ),
+      );
+    }
+    return badges;
+  }
+
+  Widget _buildTradeNameSubline(Consignor c) {
+    if (_isConsignor) return const SizedBox.shrink();
+    final Set<String> distinct = {
+      if (c.name.trim().isNotEmpty) c.name.trim(),
+      ...c.tradeNames.map((t) => t.trim()).where((t) => t.isNotEmpty),
+      if (c.legalName != null && c.legalName!.trim().isNotEmpty) c.legalName!.trim(),
+    };
+    final allNames = distinct.toList();
+    if (allNames.length > 1) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Trade: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF64748B))),
+            Container(
+              height: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: allNames.contains(c.name.trim()) ? c.name.trim() : allNames.first,
+                  isDense: true,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF1E293B), fontWeight: FontWeight.w600),
+                  items: allNames
+                      .map((n) => DropdownMenuItem<String>(
+                            value: n,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 190),
+                              child: Text(n, overflow: TextOverflow.ellipsis),
+                            ),
+                          ))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null && val != c.name) {
+                      _updateConsigneePrimaryName(c.id, val);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (c.tradeNames.isNotEmpty && c.tradeNames.first != c.name) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text(
+          'Trade: ${c.tradeNames.join(', ')}',
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildRowActions(Consignor c, {bool compact = false}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        if (_canEdit)
+          OutlinedButton.icon(
+            onPressed: () => _handleEdit(c),
+            icon: Icon(Icons.edit_outlined, size: 12, color: _isConsignor ? const Color(0xFF4F46E5) : const Color(0xFF2563EB)),
+            label: const Text('Edit', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: _isConsignor ? Colors.white : const Color(0xFFEFF6FF),
+              foregroundColor: _isConsignor ? const Color(0xFF4F46E5) : const Color(0xFF2563EB),
+              side: BorderSide(color: _isConsignor ? const Color(0xFFE0E7FF) : const Color(0xFFBFDBFE)),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        if (_canDelete && c.isActive) ...[
+          const SizedBox(width: 6),
+          OutlinedButton.icon(
+            onPressed: () => _handleArchive(c),
+            icon: Icon(Icons.delete_outline_rounded, size: 12, color: _isConsignor ? const Color(0xFFE11D48) : const Color(0xFFD97706)),
+            label: const Text('Archive', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: _isConsignor ? Colors.white : const Color(0xFFFFFBEB),
+              foregroundColor: _isConsignor ? const Color(0xFFE11D48) : const Color(0xFFD97706),
+              side: BorderSide(color: _isConsignor ? const Color(0xFFFFE4E6) : const Color(0xFFFDE68A)),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+        if (_canDelete && !c.isActive) ...[
+          const SizedBox(width: 6),
+          OutlinedButton(
+            onPressed: () => _handleRestore(c),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: const Color(0xFFECFDF5),
+              foregroundColor: const Color(0xFF059669),
+              side: const BorderSide(color: Color(0xFFA7F3D0)),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Restore', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+          ),
+        ],
       ],
     );
   }
 
-  InputDecoration _inputDeco({
-    String? hintText,
-    IconData? prefixIcon,
-    Widget? suffixIcon,
+  Widget _buildTableCard() {
+    final rows = _filteredParties;
+    final int apiOnlyCount = _parties
+        .where((c) =>
+            c.migrationType == null ||
+            c.migrationType == 'API_ONLY' ||
+            c.migrationType == 'MANUAL' ||
+            c.migrationType == 'EWB_LITE' ||
+            c.migrationType == 'GST_VERIFIED')
+        .length;
+    final int retailPhoneCount = _parties.where((c) => c.migrationType == 'RETAIL_WITH_PHONE').length;
+
+    return _glassCard(
+      padding: EdgeInsets.zero,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isMobile = constraints.maxWidth < 760;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Top Filter + Search Bar
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+                  border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                ),
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 10,
+                  children: [
+                    if (!_isConsignor)
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E8F0).withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _tabButton(
+                              label: 'API Data ($apiOnlyCount)',
+                              selected: _activeTab == 'API_ONLY',
+                              activeColor: const Color(0xFF047857),
+                              onTap: () => setState(() => _activeTab = 'API_ONLY'),
+                            ),
+                            const SizedBox(width: 4),
+                            _tabButton(
+                              label: 'Retail (Has Phone) ($retailPhoneCount)',
+                              selected: _activeTab == 'RETAIL_WITH_PHONE',
+                              activeColor: const Color(0xFF4338CA),
+                              onTap: () => setState(() => _activeTab = 'RETAIL_WITH_PHONE'),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Text(
+                        'Showing ${_parties.length} of $_totalRecords consignors',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                      ),
+                    SizedBox(
+                      width: isMobile ? double.infinity : 260,
+                      height: 34,
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: _onSearchChanged,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
+                        decoration: InputDecoration(
+                          hintText: 'Search party...',
+                          hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.search_rounded, size: 15, color: Color(0xFF94A3B8)),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    _onSearchChanged('');
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.white,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: _accent, width: 1.4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Empty State
+              if (rows.isEmpty && !_isLoading)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFFF1F5F9)),
+                        ),
+                        child: Icon(Icons.search_rounded, size: 26, color: _accent.withValues(alpha: 0.35)),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No records found',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF334155)),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'We couldn\'t find any ${widget.title.toLowerCase()}s matching your current filters or search criteria.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                      ),
+                    ],
+                  ),
+                )
+              else if (isMobile)
+                // MOBILE CARDS VIEW (React md:hidden parity)
+                SizedBox(
+                  height: 460,
+                  child: ListView.separated(
+                    controller: _tableScrollController,
+                    itemCount: rows.length + (_hasMore ? 1 : 0),
+                    separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    itemBuilder: (context, index) {
+                      if (index == rows.length) {
+                        return _buildLoadMoreFooter();
+                      }
+                      final c = rows[index];
+                      final parentName = !_isConsignor ? _resolveParentName(c.parentId) : null;
+                      return Opacity(
+                        opacity: c.isActive ? 1.0 : 0.6,
+                        child: Container(
+                          color: c.isActive ? Colors.white : const Color(0xFFF8FAFC),
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 4,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          children: [
+                                            Text(
+                                              '${index + 1}.',
+                                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
+                                            ),
+                                            Text(
+                                              c.name,
+                                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+                                            ),
+                                            ..._buildStatusBadges(c),
+                                          ],
+                                        ),
+                                        if (c.legalName != null && c.legalName!.isNotEmpty && c.legalName != c.name)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 3),
+                                            child: Text(
+                                              'Legal: ${c.legalName}',
+                                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                                            ),
+                                          ),
+                                        if (parentName != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 3),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFEEF2FF),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                'Parent: $parentName',
+                                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF4F46E5)),
+                                              ),
+                                            ),
+                                          ),
+                                        _buildTradeNameSubline(c),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          (c.gstin != null && c.gstin!.trim().isNotEmpty) ? c.gstin! : 'NO GSTIN',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            color: _accent,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                        if (c.addresses.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 4),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFFFBEB),
+                                                borderRadius: BorderRadius.circular(4),
+                                                border: Border.all(color: const Color(0xFFFDE68A)),
+                                              ),
+                                              child: Text(
+                                                '+${c.addresses.length} Addr',
+                                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildRowActions(c, compact: true),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFF94A3B8)),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              (c.city?.trim().isNotEmpty == true) ? c.city! : '-',
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.phone_outlined, size: 14, color: Color(0xFF94A3B8)),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              (c.phone?.trim().isNotEmpty == true) ? c.phone! : '-',
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              else
+                // DESKTOP DATA GRID (React hidden md:block parity)
+                Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF8FAFC),
+                        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 44,
+                            child: Text(
+                              _isConsignor ? '#' : 'S.NO',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 4,
+                            child: Text(
+                              _isConsignor ? 'CONSIGNOR DETAILS' : 'NAME',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              _isConsignor ? 'LOCATION' : 'CITY',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              _isConsignor ? 'TAX ID (GSTIN)' : 'GSTIN',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              _isConsignor ? 'CONTACT' : 'PHONE',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 170,
+                            child: Text(
+                              'ACTIONS',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 480,
+                      child: ListView.separated(
+                        controller: _tableScrollController,
+                        itemCount: rows.length + (_hasMore ? 1 : 0),
+                        separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                        itemBuilder: (context, index) {
+                          if (index == rows.length) {
+                            return _buildLoadMoreFooter();
+                          }
+                          final c = rows[index];
+                          final parentName = !_isConsignor ? _resolveParentName(c.parentId) : null;
+                          final bool isEven = index.isEven;
+
+                          return Opacity(
+                            opacity: c.isActive ? 1.0 : 0.6,
+                            child: Container(
+                              color: !c.isActive
+                                  ? const Color(0xFFF1F5F9)
+                                  : (isEven ? Colors.white : const Color(0xFFF8FAFC).withValues(alpha: 0.6)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 44,
+                                    child: Text(
+                                      '${index + 1}',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 4,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 12),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Wrap(
+                                            spacing: 6,
+                                            runSpacing: 4,
+                                            crossAxisAlignment: WrapCrossAlignment.center,
+                                            children: [
+                                              Text(
+                                                c.name,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: _isConsignor ? FontWeight.w700 : FontWeight.w600,
+                                                  color: const Color(0xFF1E293B),
+                                                ),
+                                              ),
+                                              ..._buildStatusBadges(c),
+                                            ],
+                                          ),
+                                          if (c.legalName != null && c.legalName!.isNotEmpty && c.legalName != c.name)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 2),
+                                              child: Text(
+                                                'Legal: ${c.legalName}',
+                                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                                              ),
+                                            ),
+                                          if (parentName != null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 2),
+                                              child: Text(
+                                                'Parent: $parentName',
+                                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF4F46E5)),
+                                              ),
+                                            ),
+                                          _buildTradeNameSubline(c),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            if (_isConsignor) ...[
+                                              const Icon(Icons.location_on_outlined, size: 12, color: Color(0xFF94A3B8)),
+                                              const SizedBox(width: 4),
+                                            ],
+                                            Expanded(
+                                              child: Text(
+                                                (c.city?.trim().isNotEmpty == true) ? c.city! : '-',
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (c.addresses.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 3),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFFFBEB),
+                                                borderRadius: BorderRadius.circular(4),
+                                                border: Border.all(color: const Color(0xFFFEF3C7)),
+                                              ),
+                                              child: Text(
+                                                '+${c.addresses.length} ${_isConsignor ? 'ADDR' : 'Addr'}',
+                                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFD97706)),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      (c.gstin?.trim().isNotEmpty == true) ? c.gstin!.toUpperCase() : '-',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontFamily: 'monospace',
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF334155),
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      (c.phone?.trim().isNotEmpty == true) ? c.phone! : '-',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 170,
+                                    child: _buildRowActions(c),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _tabButton({
+    required String label,
+    required bool selected,
+    required Color activeColor,
+    required VoidCallback onTap,
   }) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 18, color: const Color(0xFF64748B)) : null,
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: const Color(0xFFF8FAFC),
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: selected ? Border.all(color: const Color(0xFFE2E8F0)) : null,
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: selected ? activeColor : const Color(0xFF64748B),
+          ),
+        ),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: _themePrimary, width: 1.6),
+    );
+  }
+
+  Widget _buildLoadMoreFooter() {
+    return InkWell(
+      onTap: _isLoading ? null : () => _fetchParties(_page + 1),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        child: Center(
+          child: _isLoading
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Loading more...', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                  ],
+                )
+              : Text(
+                  'Scroll for more (${_parties.length} of $_totalRecords loaded)',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                ),
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final int gstCount = _parties.where((p) => (p.gstin?.trim().length ?? 0) == 15).length;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1240),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top Executive Header Cockpit
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final bool isCompact = constraints.maxWidth < 680;
-                      final headerInfo = Row(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true): _handleSave,
+        const SingleActivator(LogicalKeyboardKey.keyS, meta: true): _handleSave,
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          body: SingleChildScrollView(
+            controller: _pageScrollController,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // HEADER CARD (Exact React GlassCard header)
+                    _glassCard(
+                      child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: _themeGradient,
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _themePrimary.withValues(alpha: 0.35),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                              color: _accentSoftBg,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _accentSoftBorder),
                             ),
                             child: Icon(
-                              _isConsignor ? Icons.domain_rounded : Icons.storefront_rounded,
-                              color: Colors.white,
-                              size: 26,
+                              _isConsignor ? Icons.business_rounded : Icons.location_on_outlined,
+                              size: 20,
+                              color: _accent,
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${widget.title} Directory & Master',
+                                  '${widget.title} Master',
                                   style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0F172A),
-                                    letterSpacing: -0.5,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1E293B),
+                                    letterSpacing: -0.3,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 1),
                                 Text(
-                                  'Taxpayer-verified client profiles, automated GSTIN lookup & party billing addresses',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.blueGrey.shade600,
+                                  _isConsignor
+                                      ? 'Manage consignor profiles, addresses, and GSTIN details.'
+                                      : 'Manage consignee profiles, delivery addresses, and GSTIN details.',
+                                  style: const TextStyle(
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w500,
+                                    color: Color(0xFF64748B),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-
-                      final kpiPills = Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(color: _themePrimary, shape: BoxShape.circle),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '${_parties.length} Profiles',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
                                 ),
                               ],
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFBBF7D0)),
+                              color: _accentSoftBg,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: _accentSoftBorder),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF16A34A)),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '$gstCount GST Verified',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF15803D)),
-                                ),
-                              ],
+                            child: Text(
+                              '$_totalRecords Total',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _accent),
                             ),
                           ),
                         ],
-                      );
-
-                      if (isCompact) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            headerInfo,
-                            const SizedBox(height: 14),
-                            kpiPills,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(child: headerInfo),
-                          const SizedBox(width: 16),
-                          kpiPills,
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-                // Registration / Editing Form Card
-                _buildGlassCard(
-                  child: LayoutBuilder(
-                    builder: (context, formConstraints) {
-                      final bool isNarrow = formConstraints.maxWidth < 700;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Section Header with Edit Banner
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: _id != null ? const Color(0xFFFEF3C7) : _themePrimary.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        _id != null ? Icons.edit_note_rounded : Icons.person_add_alt_1_rounded,
-                                        color: _id != null ? const Color(0xFFD97706) : _themePrimary,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            _id != null ? 'Editing Profile #$_id' : 'Register New ${widget.title}',
-                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF0F172A)),
-                                          ),
-                                          Text(
-                                            _id != null
-                                                ? 'Update fields below and press Save to commit changes.'
-                                                : 'Enter GSTIN to instantly autofill legal name, PAN & registered billing address',
-                                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (_id != null)
-                                TextButton.icon(
-                                  onPressed: _clearForm,
-                                  icon: const Icon(Icons.close_rounded, size: 16),
-                                  label: const Text('Cancel Edit'),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: const Color(0xFFDC2626),
-                                    backgroundColor: const Color(0xFFFEE2E2),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Row 1: Fast GSTIN Verification & Discovery
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: isNarrow
-                                ? Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      _buildDenseInput(
-                                        label: 'GSTIN (PORTAL VERIFICATION)',
-                                        tooltip: 'Enter 15-digit GSTIN to autofill legal party information',
-                                        child: TextFormField(
-                                          controller: _gstinController,
-                                          decoration: _inputDeco(
-                                            hintText: 'e.g. 33AAAAA0000A1Z5',
-                                            prefixIcon: Icons.badge_outlined,
-                                            suffixIcon: _gstVerified
-                                                ? const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20)
-                                                : null,
-                                          ),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w900,
-                                            fontFamily: 'monospace',
-                                            letterSpacing: 0.8,
-                                            color: Color(0xFF0F172A),
-                                          ),
-                                          textCapitalization: TextCapitalization.characters,
-                                          onChanged: (val) {
-                                            if (_gstVerified && val.length != 15) {
-                                              setState(() => _gstVerified = false);
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      SizedBox(
-                                        height: 44,
-                                        child: ElevatedButton.icon(
-                                          onPressed: _isFetchingGst ? null : _handleVerifyGST,
-                                          icon: _isFetchingGst
-                                              ? const SizedBox(
-                                                  width: 16,
-                                                  height: 16,
-                                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                                )
-                                              : const Icon(Icons.cloud_download_rounded, size: 18),
-                                          label: const Text('Verify GST', style: TextStyle(fontWeight: FontWeight.w700)),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: _themePrimary,
-                                            foregroundColor: Colors.white,
-                                            elevation: 0,
-                                            padding: const EdgeInsets.symmetric(horizontal: 18),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      _buildDenseInput(
-                                        label: 'PAN NUMBER',
-                                        child: TextFormField(
-                                          controller: _panNumberController,
-                                          decoration: _inputDeco(
-                                            hintText: 'e.g. AAAAA0000A',
-                                            prefixIcon: Icons.credit_card_rounded,
-                                          ),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontFamily: 'monospace',
-                                            color: Color(0xFF0F172A),
-                                          ),
-                                          textCapitalization: TextCapitalization.characters,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Expanded(
-                                        flex: 3,
-                                        child: _buildDenseInput(
-                                          label: 'GSTIN (PORTAL VERIFICATION)',
-                                          tooltip: 'Enter 15-digit GSTIN to autofill legal party information',
-                                          child: TextFormField(
-                                            controller: _gstinController,
-                                            decoration: _inputDeco(
-                                              hintText: 'e.g. 33AAAAA0000A1Z5',
-                                              prefixIcon: Icons.badge_outlined,
-                                              suffixIcon: _gstVerified
-                                                  ? const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20)
-                                                  : null,
-                                            ),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w900,
-                                              fontFamily: 'monospace',
-                                              letterSpacing: 0.8,
-                                              color: Color(0xFF0F172A),
-                                            ),
-                                            textCapitalization: TextCapitalization.characters,
-                                            onChanged: (val) {
-                                              if (_gstVerified && val.length != 15) {
-                                                setState(() => _gstVerified = false);
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      SizedBox(
-                                        height: 44,
-                                        child: ElevatedButton.icon(
-                                          onPressed: _isFetchingGst ? null : _handleVerifyGST,
-                                          icon: _isFetchingGst
-                                              ? const SizedBox(
-                                                  width: 16,
-                                                  height: 16,
-                                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                                )
-                                              : const Icon(Icons.cloud_download_rounded, size: 18),
-                                          label: const Text('Verify GST', style: TextStyle(fontWeight: FontWeight.w700)),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: _themePrimary,
-                                            foregroundColor: Colors.white,
-                                            elevation: 0,
-                                            padding: const EdgeInsets.symmetric(horizontal: 18),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        flex: 2,
-                                        child: _buildDenseInput(
-                                          label: 'PAN NUMBER',
-                                          child: TextFormField(
-                                            controller: _panNumberController,
-                                            decoration: _inputDeco(
-                                              hintText: 'e.g. AAAAA0000A',
-                                              prefixIcon: Icons.credit_card_rounded,
-                                            ),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontFamily: 'monospace',
-                                              color: Color(0xFF0F172A),
-                                            ),
-                                            textCapitalization: TextCapitalization.characters,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                          const SizedBox(height: 18),
-
-                          // Row 2: Legal Name & Group
-                          if (isNarrow) ...[
-                            _buildDenseInput(
-                              label: '${widget.title.toUpperCase()} LEGAL NAME *',
-                              child: TextFormField(
-                                controller: _nameController,
-                                decoration: _inputDeco(
-                                  hintText: 'Full company or trade name',
-                                  prefixIcon: _isConsignor ? Icons.domain_rounded : Icons.storefront_rounded,
-                                ),
-                                style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDenseInput(
-                              label: 'PARTY GROUP / CATEGORY',
-                              child: TextFormField(
-                                controller: _groupController,
-                                decoration: _inputDeco(
-                                  hintText: 'e.g. Textile, Steel, Pharma',
-                                  prefixIcon: Icons.folder_special_rounded,
-                                ),
-                              ),
-                            ),
-                          ] else
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: _buildDenseInput(
-                                    label: '${widget.title.toUpperCase()} LEGAL NAME *',
-                                    child: TextFormField(
-                                      controller: _nameController,
-                                      decoration: _inputDeco(
-                                        hintText: 'Full company or trade name',
-                                        prefixIcon: _isConsignor ? Icons.domain_rounded : Icons.storefront_rounded,
-                                      ),
-                                      style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  flex: 2,
-                                  child: _buildDenseInput(
-                                    label: 'PARTY GROUP / CATEGORY',
-                                    child: TextFormField(
-                                      controller: _groupController,
-                                      decoration: _inputDeco(
-                                        hintText: 'e.g. Textile, Steel, Pharma',
-                                        prefixIcon: Icons.folder_special_rounded,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          const SizedBox(height: 16),
-
-                          // Row 3: Contact Details
-                          if (isNarrow) ...[
-                            _buildDenseInput(
-                              label: 'PRIMARY PHONE / MOBILE',
-                              child: TextFormField(
-                                controller: _phoneController,
-                                decoration: _inputDeco(
-                                  hintText: '10-digit mobile number',
-                                  prefixIcon: Icons.phone_rounded,
-                                ),
-                                keyboardType: TextInputType.phone,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDenseInput(
-                              label: 'OFFICIAL EMAIL ADDRESS',
-                              child: TextFormField(
-                                controller: _emailController,
-                                decoration: _inputDeco(
-                                  hintText: 'billing@company.com',
-                                  prefixIcon: Icons.email_rounded,
-                                ),
-                                keyboardType: TextInputType.emailAddress,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDenseInput(
-                              label: 'CITY / TOWN',
-                              child: TextFormField(
-                                controller: _cityController,
-                                decoration: _inputDeco(
-                                  hintText: 'e.g. Tirupur, Coimbatore',
-                                  prefixIcon: Icons.location_city_rounded,
-                                ),
-                              ),
-                            ),
-                          ] else
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildDenseInput(
-                                    label: 'PRIMARY PHONE / MOBILE',
-                                    child: TextFormField(
-                                      controller: _phoneController,
-                                      decoration: _inputDeco(
-                                        hintText: '10-digit mobile number',
-                                        prefixIcon: Icons.phone_rounded,
-                                      ),
-                                      keyboardType: TextInputType.phone,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildDenseInput(
-                                    label: 'OFFICIAL EMAIL ADDRESS',
-                                    child: TextFormField(
-                                      controller: _emailController,
-                                      decoration: _inputDeco(
-                                        hintText: 'billing@company.com',
-                                        prefixIcon: Icons.email_rounded,
-                                      ),
-                                      keyboardType: TextInputType.emailAddress,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildDenseInput(
-                                    label: 'CITY / TOWN',
-                                    child: TextFormField(
-                                      controller: _cityController,
-                                      decoration: _inputDeco(
-                                        hintText: 'e.g. Tirupur, Coimbatore',
-                                        prefixIcon: Icons.location_city_rounded,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          const SizedBox(height: 16),
-
-                          // Row 4: Address, District, State & Pincode
-                          if (isNarrow) ...[
-                            _buildDenseInput(
-                              label: 'REGISTERED BILLING ADDRESS',
-                              child: TextFormField(
-                                controller: _addressController,
-                                decoration: _inputDeco(
-                                  hintText: 'Door No, Building, Street, Area',
-                                  prefixIcon: Icons.place_rounded,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildDenseInput(
-                                    label: 'DISTRICT',
-                                    child: TextFormField(
-                                      controller: _districtController,
-                                      decoration: _inputDeco(hintText: 'District'),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildDenseInput(
-                                    label: 'STATE',
-                                    child: TextFormField(
-                                      controller: _stateController,
-                                      decoration: _inputDeco(hintText: 'State / Code'),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDenseInput(
-                              label: 'PINCODE',
-                              child: TextFormField(
-                                controller: _pincodeController,
-                                decoration: _inputDeco(hintText: '6-digit PIN'),
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                          ] else
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: _buildDenseInput(
-                                    label: 'REGISTERED BILLING ADDRESS',
-                                    child: TextFormField(
-                                      controller: _addressController,
-                                      decoration: _inputDeco(
-                                        hintText: 'Door No, Building, Street, Area',
-                                        prefixIcon: Icons.place_rounded,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  flex: 1,
-                                  child: _buildDenseInput(
-                                    label: 'DISTRICT',
-                                    child: TextFormField(
-                                      controller: _districtController,
-                                      decoration: _inputDeco(hintText: 'District'),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  flex: 1,
-                                  child: _buildDenseInput(
-                                    label: 'STATE',
-                                    child: TextFormField(
-                                      controller: _stateController,
-                                      decoration: _inputDeco(hintText: 'State / Code'),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  flex: 1,
-                                  child: _buildDenseInput(
-                                    label: 'PINCODE',
-                                    child: TextFormField(
-                                      controller: _pincodeController,
-                                      decoration: _inputDeco(hintText: '6-digit PIN'),
-                                      keyboardType: TextInputType.number,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          const SizedBox(height: 24),
-
-                          // Form Action Buttons
-                          Wrap(
-                            alignment: WrapAlignment.end,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              TextButton.icon(
-                                onPressed: _clearForm,
-                                icon: const Icon(Icons.refresh_rounded, size: 16),
-                                label: const Text('Clear Form'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: const Color(0xFF64748B),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                ),
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: _themeGradient,
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _themePrimary.withValues(alpha: 0.35),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: ElevatedButton.icon(
-                                  onPressed: _isLoading ? null : _handleSave,
-                                  icon: _isLoading
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                        )
-                                      : Icon(_id != null ? Icons.save_rounded : Icons.add_circle_outline_rounded, size: 18),
-                                  label: Text(
-                                    _id != null ? 'Update ${widget.title} Profile' : 'Save & Register ${widget.title}',
-                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    foregroundColor: Colors.white,
-                                    shadowColor: Colors.transparent,
-                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-                // Directory Search & Table Register
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final bool isSearchNarrow = constraints.maxWidth < 680;
-                    final searchTitle = Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${widget.title} Directory Register',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                        ),
-                        Text(
-                          'Showing ${_parties.length} loaded records • Scroll down for lazy pagination',
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                        ),
-                      ],
-                    );
-
-                    final searchInput = SizedBox(
-                      width: isSearchNarrow ? double.infinity : 340,
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search by Name, City or GSTIN...',
-                          hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded, size: 16),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    _searchTerm = '';
-                                    _fetchParties(1);
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: _themePrimary),
-                          ),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                        onChanged: (val) {
-                          _searchTerm = val;
-                          _fetchParties(1);
-                        },
                       ),
-                    );
-
-                    if (isSearchNarrow) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          searchTitle,
-                          const SizedBox(height: 12),
-                          searchInput,
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        searchTitle,
-                        searchInput,
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                // Table Card
-                _buildGlassCard(
-                  padding: EdgeInsets.zero,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: LayoutBuilder(
-                      builder: (context, tableConstraints) {
-                        return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SizedBox(
-                            width: tableConstraints.maxWidth < 860 ? 860 : tableConstraints.maxWidth,
-                            child: Column(
-                              children: [
-                                // Table Header
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFF8FAFC),
-                                    border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-                                  ),
-                                  child: const Row(
-                                    children: [
-                                      Expanded(flex: 3, child: Text('PARTY / ENTITY NAME', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF475569), letterSpacing: 0.5))),
-                                      Expanded(flex: 2, child: Text('CITY / STATE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF475569), letterSpacing: 0.5))),
-                                      Expanded(flex: 2, child: Text('GSTIN STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF475569), letterSpacing: 0.5))),
-                                      Expanded(flex: 2, child: Text('CONTACT PHONE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF475569), letterSpacing: 0.5))),
-                                      SizedBox(width: 140, child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF475569), letterSpacing: 0.5), textAlign: TextAlign.right)),
-                                    ],
-                                  ),
-                                ),
-
-                                // Table Body
-                                if (_parties.isEmpty && !_isLoading)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
-                                    child: Center(
-                                      child: Column(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(16),
-                                            decoration: const BoxDecoration(
-                                              color: Color(0xFFF1F5F9),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              _isConsignor ? Icons.domain_disabled_rounded : Icons.store_mall_directory_outlined,
-                                              size: 40,
-                                              color: const Color(0xFF94A3B8),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'No ${widget.title.toLowerCase()} records found',
-                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF334155)),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          const Text(
-                                            'Try searching with a different name or add a new record above.',
-                                            style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  SizedBox(
-                                    height: 440,
-                                    child: ListView.separated(
-                                      controller: _scrollController,
-                                      itemCount: _parties.length + (_hasMore ? 1 : 0),
-                                      separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                                      itemBuilder: (context, index) {
-                                        if (index == _parties.length) {
-                                          return Padding(
-                                            padding: const EdgeInsets.all(24.0),
-                                            child: Center(
-                                              child: _isLoading
-                                                  ? SizedBox(
-                                                      width: 24,
-                                                      height: 24,
-                                                      child: CircularProgressIndicator(color: _themePrimary, strokeWidth: 2),
-                                                    )
-                                                  : const Text('Scroll for more records', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-                                            ),
-                                          );
-                                        }
-
-                                        final p = _parties[index];
-                                        final bool hasGst = (p.gstin?.trim().length ?? 0) == 15;
-
-                                        return InkWell(
-                                          onTap: () => _showPartyDetailModal(p),
-                                          hoverColor: const Color(0xFFF8FAFC),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                            child: Row(
-                                              children: [
-                                                // Name & Group
-                                                Expanded(
-                                                  flex: 3,
-                                                  child: Row(
-                                                    children: [
-                                                      Container(
-                                                        width: 36,
-                                                        height: 36,
-                                                        decoration: BoxDecoration(
-                                                          color: _themePrimary.withValues(alpha: 0.1),
-                                                          borderRadius: BorderRadius.circular(10),
-                                                        ),
-                                                        child: Center(
-                                                          child: Text(
-                                                            p.name.isNotEmpty ? p.name.substring(0, 1).toUpperCase() : '?',
-                                                            style: TextStyle(
-                                                              fontWeight: FontWeight.w900,
-                                                              fontSize: 15,
-                                                              color: _themePrimary,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 12),
-                                                      Expanded(
-                                                        child: Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              p.name,
-                                                              style: const TextStyle(
-                                                                fontWeight: FontWeight.w800,
-                                                                fontSize: 13,
-                                                                color: Color(0xFF0F172A),
-                                                              ),
-                                                              maxLines: 1,
-                                                              overflow: TextOverflow.ellipsis,
-                                                            ),
-                                                            if (p.group != null && p.group!.isNotEmpty)
-                                                              Text(
-                                                                p.group!,
-                                                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
-                                                              ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-
-                                                // City / State
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        p.city?.trim().isNotEmpty == true ? p.city! : '-',
-                                                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF334155)),
-                                                      ),
-                                                      if (p.state != null && p.state!.isNotEmpty)
-                                                        Text(
-                                                          p.state!,
-                                                          style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
-
-                                                // GSTIN Status Pill
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Row(
-                                                    children: [
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                                        decoration: BoxDecoration(
-                                                          color: hasGst ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
-                                                          borderRadius: BorderRadius.circular(6),
-                                                          border: Border.all(
-                                                            color: hasGst ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
-                                                          ),
-                                                        ),
-                                                        child: Row(
-                                                          mainAxisSize: MainAxisSize.min,
-                                                          children: [
-                                                            Icon(
-                                                              hasGst ? Icons.check_circle_rounded : Icons.remove_circle_outline_rounded,
-                                                              size: 11,
-                                                              color: hasGst ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
-                                                            ),
-                                                            const SizedBox(width: 4),
-                                                            Text(
-                                                              hasGst ? p.gstin! : 'UNREGISTERED',
-                                                              style: TextStyle(
-                                                                fontSize: 10,
-                                                                fontWeight: FontWeight.w800,
-                                                                fontFamily: hasGst ? 'monospace' : null,
-                                                                color: hasGst ? const Color(0xFF15803D) : const Color(0xFF64748B),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-
-                                                // Phone
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Text(
-                                                    p.phone?.trim().isNotEmpty == true ? p.phone! : '-',
-                                                    style: const TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.w600),
-                                                  ),
-                                                ),
-
-                                                // Actions
-                                                SizedBox(
-                                                  width: 140,
-                                                  child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.end,
-                                                    children: [
-                                                      IconButton(
-                                                        icon: const Icon(Icons.visibility_outlined, size: 18, color: Color(0xFF64748B)),
-                                                        tooltip: 'View Full Profile',
-                                                        onPressed: () => _showPartyDetailModal(p),
-                                                        constraints: const BoxConstraints(),
-                                                        padding: const EdgeInsets.all(6),
-                                                      ),
-                                                      const SizedBox(width: 4),
-                                                      IconButton(
-                                                        icon: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF2563EB)),
-                                                        tooltip: 'Edit Record',
-                                                        onPressed: () => _handleEdit(p),
-                                                        constraints: const BoxConstraints(),
-                                                        padding: const EdgeInsets.all(6),
-                                                      ),
-                                                      const SizedBox(width: 4),
-                                                      IconButton(
-                                                        icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
-                                                        tooltip: 'Delete Record',
-                                                        onPressed: () => _handleDelete(p),
-                                                        constraints: const BoxConstraints(),
-                                                        padding: const EdgeInsets.all(6),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
                     ),
-                  ),
+
+                    const SizedBox(height: 16),
+
+                    // FORM CARD + ADDITIONAL ADDRESSES CARD
+                    _buildFormCard(),
+                    _buildAdditionalAddressesCard(),
+
+                    const SizedBox(height: 16),
+
+                    // LIST / TABLE CARD
+                    _buildTableCard(),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

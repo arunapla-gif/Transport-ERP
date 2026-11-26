@@ -21,17 +21,18 @@ router.get('/', cacheMiddleware(3600), async (req, res) => {
 
     let consignors = await prisma.consignor.findMany({ 
       where: branchCondition,
-      orderBy: { id: 'desc' },
-      take: 1000
+      orderBy: { id: 'desc' }
     });
 
     if (q) {
       consignors = consignors.filter(c => {
         const nameStr = (c.name || '').toLowerCase();
+        const legalStr = (c.legalName || '').toLowerCase();
         const cityStr = (c.city || '').toLowerCase();
         const gstinStr = (c.gstin || '').toLowerCase();
+        const phoneStr = (c.phone || '').toLowerCase();
         const addrStr = JSON.stringify(c.addresses || []).toLowerCase();
-        return nameStr.includes(q) || cityStr.includes(q) || gstinStr.includes(q) || addrStr.includes(q);
+        return nameStr.includes(q) || legalStr.includes(q) || cityStr.includes(q) || gstinStr.includes(q) || phoneStr.includes(q) || addrStr.includes(q);
       });
     }
 

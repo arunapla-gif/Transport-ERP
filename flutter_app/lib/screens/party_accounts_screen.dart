@@ -115,7 +115,7 @@ class _PartyAccountsScreenState extends State<PartyAccountsScreen> {
   Future<void> _fetchParties() async {
     try {
       final endpoint = _partyType == 'Consignee' ? 'consignees' : 'consignors';
-      final res = await ApiService.getParties(endpoint, limit: 500);
+      final res = await ApiService.getParties(endpoint, limit: 5000);
       if (mounted) {
         setState(() {
           _parties = res.map((e) => Party.fromJson(e)).toList();

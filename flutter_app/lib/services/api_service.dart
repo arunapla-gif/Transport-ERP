@@ -132,9 +132,9 @@ class ApiService {
   }
 
   // --- CONSIGNORS ---
-  static Future<List<Consignor>> getConsignors({String query = '', int limit = 500}) async {
+  static Future<List<Consignor>> getConsignors({String query = '', int limit = 5000}) async {
     await _ensureAuth();
-    final uri = Uri.parse('$baseUrl/consignors?branch=$activeBranch&page=1&limit=$limit&q=$query');
+    final uri = Uri.parse('$baseUrl/consignors?branch=$activeBranch&page=1&limit=$limit&q=${Uri.encodeComponent(query)}');
     final response = await http.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
@@ -172,9 +172,9 @@ class ApiService {
   }
 
   // --- CONSIGNEES ---
-  static Future<List<Consignee>> getConsignees({String query = '', int limit = 500}) async {
+  static Future<List<Consignee>> getConsignees({String query = '', int limit = 5000}) async {
     await _ensureAuth();
-    final uri = Uri.parse('$baseUrl/consignees?branch=$activeBranch&page=1&limit=$limit&q=$query');
+    final uri = Uri.parse('$baseUrl/consignees?branch=$activeBranch&page=1&limit=$limit&q=${Uri.encodeComponent(query)}');
     final response = await http.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
@@ -831,14 +831,30 @@ class ApiService {
 
 
   static Future<List<dynamic>> getParties(String endpoint, {int page = 1, int limit = 50, String q = ''}) async {
+    final res = await getPartiesPaginated(endpoint, page: page, limit: limit, q: q);
+    return res['data'] as List<dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> getPartiesPaginated(String endpoint, {int page = 1, int limit = 50, String q = ''}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/$endpoint?branch=$activeBranch&page=$page&limit=$limit&q=${Uri.encodeComponent(q)}');
     final response = await http.get(uri, headers: _headers);
     _handleUnauthorized(response.statusCode);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      if (decoded is List) return decoded;
-      return decoded['data'] ?? [];
+      if (decoded is List) {
+        return {
+          'data': decoded,
+          'total': decoded.length,
+          'hasMore': false,
+        };
+      }
+      final List<dynamic> list = decoded['data'] ?? [];
+      return {
+        'data': list,
+        'total': decoded['total'] ?? list.length,
+        'hasMore': decoded['hasMore'] == true,
+      };
     } else {
       throw Exception('Failed to fetch $endpoint');
     }
