@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.12",
-      buildNumber: 13,
+      version: "1.0.13",
+      buildNumber: 14,
       forceUpdate: false,
-      releaseNotes: "• Login: 4 rounded PIN boxes with focus indicator, role/branch pill on PIN step, and branch filter chips"
+      releaseNotes: "• Login: Switched to clean light mode matching System Boot & ERP workspace"
     },
     android: {
       version: "1.0.8",
