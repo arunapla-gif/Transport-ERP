@@ -10,6 +10,8 @@ import '../models/unit_model.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:printing/printing.dart';
+import '../services/pdf_service.dart';
 
 class GcEntryItemRow {
   TextEditingController articlesController = TextEditingController(text: '10');
@@ -373,7 +375,12 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
       final num = await ApiService.getNextGcNumber(mode: _companyMode);
       if (mounted) setState(() => _gcNumber = num);
     } catch (e) {
-      if (mounted) setState(() => _gcNumber = '${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}');
+      if (mounted) {
+        setState(() => _gcNumber = 'ERROR');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not fetch next GC number: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -486,19 +493,21 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
       final toGstin = data['toGstin']?.toString().toUpperCase() ?? '';
       final toName = data['toTrdName']?.toString().toUpperCase() ?? '';
       
+      final normalizedFromName = fromName.replaceAll(RegExp(r'\s+'), ' ').trim();
+      final normalizedToName = toName.replaceAll(RegExp(r'\s+'), ' ').trim();
+
       Consignor? matchedCnor;
       try {
-        matchedCnor = _consignors.firstWhere((c) => 
-          (fromGstin.isNotEmpty && c.gstin?.toUpperCase() == fromGstin) || 
-          (fromName.isNotEmpty && c.name.toUpperCase().contains(fromName)) ||
-          (fromName.isNotEmpty && fromName.contains(c.name.toUpperCase()))
+        matchedCnor = _consignors.firstWhere((c) =>
+          (fromGstin.isNotEmpty && c.gstin?.trim().toUpperCase() == fromGstin) ||
+          (normalizedFromName.isNotEmpty && c.name.replaceAll(RegExp(r'\s+'), ' ').trim().toUpperCase() == normalizedFromName)
         );
       } catch (_) {
-        if (fromName.isNotEmpty) {
+        if (normalizedFromName.isNotEmpty) {
            try {
              // EWB_LITE auto-creation
              final newCnor = await ApiService.saveConsignor({
-               'name': fromName.replaceAll(RegExp(r'\s+'), ' ').trim(),
+               'name': normalizedFromName,
                'gstin': fromGstin,
                'address': [data['fromAddr1'], data['fromAddr2']].where((e) => e != null && e.toString().isNotEmpty).join(', '),
                'city': data['fromPlace'] ?? data['fromAddr2'] ?? '',
@@ -516,16 +525,15 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
       
       Consignee? matchedCnee;
       try {
-        matchedCnee = _consignees.firstWhere((c) => 
-          (toGstin.isNotEmpty && c.gstin?.toUpperCase() == toGstin) ||
-          (toName.isNotEmpty && c.name.toUpperCase().contains(toName)) ||
-          (toName.isNotEmpty && toName.contains(c.name.toUpperCase()))
+        matchedCnee = _consignees.firstWhere((c) =>
+          (toGstin.isNotEmpty && c.gstin?.trim().toUpperCase() == toGstin) ||
+          (normalizedToName.isNotEmpty && c.name.replaceAll(RegExp(r'\s+'), ' ').trim().toUpperCase() == normalizedToName)
         );
       } catch (_) {
-        if (toName.isNotEmpty) {
+        if (normalizedToName.isNotEmpty) {
            try {
              final newCnee = await ApiService.saveConsignee({
-               'name': toName.replaceAll(RegExp(r'\s+'), ' ').trim(),
+               'name': normalizedToName,
                'gstin': toGstin,
                'address': [data['toAddr1'], data['toAddr2']].where((e) => e != null && e.toString().isNotEmpty).join(', '),
                'city': data['toPlace'] ?? data['toAddr2'] ?? '',
@@ -697,30 +705,43 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
   }
 
   Future<void> _loadGcForEdit(String searchTerm) async {
-    if (searchTerm.isEmpty) return;
-    
-    // Auto prefix if only digits
-    if (RegExp(r'^\d+$').hasMatch(searchTerm)) {
-      searchTerm = '${_companyMode == 'A' ? 'AP' : 'BELL'}-$searchTerm';
-    }
+    final rawInput = searchTerm.trim();
+    if (rawInput.isEmpty) return;
+
+    final isDigitsOnly = RegExp(r'^\d+$').hasMatch(rawInput);
+    final primaryPrefix = _companyMode == 'A' ? 'AP' : 'BELL';
+    final altPrefix = _companyMode == 'A' ? 'BELL' : 'AP';
+    final primaryTerm = isDigitsOnly ? '$primaryPrefix-$rawInput' : rawInput;
 
     try {
       setState(() => _isLoadingHistory = true);
-      final gcRaw = await ApiService.fetchGcRaw(searchTerm);
+      Map<String, dynamic> gcRaw;
+      try {
+        gcRaw = await ApiService.fetchGcRaw(primaryTerm);
+      } catch (_) {
+        if (!isDigitsOnly) rethrow;
+        gcRaw = await ApiService.fetchGcRaw('$altPrefix-$rawInput');
+      }
       _loadInitialGc(gcRaw);
       _scaffoldKey.currentState?.closeEndDrawer();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Loaded ${gcRaw['gcNumber']} for editing.')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('GC Not Found: $searchTerm'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('GC Not Found: $primaryTerm'), backgroundColor: Colors.red));
     } finally {
-      setState(() => _isLoadingHistory = false);
+      if (mounted) setState(() => _isLoadingHistory = false);
     }
   }
 
   Future<void> _saveGC() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_gcNumber.trim().isEmpty || _gcNumber == 'ERROR' || _gcNumber == '...') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('GC Number is missing. Please retry fetching next GC number.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
     if (_selectedConsignor == null || _selectedConsignee == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select Consignor and Consignee'), backgroundColor: Colors.orange),
@@ -780,7 +801,7 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
         'freightTotal': _calculatedTotalFreight,
         'advancePaid': double.tryParse(_advancePaidController.text) ?? 0,
         'balanceFreight': _calculatedBalance,
-        'freightNote': _remarksController.text.trim().isNotEmpty ? _remarksController.text.trim() : _freightNote,
+        'freightNote': _remarksController.text.trim(),
         'ewbNumber': _fetchedEwbDetails != null
             ? (_fetchedEwbDetails!['ewayBillNo'] ?? _fetchedEwbDetails!['ewbNo'])?.toString()
             : (_ewbNumberController.text.isNotEmpty ? _ewbNumberController.text : null),
@@ -840,6 +861,14 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
           ),
           content: Text('GC Receipt Number: ${createdGc.gcNumber}\nConsignor: ${createdGc.consignorName}\nConsignee: ${createdGc.consigneeName}'),
           actions: [
+            OutlinedButton.icon(
+              icon: const Icon(Icons.print_rounded, size: 16),
+              label: const Text('Print GC'),
+              onPressed: () async {
+                final pdfBytes = await PdfService.generateGcPdf([createdGc], ['CONSIGNOR', 'CONSIGNEE', 'DRIVER']);
+                await Printing.layoutPdf(onLayout: (_) async => pdfBytes, name: '${createdGc.gcNumber}.pdf');
+              },
+            ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white),
               onPressed: () {
@@ -997,7 +1026,10 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
     );
   }
 
-  void _clearForm() {
+  Future<void> _clearForm() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('gcDraft');
+    if (!mounted) return;
     _formKey.currentState?.reset();
     _invoiceNumberController.clear();
     _privateMarkController.clear();
@@ -1009,9 +1041,15 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
     _ewbNumberController.clear();
     _remarksController.clear();
     setState(() {
+      _editingGcId = null;
       _selectedConsignor = null;
       _selectedConsignee = null;
+      _fetchedEwbDetails = null;
       _linkedGdmNumber = null;
+      _date = DateTime.now();
+      _time = TimeOfDay.now();
+      _invoiceDate = DateTime.now();
+      _partyAutocompleteEpoch++;
       for (var row in _itemRows) {
         row.dispose();
       }
@@ -1755,10 +1793,13 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                       displayStringForOption: (c) => c.name,
                                       initialValue: _selectedConsignor != null ? TextEditingValue(text: _selectedConsignor!.name) : TextEditingValue.empty,
                                       optionsBuilder: (TextEditingValue textEditingValue) {
-                                        if (textEditingValue.text.isEmpty) {
+                                        final q = textEditingValue.text.trim().toLowerCase();
+                                        if (q.isEmpty) {
                                           return const Iterable<Consignor>.empty();
                                         }
-                                        return _consignors.where((c) => c.name.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                                        return _consignors.where((c) =>
+                                            c.name.toLowerCase().contains(q) ||
+                                            (c.gstin?.toLowerCase().contains(q) ?? false));
                                       },
                                       onSelected: (Consignor selection) {
                                         setState(() {
@@ -1891,10 +1932,13 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                       displayStringForOption: (c) => c.name,
                                       initialValue: _selectedConsignee != null ? TextEditingValue(text: _selectedConsignee!.name) : TextEditingValue.empty,
                                       optionsBuilder: (TextEditingValue textEditingValue) {
-                                        if (textEditingValue.text.isEmpty) {
+                                        final q = textEditingValue.text.trim().toLowerCase();
+                                        if (q.isEmpty) {
                                           return const Iterable<Consignee>.empty();
                                         }
-                                        return _consignees.where((c) => c.name.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                                        return _consignees.where((c) =>
+                                            c.name.toLowerCase().contains(q) ||
+                                            (c.gstin?.toLowerCase().contains(q) ?? false));
                                       },
                                       onSelected: (Consignee selection) {
                                         setState(() {

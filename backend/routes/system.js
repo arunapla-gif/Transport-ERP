@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.16",
-      buildNumber: 17,
+      version: "1.0.17",
+      buildNumber: 18,
       forceUpdate: false,
-      releaseNotes: "• Tech Usage: Updated database architecture card to Railway PostgreSQL 18"
+      releaseNotes: "• New GC Entry: Exact EWB party matching, GSTIN party search, edit prefix fallback, clean draft reset & Print GC button"
     },
     android: {
       version: "1.0.8",
