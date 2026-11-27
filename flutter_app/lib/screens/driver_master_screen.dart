@@ -309,16 +309,24 @@ class _DriverMasterScreenState extends State<DriverMasterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF64748B),
-            letterSpacing: 0.6,
+        SizedBox(
+          height: 18,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF475569),
+                letterSpacing: 0.4,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
@@ -332,28 +340,28 @@ class _DriverMasterScreenState extends State<DriverMasterScreen> {
             }
           },
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: boldEmerald ? FontWeight.w700 : FontWeight.w500,
-            color: boldEmerald ? _emeraldDark : const Color(0xFF1E293B),
+            color: boldEmerald ? _emeraldDark : const Color(0xFF0F172A),
           ),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
+            hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
             isDense: true,
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.6),
             ),
           ),
         ),
@@ -375,29 +383,37 @@ class _DriverMasterScreenState extends State<DriverMasterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF64748B),
-            letterSpacing: 0.6,
+        SizedBox(
+          height: 18,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF475569),
+                letterSpacing: 0.4,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         InputDecorator(
           decoration: InputDecoration(
             isDense: true,
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
             ),
           ),
           child: DropdownButtonHideUnderline(
@@ -405,7 +421,7 @@ class _DriverMasterScreenState extends State<DriverMasterScreen> {
               value: value,
               isExpanded: true,
               isDense: true,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF0F172A)),
               items: safeOptions
                   .map((opt) => DropdownMenuItem<String>(value: opt, child: Text(opt)))
                   .toList(),
@@ -1122,11 +1138,11 @@ class _DriverMasterScreenState extends State<DriverMasterScreen> {
           backgroundColor: const Color(0xFFF8FAFC),
           body: SingleChildScrollView(
             controller: _pageScrollController,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 40),
             child: Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
+                constraints: const BoxConstraints(maxWidth: 1240),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1135,13 +1151,13 @@ class _DriverMasterScreenState extends State<DriverMasterScreen> {
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: const Color(0xFFECFDF5),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: const Color(0xFFD1FAE5)),
                             ),
-                            child: const Icon(Icons.person_outline_rounded, size: 20, color: _emerald),
+                            child: const Icon(Icons.person_outline_rounded, size: 22, color: _emerald),
                           ),
                           const SizedBox(width: 12),
                           const Expanded(
@@ -1151,17 +1167,17 @@ class _DriverMasterScreenState extends State<DriverMasterScreen> {
                                 Text(
                                   'Driver Master',
                                   style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1E293B),
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
                                     letterSpacing: -0.3,
                                   ),
                                 ),
-                                SizedBox(height: 1),
+                                SizedBox(height: 2),
                                 Text(
                                   'Manage drivers, contact details, and license validity.',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                     color: Color(0xFF64748B),
                                   ),

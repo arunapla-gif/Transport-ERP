@@ -197,35 +197,35 @@ class _HSNMasterScreenState extends State<HSNMasterScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('HSN CODE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
-                          const SizedBox(height: 4),
+                          const Text('HSN CODE', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+                          const SizedBox(height: 6),
                           TextField(
                             controller: codeCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            style: const TextStyle(fontSize: 13, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                            style: const TextStyle(fontSize: 14, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
                             decoration: _modalDeco('e.g. 3604'),
                           ),
                           const SizedBox(height: 4),
                           const Text(
                             'Numbers only. Enter exact 4, 6, or 8 digit code.',
-                            style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                            style: TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
                           ),
                           const SizedBox(height: 14),
-                          const Text('GOODS DESCRIPTION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
-                          const SizedBox(height: 4),
+                          const Text('GOODS DESCRIPTION', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+                          const SizedBox(height: 6),
                           TextField(
                             controller: descCtrl,
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B)),
+                            style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
                             decoration: _modalDeco('e.g. Fireworks and Crackers'),
                           ),
                           const SizedBox(height: 14),
-                          const Text('TOTAL GST RATE (%)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
-                          const SizedBox(height: 4),
+                          const Text('TOTAL GST RATE (%)', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+                          const SizedBox(height: 6),
                           TextField(
                             controller: rateCtrl,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                             decoration: _modalDeco('e.g. 18').copyWith(
                               suffixText: '%',
                               suffixStyle: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
@@ -295,20 +295,20 @@ class _HSNMasterScreenState extends State<HSNMasterScreen> {
   InputDecoration _modalDeco(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
+      hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _indigo, width: 1.5),
+        borderSide: const BorderSide(color: _indigo, width: 1.6),
       ),
     );
   }

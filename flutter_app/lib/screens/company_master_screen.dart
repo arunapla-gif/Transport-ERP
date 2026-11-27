@@ -266,19 +266,27 @@ class _CompanyMasterScreenState extends State<CompanyMasterScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label != null) ...[
-          Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF64748B),
-              letterSpacing: 0.5,
+          SizedBox(
+            height: 18,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF475569),
+                  letterSpacing: 0.4,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
         ],
         SizedBox(
-          height: 40,
+          height: 42,
           child: TextField(
             controller: controller,
             readOnly: readOnly,
@@ -296,32 +304,32 @@ class _CompanyMasterScreenState extends State<CompanyMasterScreen> {
                   }
                 : null,
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: highlightIndigo ? FontWeight.w900 : FontWeight.w600,
+              fontSize: 14,
+              fontWeight: highlightIndigo ? FontWeight.w800 : FontWeight.w600,
               color: readOnly
                   ? const Color(0xFF64748B)
-                  : (highlightIndigo ? const Color(0xFF312E81) : const Color(0xFF1E293B)),
+                  : (highlightIndigo ? const Color(0xFF312E81) : const Color(0xFF0F172A)),
             ),
             decoration: InputDecoration(
               hintText: placeholder,
-              hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
+              hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
               filled: true,
               fillColor: readOnly
                   ? const Color(0xFFF8FAFC)
                   : (highlightIndigo ? const Color(0xFFEEF2FF).withValues(alpha: 0.5) : Colors.white),
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: _indigo, width: 1.5),
+                borderSide: const BorderSide(color: _indigo, width: 1.6),
               ),
             ),
           ),
@@ -719,7 +727,7 @@ class _CompanyMasterScreenState extends State<CompanyMasterScreen> {
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1200),
+            constraints: const BoxConstraints(maxWidth: 1240),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

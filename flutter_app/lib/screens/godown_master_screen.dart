@@ -218,18 +218,24 @@ class _GodownMasterScreenState extends State<GodownMasterScreen> {
                               final nameInput = Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'GODOWN NAME *',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF64748B),
-                                      letterSpacing: 0.6,
+                                  const SizedBox(
+                                    height: 18,
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        'GODOWN NAME *',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF475569),
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 6),
                                   SizedBox(
-                                    height: 38,
+                                    height: 42,
                                     child: TextField(
                                       controller: _nameController,
                                       focusNode: _nameFocusNode,
@@ -244,25 +250,25 @@ class _GodownMasterScreenState extends State<GodownMasterScreen> {
                                         }
                                       },
                                       onSubmitted: (_) => _handleSubmit(),
-                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
                                       decoration: InputDecoration(
                                         hintText: 'e.g. Sivakasi Main Godown',
-                                        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
+                                        hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w400),
                                         filled: true,
                                         fillColor: const Color(0xFFF8FAFC),
                                         isDense: true,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
-                                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
                                         ),
                                         enabledBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
-                                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
-                                          borderSide: const BorderSide(color: _indigo, width: 1.5),
+                                          borderSide: const BorderSide(color: _indigo, width: 1.6),
                                         ),
                                       ),
                                     ),
@@ -271,7 +277,7 @@ class _GodownMasterScreenState extends State<GodownMasterScreen> {
                               );
 
                               final buttonsRow = SizedBox(
-                                height: 38,
+                                height: 42,
                                 child: Row(
                                   children: [
                                     if (_editingId != null) ...[

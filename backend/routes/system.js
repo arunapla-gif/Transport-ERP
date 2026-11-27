@@ -10,17 +10,17 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.3",
-      buildNumber: 4,
+      version: "1.0.4",
+      buildNumber: 5,
       forceUpdate: false,
-      releaseNotes: "• Tuned Consignor & Consignee Master sizing to balanced medium proportions\n• SQL-level search & pagination + faster API caching"
+      releaseNotes: "• Unified balanced medium sizing across all 8 Master screens\n• Removed per-keystroke rebuild lag in Vehicle Master"
     },
     android: {
-      version: "1.0.2",
-      buildNumber: 3,
+      version: "1.0.4",
+      buildNumber: 5,
       downloadUrl: "https://transport-erp-production.up.railway.app/downloads/transport-erp-operator.apk",
       forceUpdate: false,
-      releaseNotes: "• SQL-level search & pagination for Consignors & Consignees\n• Debounced GC Register search & controller leak fixes\n• Persistent HTTP pooling & static Master caching"
+      releaseNotes: "• Unified balanced medium sizing across all 8 Master screens\n• Removed per-keystroke rebuild lag in Vehicle Master"
     },
     windows: {
       version: "1.0.2",
