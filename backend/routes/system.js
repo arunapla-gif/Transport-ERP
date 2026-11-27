@@ -10,17 +10,17 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.4",
-      buildNumber: 5,
+      version: "1.0.5",
+      buildNumber: 6,
       forceUpdate: false,
-      releaseNotes: "• Unified balanced medium sizing across all 8 Master screens\n• Removed per-keystroke rebuild lag in Vehicle Master"
+      releaseNotes: "• Moved version badge & update check cleanly to the Login screen\n• Removed hardcoded System Boot version badge"
     },
     android: {
-      version: "1.0.4",
-      buildNumber: 5,
+      version: "1.0.5",
+      buildNumber: 6,
       downloadUrl: "https://transport-erp-production.up.railway.app/downloads/transport-erp-operator.apk",
       forceUpdate: false,
-      releaseNotes: "• Unified balanced medium sizing across all 8 Master screens\n• Removed per-keystroke rebuild lag in Vehicle Master"
+      releaseNotes: "• Moved version badge & update check cleanly to the Login screen\n• Removed hardcoded System Boot version badge"
     },
     windows: {
       version: "1.0.2",

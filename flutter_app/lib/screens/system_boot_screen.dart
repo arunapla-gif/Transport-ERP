@@ -326,34 +326,6 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
               ),
               child: const Icon(Icons.dns_rounded, color: Colors.white, size: 34),
             ),
-            Positioned(
-              top: -6,
-              right: -36,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF34D399)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Text(
-                  'v3.0.2 Live',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
         const SizedBox(height: 20),

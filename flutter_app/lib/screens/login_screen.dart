@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/update_service.dart';
 import 'system_boot_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -477,39 +478,79 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
 
                         const SizedBox(height: 20),
-                        // Dynamic Server Connection Pill
-                        InkWell(
-                          onTap: _showServerConfigDialog,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.8),
+                        // Dynamic Server Connection & App Version Pills
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            InkWell(
+                              onTap: _showServerConfigDialog,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF334155)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.dns_rounded, size: 13, color: Color(0xFF38BDF8)),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Text(
-                                    'SERVER: ${ApiService.baseUrl.replaceAll('/api', '')}',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      fontFamily: 'monospace',
-                                      color: Color(0xFF94A3B8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A).withValues(alpha: 0.8),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFF334155)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.dns_rounded, size: 13, color: Color(0xFF38BDF8)),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'SERVER: ${ApiService.baseUrl.replaceAll('/api', '')}',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          fontFamily: 'monospace',
+                                          color: Color(0xFF94A3B8),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    overflow: TextOverflow.ellipsis,
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.settings_rounded, size: 12, color: Color(0xFF64748B)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Tooltip(
+                              message: 'Click to check for Web / APK updates',
+                              child: InkWell(
+                                onTap: () => UpdateService.checkForUpdate(context, manual: true),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.45)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.verified_outlined, size: 13, color: Color(0xFF93C5FD)),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        UpdateService.buildLabel,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFFBFDBFE),
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Icon(Icons.system_update_rounded, size: 12, color: Color(0xFF60A5FA)),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-                                const Icon(Icons.settings_rounded, size: 12, color: Color(0xFF64748B)),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
 
                         const SizedBox(height: 16),

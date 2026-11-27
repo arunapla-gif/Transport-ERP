@@ -843,69 +843,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: Color(0xFF1E293B))),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            child: Row(
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'App ${UpdateService.buildLabel}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF94A3B8),
-                        ),
-                      ),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          UpdateService.checkForUpdate(context, manual: true);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB).withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.4)),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.system_update_rounded, size: 12, color: Color(0xFF93C5FD)),
-                              SizedBox(width: 4),
-                              Text(
-                                'Check Update',
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF93C5FD)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFEF4444),
-                          side: const BorderSide(color: Color(0xFF7F1D1D)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.logout_rounded, size: 16),
-                        label: const Text('LOGOUT SESSION', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11)),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _handleLogout();
-                        },
-                      ),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFEF4444),
+                      side: const BorderSide(color: Color(0xFF7F1D1D)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                  ],
+                    icon: const Icon(Icons.logout_rounded, size: 16),
+                    label: const Text('LOGOUT SESSION', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11)),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _handleLogout();
+                    },
+                  ),
                 ),
               ],
             ),
@@ -1099,41 +1052,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
 
                 const Spacer(),
-
-                // Version Badge + Manual Update Check
-                Tooltip(
-                  message: 'Running ${UpdateService.buildLabel} • Click to check for updates',
-                  child: InkWell(
-                    onTap: () => UpdateService.checkForUpdate(context, manual: true),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB).withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: const Color(0xFF60A5FA).withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.verified_outlined, size: 13, color: Color(0xFF93C5FD)),
-                          const SizedBox(width: 5),
-                          Text(
-                            UpdateService.buildLabel,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFBFDBFE),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
 
                 // Station Pill with Live Indicator & Branch Switcher
                 InkWell(
