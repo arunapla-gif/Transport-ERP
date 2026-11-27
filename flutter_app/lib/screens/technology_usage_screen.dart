@@ -255,83 +255,6 @@ class _TechnologyUsageScreenState extends State<TechnologyUsageScreen> {
                             ),
                             const SizedBox(height: 24),
 
-                            // System Status Summary (English Report)
-                            Container(
-                              padding: const EdgeInsets.all(22),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Row(
-                                    children: [
-                                      Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 18),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'SYSTEM STATUS SUMMARY',
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 0.5),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final isNarrow = constraints.maxWidth < 650;
-                                      return GridView.count(
-                                        crossAxisCount: isNarrow ? 1 : 2,
-                                        crossAxisSpacing: 14,
-                                        mainAxisSpacing: 12,
-                                        shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        childAspectRatio: isNarrow ? 3.5 : 3.8,
-                                        children: [
-                                          _buildStatusTile(
-                                            title: 'Performance',
-                                            status: (dbPing is int && dbPing > 100) ? 'Degraded' : 'Excellent',
-                                            desc: 'System queries are executing promptly under standard threshold.',
-                                            isOk: (dbPing is int && dbPing > 100) ? false : true,
-                                            isDark: isDark,
-                                          ),
-                                          _buildStatusTile(
-                                            title: 'Reliability',
-                                            status: 'High Stability',
-                                            desc: 'Zero unhandled cluster exceptions in the active runtime.',
-                                            isOk: true,
-                                            isDark: isDark,
-                                          ),
-                                          _buildStatusTile(
-                                            title: 'Resource Health',
-                                            status: 'Stable',
-                                            desc: 'Memory utilization is level with no memory leak profiles.',
-                                            isOk: true,
-                                            isDark: isDark,
-                                          ),
-                                          _buildStatusTile(
-                                            title: 'Maintenance',
-                                            status: 'Up to date',
-                                            desc: 'Prisma query cache & temporary log cleaner running normally.',
-                                            isOk: true,
-                                            isDark: isDark,
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-
                             // 24-Hour Performance Timeline Visual
                             if (_healthHistory.isNotEmpty) ...[
                               Container(
@@ -579,17 +502,17 @@ class _TechnologyUsageScreenState extends State<TechnologyUsageScreen> {
                                   childAspectRatio: isNarrow ? 2.3 : 1.9,
                                   children: [
                                     _buildTechCard(
-                                      title: 'Supabase PostgreSQL',
-                                      desc: 'Serverless Database holding all ERP records with connection pooling and edge caching.',
+                                      title: 'Neon PostgreSQL',
+                                      desc: 'Serverless PostgreSQL database holding all ERP records via Prisma ORM with connection pooling.',
                                       status: 'ACTIVE',
                                       icon: Icons.storage_rounded,
-                                      color: const Color(0xFF3B82F6),
-                                      link: 'https://supabase.com/dashboard',
+                                      color: const Color(0xFF10B981),
+                                      link: 'https://console.neon.tech',
                                       isDark: isDark,
                                     ),
                                     _buildTechCard(
-                                      title: 'Railway Backend',
-                                      desc: 'Node.js Express Server handling heavy PDF generation and E-Way Bill integrations 24/7.',
+                                      title: 'Railway Cloud Server',
+                                      desc: 'Node.js Express backend & Flutter Web host handling APIs, PDF receipts, and E-Way Bill sync 24/7.',
                                       status: 'ACTIVE',
                                       icon: Icons.dns_rounded,
                                       color: const Color(0xFF8B5CF6),
@@ -597,17 +520,17 @@ class _TechnologyUsageScreenState extends State<TechnologyUsageScreen> {
                                       isDark: isDark,
                                     ),
                                     _buildTechCard(
-                                      title: 'Vercel & Flutter CDN',
-                                      desc: 'Global Edge Network hosting responsive web and desktop portals with sub-second asset delivery.',
+                                      title: 'Flutter Multi-Platform',
+                                      desc: 'Unified client powering the live Web portal, Android Operator APK, and Windows Office app.',
                                       status: 'ACTIVE',
-                                      icon: Icons.cloud_queue_rounded,
+                                      icon: Icons.devices_rounded,
                                       color: const Color(0xFF0EA5E9),
-                                      link: 'https://vercel.com',
+                                      link: null,
                                       isDark: isDark,
                                     ),
                                     _buildTechCard(
-                                      title: 'Whitebooks API',
-                                      desc: 'Fetches government E-Way Bill details, verifies VAHAN RC statuses, and GSTIN auto-fill.',
+                                      title: 'WhiteBooks GSP API',
+                                      desc: 'Official NIC E-Way Bill v1.03 gateway for EWB generation, CEWB manifests, and transporter updates.',
                                       status: 'PREPAID',
                                       icon: Icons.sync_alt_rounded,
                                       color: const Color(0xFFF59E0B),
@@ -615,19 +538,19 @@ class _TechnologyUsageScreenState extends State<TechnologyUsageScreen> {
                                       isDark: isDark,
                                     ),
                                     _buildTechCard(
-                                      title: 'Appyflow API',
-                                      desc: 'Integrated globally for instant GSTIN verification and postal pincode city mapping.',
+                                      title: 'Appyflow & Govt APIs',
+                                      desc: 'Integrated verification for GSTIN lookups, VAHAN RC, Driving License, FASTag, and Pincodes.',
                                       status: 'ACTIVE',
                                       icon: Icons.verified_rounded,
-                                      color: const Color(0xFF10B981),
+                                      color: const Color(0xFF3B82F6),
                                       link: 'https://app.appyflow.in',
                                       isDark: isDark,
                                     ),
                                     _buildTechCard(
-                                      title: 'Tesseract OCR',
-                                      desc: 'On-device camera AI processing for rapid barcode & consignment slip scanning.',
+                                      title: 'Mobile QR & Barcode',
+                                      desc: 'On-device camera scanning via mobile_scanner for instant E-Way Bill and parcel slip capture.',
                                       status: 'ACTIVE',
-                                      icon: Icons.document_scanner_rounded,
+                                      icon: Icons.qr_code_scanner_rounded,
                                       color: const Color(0xFFEC4899),
                                       link: null,
                                       isDark: isDark,
@@ -1133,62 +1056,6 @@ class _TechnologyUsageScreenState extends State<TechnologyUsageScreen> {
                 style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusTile({
-    required String title,
-    required String status,
-    required String desc,
-    required bool isOk,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            isOk ? Icons.check_circle_rounded : Icons.warning_rounded,
-            size: 18,
-            color: isOk ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: isDark ? Colors.white : const Color(0xFF0F172A))),
-                    const SizedBox(width: 6),
-                    Text(
-                      status,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: isOk ? const Color(0xFF059669) : const Color(0xFFD97706),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  desc,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                ),
-              ],
-            ),
           ),
         ],
       ),

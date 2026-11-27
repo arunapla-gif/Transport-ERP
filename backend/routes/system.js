@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.14",
-      buildNumber: 15,
+      version: "1.0.15",
+      buildNumber: 16,
       forceUpdate: false,
-      releaseNotes: "• System Boot: Pre-warms Companies, Godowns, Units & HSN caches during boot for instant workspace entry"
+      releaseNotes: "• Tech Usage: Removed static summary tiles & updated architecture cards to Neon, Railway, Flutter, WhiteBooks & mobile_scanner"
     },
     android: {
       version: "1.0.8",
