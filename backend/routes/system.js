@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.2",
-      buildNumber: 3,
+      version: "1.0.3",
+      buildNumber: 4,
       forceUpdate: false,
-      releaseNotes: "• SQL-level search & pagination for Consignors & Consignees\n• Debounced GC Register search & controller leak fixes\n• Persistent HTTP pooling & static Master caching"
+      releaseNotes: "• Tuned Consignor & Consignee Master sizing to balanced medium proportions\n• SQL-level search & pagination + faster API caching"
     },
     android: {
       version: "1.0.2",

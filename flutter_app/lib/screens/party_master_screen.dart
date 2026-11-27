@@ -624,17 +624,17 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor ?? const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.035),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: padding ?? const EdgeInsets.all(20),
+      padding: padding ?? const EdgeInsets.all(16),
       child: child,
     );
   }
@@ -654,7 +654,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: 22,
+          height: 18,
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -662,7 +662,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 12.5,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF475569),
                 letterSpacing: 0.4,
@@ -670,7 +670,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         TextField(
           controller: controller,
           readOnly: readOnly,
@@ -689,8 +689,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
             onChanged?.call(uppercase ? val.toUpperCase() : val);
           },
           style: TextStyle(
-            fontSize: 15.5,
-            fontWeight: boldAccentText ? FontWeight.w700 : FontWeight.w600,
+            fontSize: 14,
+            fontWeight: boldAccentText ? FontWeight.w700 : FontWeight.w500,
             color: readOnly
                 ? const Color(0xFF94A3B8)
                 : (boldAccentText ? _accentDarkText : const Color(0xFF0F172A)),
@@ -698,26 +698,26 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
           decoration: InputDecoration(
             hintText: placeholder,
             hintStyle: const TextStyle(
-                fontSize: 15,
+                fontSize: 13.5,
                 color: Color(0xFF94A3B8),
                 fontWeight: FontWeight.w400),
             isDense: true,
             filled: true,
             fillColor: readOnly ? const Color(0xFFF8FAFC) : Colors.white,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide:
-                  const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                  const BorderSide(color: Color(0xFF10B981), width: 1.6),
             ),
           ),
         ),
@@ -740,21 +740,21 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-            height: 22,
+            height: 18,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'GSTIN',
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF475569),
                     letterSpacing: 0.4,
                   ),
                 ),
                 InkWell(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(4),
                   onTap: _isRetail
                       ? null
                       : () {
@@ -774,8 +774,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 18,
-                          height: 18,
+                          width: 15,
+                          height: 15,
                           child: Checkbox(
                             value: _isUrp,
                             activeColor: const Color(0xFF059669),
@@ -783,9 +783,9 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                 MaterialTapTargetSize.shrinkWrap,
                             visualDensity: VisualDensity.compact,
                             side: const BorderSide(
-                                color: Color(0xFF94A3B8), width: 1.5),
+                                color: Color(0xFF94A3B8), width: 1.4),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4)),
+                                borderRadius: BorderRadius.circular(3)),
                             onChanged: _isRetail
                                 ? null
                                 : (checked) {
@@ -800,11 +800,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                   },
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         const Text(
                           'Unregistered (URD)',
                           style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF334155)),
                         ),
@@ -814,7 +814,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                 ),
               ],
             )),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -838,8 +838,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   });
                 },
                 style: TextStyle(
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                   fontFamily: 'monospace',
                   color: (_isUrp || _isRetail)
                       ? const Color(0xFF94A3B8)
@@ -849,7 +849,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   hintText:
                       _isRetail ? 'Disabled for Retail' : '27AADCB2230M1Z2',
                   hintStyle: const TextStyle(
-                      fontSize: 14.5,
+                      fontSize: 13.5,
                       color: Color(0xFF94A3B8),
                       fontFamily: 'Inter'),
                   isDense: true,
@@ -858,26 +858,26 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       ? const Color(0xFFF8FAFC)
                       : Colors.white,
                   contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     borderSide:
-                        const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                        const BorderSide(color: Color(0xFF10B981), width: 1.6),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             SizedBox(
-              height: 48,
+              height: 42,
               child: OutlinedButton(
                 onPressed: disableVerify ? null : _handleVerifyGST,
                 style: OutlinedButton.styleFrom(
@@ -898,14 +898,14 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                         ? const Color(0xFFE2E8F0)
                         : const Color(0xFFA7F3D0),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 child: _isVerifyingGst
                     ? const SizedBox(
-                        width: 16,
-                        height: 16,
+                        width: 14,
+                        height: 14,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Color(0xFF047857)),
                       )
@@ -914,17 +914,17 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.check_circle_outline_rounded,
-                                  size: 16, color: Color(0xFF047857)),
-                              SizedBox(width: 6),
+                                  size: 15, color: Color(0xFF047857)),
+                              SizedBox(width: 5),
                               Text('Verified',
                                   style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w700)),
                             ],
                           )
                         : const Text('Verify',
                             style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w700)),
+                                fontSize: 13, fontWeight: FontWeight.w700)),
               ),
             ),
           ],
@@ -948,22 +948,22 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
         });
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
               'Retail / Walk-in Customer',
               style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF334155)),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: 44,
-              height: 24,
+              width: 40,
+              height: 22,
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 color: _isRetail ? _accent : const Color(0xFFCBD5E1),
@@ -972,8 +972,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               alignment:
                   _isRetail ? Alignment.centerRight : Alignment.centerLeft,
               child: Container(
-                width: 20,
-                height: 20,
+                width: 18,
+                height: 18,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -995,13 +995,13 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(
-          height: 22,
+          height: 18,
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'PARENT GROUP (MASTER CONSIGNEE)',
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF475569),
                 letterSpacing: 0.4,
@@ -1009,20 +1009,20 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         InputDecorator(
           decoration: InputDecoration(
             isDense: true,
             filled: true,
             fillColor: Colors.white,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
             ),
           ),
@@ -1032,8 +1032,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               isExpanded: true,
               isDense: true,
               style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                   color: Color(0xFF0F172A)),
               items: [
                 const DropdownMenuItem<int?>(
@@ -1061,11 +1061,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
 
   Widget _buildUrdKycBanner(bool isDesktop) {
     return Container(
-      margin: const EdgeInsets.only(top: 18),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFFDE68A)),
       ),
       child: isDesktop
@@ -1079,22 +1079,22 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       Text(
                         'KYC Required for Unregistered Dealers',
                         style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF78350F)),
                       ),
-                      SizedBox(height: 4),
+                      SizedBox(height: 3),
                       Text(
                         'Please provide their PAN or Aadhaar number for compliance.',
                         style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFFB45309)),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 16),
                 Expanded(
                   flex: 1,
                   child: _denseField(
@@ -1112,19 +1112,19 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                 const Text(
                   'KYC Required for Unregistered Dealers',
                   style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF78350F)),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 const Text(
                   'Please provide their PAN or Aadhaar number for compliance.',
                   style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: Color(0xFFB45309)),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _denseField(
                   label: 'PAN / Aadhaar *',
                   controller: _panNumberController,
@@ -1138,7 +1138,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
 
   Widget _buildFormCard() {
     return _glassCard(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(22),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final bool isDesktop = constraints.maxWidth >= 780;
@@ -1159,7 +1159,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 flex: 2,
                 child: _denseField(
@@ -1175,15 +1175,15 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
             children: [
               // Card Header
               Container(
-                padding: const EdgeInsets.only(bottom: 16),
-                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.only(bottom: 12),
+                margin: const EdgeInsets.only(bottom: 16),
                 decoration: const BoxDecoration(
                   border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
                 ),
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
-                  runSpacing: 10,
+                  runSpacing: 8,
                   children: [
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1191,15 +1191,15 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                         const Text(
                           'Customer Details',
                           style: TextStyle(
-                              fontSize: 17,
+                              fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: Color(0xFF0F172A)),
                         ),
                         if (_id != null) ...[
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                                horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: _accentSoftBg,
                               borderRadius: BorderRadius.circular(10),
@@ -1208,7 +1208,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             child: Text(
                               'Editing #$_id',
                               style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w800,
                                   color: _accent),
                             ),
@@ -1235,7 +1235,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                           boldAccentText: true,
                         ),
                       ),
-                      const SizedBox(width: 22),
+                      const SizedBox(width: 18),
                       Expanded(flex: 1, child: _buildGstinControl()),
                     ],
                   )
@@ -1245,7 +1245,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                     controller: _nameController,
                     boldAccentText: true,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   _buildGstinControl(),
                 ],
               ] else ...[
@@ -1261,7 +1261,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                           boldAccentText: true,
                         ),
                       ),
-                      const SizedBox(width: 22),
+                      const SizedBox(width: 18),
                       Expanded(
                         flex: 1,
                         child: _denseField(
@@ -1277,24 +1277,24 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                     controller: _nameController,
                     boldAccentText: true,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   _denseField(
                     label: 'Legal Name',
                     controller: _legalNameController,
                   ),
                 ],
-                const SizedBox(height: 22),
+                const SizedBox(height: 16),
                 _buildGstinControl(),
               ],
 
-              const SizedBox(height: 22),
+              const SizedBox(height: 16),
               _denseField(
                 label: 'Full Address$urpStar',
                 controller: _addressController,
                 maxLines: 2,
               ),
 
-              const SizedBox(height: 22),
+              const SizedBox(height: 16),
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1303,24 +1303,24 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                         child: _denseField(
                             label: 'City$urpStar',
                             controller: _cityController)),
-                    const SizedBox(width: 22),
+                    const SizedBox(width: 18),
                     Expanded(
                         child: _denseField(
                             label: 'District',
                             controller: _districtController)),
-                    const SizedBox(width: 22),
+                    const SizedBox(width: 18),
                     Expanded(child: stateAndCodeRow),
                   ],
                 )
               else ...[
                 _denseField(label: 'City$urpStar', controller: _cityController),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _denseField(label: 'District', controller: _districtController),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 stateAndCodeRow,
               ],
 
-              const SizedBox(height: 22),
+              const SizedBox(height: 16),
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1332,7 +1332,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                         keyboardType: TextInputType.number,
                       ),
                     ),
-                    const SizedBox(width: 22),
+                    const SizedBox(width: 18),
                     Expanded(
                       child: _denseField(
                         label: 'Phone Number${_isRetail ? ' *' : ''}',
@@ -1340,7 +1340,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                         keyboardType: TextInputType.phone,
                       ),
                     ),
-                    const SizedBox(width: 22),
+                    const SizedBox(width: 18),
                     Expanded(
                       child: _denseField(
                         label: 'Email Address',
@@ -1356,13 +1356,13 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   controller: _pincodeController,
                   keyboardType: TextInputType.number,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _denseField(
                   label: 'Phone Number${_isRetail ? ' *' : ''}',
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _denseField(
                   label: 'Email Address',
                   controller: _emailController,
@@ -1373,12 +1373,12 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               if (_isUrp) _buildUrdKycBanner(isDesktop),
 
               if (!_isConsignor) ...[
-                const SizedBox(height: 22),
+                const SizedBox(height: 16),
                 if (isDesktop)
                   Row(
                     children: [
                       Expanded(flex: 2, child: _buildParentGroupDropdown()),
-                      const SizedBox(width: 22),
+                      const SizedBox(width: 18),
                       const Expanded(flex: 1, child: SizedBox.shrink()),
                     ],
                   )
@@ -1388,8 +1388,8 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
 
               // Bottom Action Bar
               Container(
-                margin: const EdgeInsets.only(top: 24),
-                padding: const EdgeInsets.only(top: 18),
+                margin: const EdgeInsets.only(top: 18),
+                padding: const EdgeInsets.only(top: 14),
                 decoration: const BoxDecoration(
                   border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
                 ),
@@ -1397,51 +1397,51 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     SizedBox(
-                      height: 46,
+                      height: 40,
                       child: OutlinedButton(
                         onPressed: _clearForm,
                         style: OutlinedButton.styleFrom(
                           backgroundColor: const Color(0xFFF1F5F9),
                           foregroundColor: const Color(0xFF1E293B),
                           side: const BorderSide(color: Color(0xFFCBD5E1)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                              borderRadius: BorderRadius.circular(8)),
                         ),
                         child: const Text('Clear',
                             style: TextStyle(
-                                fontSize: 14.5, fontWeight: FontWeight.w700)),
+                                fontSize: 13, fontWeight: FontWeight.w700)),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     SizedBox(
-                      height: 46,
+                      height: 40,
                       child: ElevatedButton.icon(
                         onPressed: (_isSaving || (_id != null && !_canEdit))
                             ? null
                             : _handleSave,
                         icon: _isSaving
                             ? const SizedBox(
-                                width: 16,
-                                height: 16,
+                                width: 15,
+                                height: 15,
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2, color: Colors.white),
                               )
-                            : const Icon(Icons.save_outlined, size: 18),
+                            : const Icon(Icons.save_outlined, size: 16),
                         label: Text(
                           _id != null
                               ? 'Update ${widget.title}'
                               : 'Save ${widget.title}',
                           style: const TextStyle(
-                              fontSize: 14.5, fontWeight: FontWeight.w700),
+                              fontSize: 13, fontWeight: FontWeight.w700),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _accent,
                           foregroundColor: Colors.white,
                           elevation: 1,
-                          padding: const EdgeInsets.symmetric(horizontal: 26),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                              borderRadius: BorderRadius.circular(8)),
                         ),
                       ),
                     ),
@@ -1505,10 +1505,10 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
+                spacing: 10,
+                runSpacing: 10,
                 children: List.generate(_addresses.length, (idx) {
                   final addr = _addresses[idx];
                   final locParts = [
@@ -1520,12 +1520,12 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       .map((e) => e.toString())
                       .join(' • ');
                   return SizedBox(
-                    width: 410,
+                    width: 380,
                     child: Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: const Color(0xFFCBD5E1)),
                       ),
                       child: Row(
@@ -1544,24 +1544,24 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                       ? addr['address'].toString()
                                       : 'No Street Address',
                                   style: const TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w700,
                                       color: Color(0xFF1E293B)),
                                 ),
                                 if (locParts.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 3),
                                   Text(locParts,
                                       style: const TextStyle(
-                                          fontSize: 12.5,
+                                          fontSize: 11.5,
                                           fontWeight: FontWeight.w500,
                                           color: Color(0xFF475569))),
                                 ],
                                 if (addr['pincode'] != null &&
                                     addr['pincode'].toString().isNotEmpty) ...[
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 3),
                                   Text('PIN: ${addr['pincode']}',
                                       style: const TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.w600,
                                           color: Color(0xFF64748B))),
                                 ],
@@ -1740,12 +1740,12 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
           OutlinedButton.icon(
             onPressed: () => _handleEdit(c),
             icon: Icon(Icons.edit_outlined,
-                size: 15,
+                size: 13,
                 color: _isConsignor
                     ? const Color(0xFF4F46E5)
                     : const Color(0xFF2563EB)),
             label: const Text('Edit',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
             style: OutlinedButton.styleFrom(
               backgroundColor:
                   _isConsignor ? Colors.white : const Color(0xFFEFF6FF),
@@ -1757,7 +1757,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       ? const Color(0xFFC7D2FE)
                       : const Color(0xFFBFDBFE)),
               padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 10 : 13, vertical: 8),
+                  horizontal: compact ? 8 : 11, vertical: 6),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
@@ -1765,16 +1765,16 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
             ),
           ),
         if (_canDelete && c.isActive) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           OutlinedButton.icon(
             onPressed: () => _handleArchive(c),
             icon: Icon(Icons.delete_outline_rounded,
-                size: 15,
+                size: 13,
                 color: _isConsignor
                     ? const Color(0xFFE11D48)
                     : const Color(0xFFD97706)),
             label: const Text('Archive',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
             style: OutlinedButton.styleFrom(
               backgroundColor:
                   _isConsignor ? Colors.white : const Color(0xFFFFFBEB),
@@ -1786,7 +1786,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       ? const Color(0xFFFECDD3)
                       : const Color(0xFFFDE68A)),
               padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 10 : 13, vertical: 8),
+                  horizontal: compact ? 8 : 11, vertical: 6),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
@@ -1795,7 +1795,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
           ),
         ],
         if (_canDelete && !c.isActive) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           OutlinedButton(
             onPressed: () => _handleRestore(c),
             style: OutlinedButton.styleFrom(
@@ -1803,14 +1803,14 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
               foregroundColor: const Color(0xFF059669),
               side: const BorderSide(color: Color(0xFFA7F3D0)),
               padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 10 : 13, vertical: 8),
+                  horizontal: compact ? 8 : 11, vertical: 6),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('Restore',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
           ),
         ],
       ],
@@ -1890,25 +1890,25 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             color: Color(0xFF475569)),
                       ),
                     SizedBox(
-                      width: isMobile ? double.infinity : 320,
-                      height: 42,
+                      width: isMobile ? double.infinity : 280,
+                      height: 38,
                       child: TextField(
                         controller: _searchController,
                         onChanged: _onSearchChanged,
                         style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF0F172A)),
                         decoration: InputDecoration(
                           hintText: 'Search party...',
                           hintStyle: const TextStyle(
-                              fontSize: 14, color: Color(0xFF94A3B8)),
+                              fontSize: 13, color: Color(0xFF94A3B8)),
                           prefixIcon: const Icon(Icons.search_rounded,
-                              size: 18, color: Color(0xFF64748B)),
+                              size: 16, color: Color(0xFF64748B)),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.close_rounded,
-                                      size: 16, color: Color(0xFF64748B)),
+                                      size: 15, color: Color(0xFF64748B)),
                                   padding: EdgeInsets.zero,
                                   onPressed: () {
                                     _searchController.clear();
@@ -1920,20 +1920,20 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                           fillColor: Colors.white,
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 11),
+                              horizontal: 12, vertical: 9),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             borderSide:
                                 const BorderSide(color: Color(0xFFCBD5E1)),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             borderSide:
                                 const BorderSide(color: Color(0xFFCBD5E1)),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: _accent, width: 1.6),
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: _accent, width: 1.5),
                           ),
                         ),
                       ),
@@ -2193,7 +2193,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 14),
+                          horizontal: 16, vertical: 11),
                       decoration: const BoxDecoration(
                         color: Color(0xFFF8FAFC),
                         border: Border(
@@ -2202,12 +2202,12 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       child: Row(
                         children: [
                           SizedBox(
-                            width: 50,
+                            width: 44,
                             child: Text(
                               _isConsignor ? '#' : 'S.NO',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF475569),
                                   letterSpacing: 0.4),
@@ -2218,7 +2218,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             child: Text(
                               _isConsignor ? 'CONSIGNOR DETAILS' : 'NAME',
                               style: const TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF475569),
                                   letterSpacing: 0.4),
@@ -2229,7 +2229,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             child: Text(
                               _isConsignor ? 'LOCATION' : 'CITY',
                               style: const TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF475569),
                                   letterSpacing: 0.4),
@@ -2240,7 +2240,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             child: Text(
                               _isConsignor ? 'TAX ID (GSTIN)' : 'GSTIN',
                               style: const TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF475569),
                                   letterSpacing: 0.4),
@@ -2251,19 +2251,19 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                             child: Text(
                               _isConsignor ? 'CONTACT' : 'PHONE',
                               style: const TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF475569),
                                   letterSpacing: 0.4),
                             ),
                           ),
                           const SizedBox(
-                            width: 200,
+                            width: 180,
                             child: Text(
                               'ACTIONS',
                               textAlign: TextAlign.right,
                               style: TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF475569),
                                   letterSpacing: 0.4),
@@ -2273,7 +2273,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       ),
                     ),
                     SizedBox(
-                      height: 560,
+                      height: 500,
                       child: ListView.separated(
                         controller: _tableScrollController,
                         itemCount: rows.length + (_hasMore ? 1 : 0),
@@ -2299,16 +2299,16 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                       : const Color(0xFFF8FAFC)
                                           .withValues(alpha: 0.65)),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 14),
+                                  horizontal: 16, vertical: 11),
                               child: Row(
                                 children: [
                                   SizedBox(
-                                    width: 50,
+                                    width: 44,
                                     child: Text(
                                       '${index + 1}',
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
-                                          fontSize: 13.5,
+                                          fontSize: 12.5,
                                           fontWeight: FontWeight.w700,
                                           color: Color(0xFF64748B)),
                                     ),
@@ -2316,13 +2316,13 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                   Expanded(
                                     flex: 4,
                                     child: Padding(
-                                      padding: const EdgeInsets.only(right: 14),
+                                      padding: const EdgeInsets.only(right: 12),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
                                           Wrap(
-                                            spacing: 8,
+                                            spacing: 6,
                                             runSpacing: 4,
                                             crossAxisAlignment:
                                                 WrapCrossAlignment.center,
@@ -2330,7 +2330,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                               Text(
                                                 c.name,
                                                 style: const TextStyle(
-                                                  fontSize: 15,
+                                                  fontSize: 14,
                                                   fontWeight: FontWeight.w700,
                                                   color: Color(0xFF0F172A),
                                                 ),
@@ -2343,11 +2343,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                               c.legalName != c.name)
                                             Padding(
                                               padding:
-                                                  const EdgeInsets.only(top: 3),
+                                                  const EdgeInsets.only(top: 2),
                                               child: Text(
                                                 'Legal: ${c.legalName}',
                                                 style: const TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 11,
                                                     fontWeight: FontWeight.w600,
                                                     color: Color(0xFF64748B)),
                                               ),
@@ -2355,11 +2355,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                           if (parentName != null)
                                             Padding(
                                               padding:
-                                                  const EdgeInsets.only(top: 3),
+                                                  const EdgeInsets.only(top: 2),
                                               child: Text(
                                                 'Parent: $parentName',
                                                 style: const TextStyle(
-                                                    fontSize: 12.5,
+                                                    fontSize: 11.5,
                                                     fontWeight: FontWeight.w700,
                                                     color: Color(0xFF4F46E5)),
                                               ),
@@ -2380,9 +2380,9 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                             if (_isConsignor) ...[
                                               const Icon(
                                                   Icons.location_on_outlined,
-                                                  size: 15,
+                                                  size: 13,
                                                   color: Color(0xFF94A3B8)),
-                                              const SizedBox(width: 5),
+                                              const SizedBox(width: 4),
                                             ],
                                             Expanded(
                                               child: Text(
@@ -2392,7 +2392,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                                     : '-',
                                                 overflow: TextOverflow.ellipsis,
                                                 style: const TextStyle(
-                                                    fontSize: 14,
+                                                    fontSize: 13,
                                                     fontWeight: FontWeight.w500,
                                                     color: Color(0xFF334155)),
                                               ),
@@ -2402,16 +2402,16 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                         if (c.addresses.isNotEmpty)
                                           Padding(
                                             padding:
-                                                const EdgeInsets.only(top: 4),
+                                                const EdgeInsets.only(top: 3),
                                             child: Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                      horizontal: 7,
-                                                      vertical: 2),
+                                                      horizontal: 6,
+                                                      vertical: 1),
                                               decoration: BoxDecoration(
                                                 color: const Color(0xFFFFFBEB),
                                                 borderRadius:
-                                                    BorderRadius.circular(5),
+                                                    BorderRadius.circular(4),
                                                 border: Border.all(
                                                     color: const Color(
                                                         0xFFFDE68A)),
@@ -2419,7 +2419,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                               child: Text(
                                                 '+${c.addresses.length} ${_isConsignor ? 'ADDR' : 'Addr'}',
                                                 style: const TextStyle(
-                                                    fontSize: 11,
+                                                    fontSize: 10,
                                                     fontWeight: FontWeight.w800,
                                                     color: Color(0xFFD97706)),
                                               ),
@@ -2435,7 +2435,7 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                           ? c.gstin!.toUpperCase()
                                           : '-',
                                       style: const TextStyle(
-                                        fontSize: 13.5,
+                                        fontSize: 12.5,
                                         fontFamily: 'monospace',
                                         fontWeight: FontWeight.w700,
                                         color: Color(0xFF1E293B),
@@ -2450,13 +2450,13 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                           ? c.phone!
                                           : '-',
                                       style: const TextStyle(
-                                          fontSize: 14,
+                                          fontSize: 13,
                                           fontWeight: FontWeight.w500,
                                           color: Color(0xFF334155)),
                                     ),
                                   ),
                                   SizedBox(
-                                    width: 200,
+                                    width: 180,
                                     child: _buildRowActions(c),
                                   ),
                                 ],
@@ -2562,11 +2562,11 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
           backgroundColor: const Color(0xFFF8FAFC),
           body: SingleChildScrollView(
             controller: _pageScrollController,
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 48),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 40),
             child: Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1440),
+                constraints: const BoxConstraints(maxWidth: 1240),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -2575,21 +2575,21 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: _accentSoftBg,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: _accentSoftBorder),
                             ),
                             child: Icon(
                               _isConsignor
                                   ? Icons.business_rounded
                                   : Icons.location_on_outlined,
-                              size: 26,
+                              size: 22,
                               color: _accent,
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2597,19 +2597,19 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                                 Text(
                                   '${widget.title} Master',
                                   style: const TextStyle(
-                                    fontSize: 22,
+                                    fontSize: 19,
                                     fontWeight: FontWeight.w800,
                                     color: Color(0xFF0F172A),
                                     letterSpacing: -0.3,
                                   ),
                                 ),
-                                const SizedBox(height: 3),
+                                const SizedBox(height: 2),
                                 Text(
                                   _isConsignor
                                       ? 'Manage consignor profiles, addresses, and GSTIN details.'
                                       : 'Manage consignee profiles, delivery addresses, and GSTIN details.',
                                   style: const TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                     color: Color(0xFF64748B),
                                   ),
@@ -2619,16 +2619,16 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: _accentSoftBg,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: _accentSoftBorder),
                             ),
                             child: Text(
                               '$_totalRecords Total',
                               style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                   color: _accent),
                             ),
@@ -2637,13 +2637,13 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
                     // FORM CARD + ADDITIONAL ADDRESSES CARD
                     _buildFormCard(),
                     _buildAdditionalAddressesCard(),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
                     // LIST / TABLE CARD
                     _buildTableCard(),
