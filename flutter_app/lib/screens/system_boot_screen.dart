@@ -103,12 +103,25 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 448),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 468),
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -203,6 +216,7 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
                           child: _buildBranchCard(
                             branchId: 'MAIN',
                             title: 'MAIN BRANCH',
+                            subtitle: 'Sivakasi',
                             icon: Icons.storage_rounded,
                             bgColor: const Color(0xFFEEF2FF),
                             borderColor: const Color(0xFFE0E7FF),
@@ -215,6 +229,7 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
                           child: _buildBranchCard(
                             branchId: 'AP_BNG',
                             title: 'AP BNG',
+                            subtitle: 'Bangalore',
                             icon: Icons.dns_rounded,
                             bgColor: const Color(0xFFFFFBEB),
                             borderColor: const Color(0xFFFEF3C7),
@@ -455,6 +470,7 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
   Widget _buildBranchCard({
     required String branchId,
     required String title,
+    required String subtitle,
     required IconData icon,
     required Color bgColor,
     required Color borderColor,
@@ -475,7 +491,7 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: borderColor, width: 2),
@@ -492,6 +508,16 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
                   fontWeight: FontWeight.w900,
                   fontSize: 16,
                   color: textColor,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: textColor.withValues(alpha: 0.7),
                 ),
               ),
             ],

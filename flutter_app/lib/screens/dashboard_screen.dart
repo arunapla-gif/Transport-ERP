@@ -921,14 +921,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Color(0xFF090D1A), // Deepest Midnight
-            Color(0xFF0F172A), // Slate Navy
+            Color(0xFF1C1917), // Stone-900 (matches React App.jsx & Login)
+            Color(0xFF292524), // Stone-800
+            Color(0xFF1C1917), // Stone-900
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
         border: Border(
-          bottom: BorderSide(color: Color(0xFF1E293B), width: 1),
+          bottom: BorderSide(color: Color(0xFF292524), width: 1),
         ),
         boxShadow: [
           BoxShadow(
@@ -1052,7 +1053,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
 
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
+          Container(
+            width: 1,
+            height: 24,
+            color: Colors.white.withValues(alpha: 0.14),
+          ),
+          const SizedBox(width: 12),
 
           // Center Unified Navigation Menus
           Expanded(

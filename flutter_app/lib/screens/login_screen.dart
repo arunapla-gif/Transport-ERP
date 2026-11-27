@@ -577,6 +577,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 final u = _users[index] as Map<String, dynamic>;
                 final String username = (u['username'] ?? 'User').toString();
                 final String role = (u['role'] ?? 'worker').toString();
+                final String branch = (u['branch'] ?? 'MAIN').toString().toUpperCase();
                 final bool isAdmin = role.toLowerCase() == 'admin';
                 final bool isLastUsed = _lastUserId != null && u['id']?.toString() == _lastUserId;
 
@@ -629,14 +630,39 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            role.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: _stone400,
-                              letterSpacing: 0.8,
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                role.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: _stone400,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: branch == 'AP_BNG'
+                                      ? const Color(0xFFF59E0B).withValues(alpha: 0.16)
+                                      : const Color(0xFF10B981).withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  branch == 'AP_BNG' ? 'AP BNG' : branch,
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: branch == 'AP_BNG'
+                                        ? const Color(0xFFFCD34D)
+                                        : const Color(0xFF6EE7B7),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           if (isLastUsed) ...[
                             const SizedBox(height: 5),
