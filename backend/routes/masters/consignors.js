@@ -86,6 +86,68 @@ router.get('/search', async (req, res) => {
   }
 });
 
+router.get('/duplicates', async (req, res) => {
+  try {
+    const rows = await prisma.consignor.findMany({
+      select: {
+        id: true,
+        name: true,
+        gstin: true,
+        branch: true,
+        city: true,
+        isActive: true,
+        migrationType: true,
+        _count: { select: { gcs: true } }
+      },
+      orderBy: { id: 'asc' }
+    });
+
+    const byName = new Map();
+    const byGstin = new Map();
+    for (const r of rows) {
+      const normKey = (r.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const gstinKey = (r.gstin || '').trim().toUpperCase();
+      const item = {
+        id: r.id,
+        name: r.name,
+        gstin: r.gstin || '',
+        branch: r.branch || 'MAIN',
+        city: r.city || '',
+        isActive: r.isActive !== false,
+        migrationType: r.migrationType || 'MANUAL',
+        gcCount: r._count?.gcs || 0
+      };
+      if (normKey) {
+        if (!byName.has(normKey)) byName.set(normKey, []);
+        byName.get(normKey).push(item);
+      }
+      if (gstinKey.length >= 10) {
+        if (!byGstin.has(gstinKey)) byGstin.set(gstinKey, []);
+        byGstin.get(gstinKey).push(item);
+      }
+    }
+
+    const dupGstin = [...byGstin.entries()]
+      .filter(([, list]) => list.length > 1)
+      .map(([key, items]) => ({ key, items }));
+    const dupName = [...byName.entries()]
+      .filter(([, list]) => list.length > 1)
+      .map(([key, items]) => ({ key, items }));
+
+    res.json({
+      total: rows.length,
+      activeCount: rows.filter(r => r.isActive !== false).length,
+      dupGstinCount: dupGstin.length,
+      dupNameCount: dupName.length,
+      dupGstin,
+      dupName
+    });
+  } catch (error) {
+    console.error('Error checking duplicate consignors:', error);
+    res.status(500).json({ error: 'Failed to check duplicate consignors' });
+  }
+});
+
 router.post('/', async (req, res) => {
   try {
     const { name, branch = 'MAIN', ...rest } = req.body;

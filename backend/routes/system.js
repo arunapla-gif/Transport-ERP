@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.20",
-      buildNumber: 21,
+      version: "1.0.21",
+      buildNumber: 22,
       forceUpdate: false,
-      releaseNotes: "• New GC Entry: Full keyboard ↑↓ + Enter selection for Consignor & Consignee search & smoother Tab flow"
+      releaseNotes: "• Masters: Added live Find Duplicates scanner for Consignor & Consignee Masters (GSTIN & Name groups)"
     },
     android: {
       version: "1.0.8",

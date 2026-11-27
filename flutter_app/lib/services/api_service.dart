@@ -924,6 +924,17 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> getPartyDuplicates(String endpoint) async {
+    await _ensureAuth();
+    final uri = Uri.parse('$baseUrl/$endpoint/duplicates');
+    final response = await _client.get(uri, headers: _headers);
+    _handleUnauthorized(response.statusCode);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to scan duplicate $endpoint');
+  }
+
   static Future<void> restoreParty(String endpoint, int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/$endpoint/$id/restore');
