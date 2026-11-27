@@ -190,101 +190,106 @@ router.get('/audit-logs', async (req, res) => {
 });
 
 router.post('/usage/sandbox-test', async (req, res) => {
-  // Set long timeout for multi-step test
   req.setTimeout(60000);
-  
-  try {
-    const results = [];
-    const pushResult = (step, success, ping, message, data = null) => {
-      results.push({ step, success, ping, message, data });
-    };
 
+  try {
     const email = process.env.WHITEBOOKS_EMAIL?.trim();
     const clientId = process.env.WHITEBOOKS_CLIENT_ID?.trim();
     const clientSecret = process.env.WHITEBOOKS_CLIENT_SECRET?.trim();
     const gstin = process.env.WHITEBOOKS_GSTIN?.trim();
 
-    const headers = { 
-      "Content-Type": "application/json", 
-      "client_id": clientId, 
-      "client_secret": clientSecret, 
-      "gstin": gstin, 
-      "ip_address": "127.0.0.1" 
+    if (!email || !clientId || !clientSecret || !gstin) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing WhiteBooks credentials (WHITEBOOKS_EMAIL, CLIENT_ID, CLIENT_SECRET, GSTIN).'
+      });
+    }
+
+    const headers = {
+      "Content-Type": "application/json",
+      "client_id": clientId,
+      "client_secret": clientSecret,
+      "gstin": gstin,
+      "ip_address": "127.0.0.1"
     };
 
     const testEndpoint = async (step, method, url, body = null) => {
-      let start = Date.now();
+      const start = Date.now();
       try {
-        const options = { method, headers };
+        const options = { method, headers, signal: AbortSignal.timeout(15000) };
         if (body) options.body = JSON.stringify(body);
-        
-        const res = await fetch(url, options);
-        const data = await res.json();
+
+        const response = await fetch(url, options);
+        const rawText = await response.text();
         const ping = Date.now() - start;
-        
+
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          return {
+            step,
+            success: false,
+            ping,
+            message: `Invalid non-JSON response (HTTP ${response.status})`,
+            data: null
+          };
+        }
+
         // Validation errors count as a successful ping because we reached the engine
         const isAuthError = data.error && (data.error.message?.toLowerCase().includes('auth') || data.error.message?.toLowerCase().includes('token'));
-        
+
         if (data.status_cd === '0') {
           if (isAuthError) {
-             pushResult(step, false, ping, "Authentication Failed (Check Credentials)");
-          } else {
-             pushResult(step, true, ping, "Success! Reached NIC Validation Engine");
+            return { step, success: false, ping, message: "Authentication Failed (Check Credentials)", data: null };
           }
-        } else {
-          pushResult(step, true, ping, "Success! Valid response received");
+          return { step, success: true, ping, message: "Success! Reached NIC Validation Engine", data: null };
         }
+        return { step, success: true, ping, message: "Success! Valid response received", data: null };
       } catch (e) {
-        pushResult(step, false, Date.now() - start, e.message);
+        return { step, success: false, ping: Date.now() - start, message: e.message, data: null };
       }
     };
 
-    // 1. Get GSTIN Details
-    await testEndpoint(
-      "Get GSTIN Details", 
-      "GET", 
-      `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getgstindetails?email=${encodeURIComponent(email)}&GSTIN=${gstin}`
-    );
-
-    // 2. Get E-Way Bill (Fake EWB Number)
-    await testEndpoint(
-      "Fetch E-Way Bill", 
-      "GET", 
-      `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=552028120315`
-    );
-
-    // 3. Generate E-Way Bill (Fake Payload)
-    await testEndpoint(
-      "Generate E-Way Bill", 
-      "POST", 
-      `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`,
-      { docNo: "TEST001", docDate: "01/01/2026" }
-    );
-
-    // 4. Generate Consolidated E-Way Bill (Fake Payload)
-    await testEndpoint(
-      "Generate CEWB", 
-      "POST", 
-      `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/gencewb?email=${encodeURIComponent(email)}`,
-      { vehicleNo: "TN99Z9999", fromPlace: "Sivakasi" }
-    );
-
-    // 5. Update Transporter (Fake Payload)
-    await testEndpoint(
-      "Update Transporter", 
-      "POST", 
-      `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/updatetransporter?email=${encodeURIComponent(email)}`,
-      { ewbNo: 123456789012, transporterId: gstin }
-    );
+    const results = await Promise.all([
+      testEndpoint(
+        "Get GSTIN Details",
+        "GET",
+        `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getgstindetails?email=${encodeURIComponent(email)}&GSTIN=${gstin}`
+      ),
+      testEndpoint(
+        "Fetch E-Way Bill",
+        "GET",
+        `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getewaybill?email=${encodeURIComponent(email)}&ewbNo=552028120315`
+      ),
+      testEndpoint(
+        "Generate E-Way Bill",
+        "POST",
+        `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/generateewaybill?email=${encodeURIComponent(email)}`,
+        { docNo: "TEST001", docDate: "01/01/2026" }
+      ),
+      testEndpoint(
+        "Generate CEWB",
+        "POST",
+        `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/gencewb?email=${encodeURIComponent(email)}`,
+        { vehicleNo: "TN99Z9999", fromPlace: "Sivakasi" }
+      ),
+      testEndpoint(
+        "Update Transporter",
+        "POST",
+        `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/updatetransporter?email=${encodeURIComponent(email)}`,
+        { ewbNo: 123456789012, transporterId: gstin }
+      )
+    ]);
 
     const allSuccess = results.every(r => r.success);
-    
+
     // Log overall ping
     try {
-       await prisma.apiUsageLog.create({
-         data: { provider: 'WhiteBooks (Sandbox)', apiName: 'Full Lifecycle Test', status: allSuccess ? 'Success' : 'Failed', cost: 0.00 }
-       });
-    } catch(e) {}
+      await prisma.apiUsageLog.create({
+        data: { provider: 'WhiteBooks (Sandbox)', apiName: 'Full Lifecycle Test', status: allSuccess ? 'Success' : 'Failed', cost: 0.00 }
+      });
+    } catch (e) {}
 
     res.json({ success: allSuccess, results });
   } catch (err) {
