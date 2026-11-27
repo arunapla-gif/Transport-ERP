@@ -34131,11 +34131,11 @@ if(m.b!==200){if(a6&&a5.e!=null)B.ay_(a5,"Could not check for updates right now.
 s=1
 break}b=m
 l=A.a3.aR(0,B.b2(B.b1(b.e)).aw(0,b.w),null)
-k=16
-j="1.0.15"
+k=17
+j="1.0.16"
 i=null
 i=t.nA.a(J.r(l,"web"))
-if(i==null){if(a6&&a5.e!=null)B.ay_(a5,"You are on the latest version (v1.0.15 (b16)).",!1)
+if(i==null){if(a6&&a5.e!=null)B.ay_(a5,"You are on the latest version (v1.0.16 (b17)).",!1)
 s=1
 break}a=B.e1(J.r(i,"buildNumber"))
 h=a==null?1:a
@@ -115717,7 +115717,7 @@ k=B.bf(!1,l,!0,B.k(p,B.q(B.a([A.afo,A.bb,B.d("SERVER: "+B.d5(s,"/api",""),p,p,p,
 j=B.c(10)
 s=B.c(10)
 l=B.G(A.d4,1)
-return B.fo(p,A.a2,B.bI(B.ck(new B.bp(A.a0D,B.B(B.a([m,A.aD,A.bt2,A.aI,A.bwf,A.lC,n,A.bf,B.cC(A.Bg,B.a([k,B.a_N(B.bf(!1,j,!0,B.k(p,B.q(B.a([A.ahv,A.bb,B.d("v1.0.15 (b16)",p,p,p,p,A.bqp,p,p,p),A.dy,A.ahP],r),A.q,A.k,A.V,0,p),A.p,p,p,new B.m(A.bI,p,l,s,p,p,A.t),p,p,p,A.hQ,p,p,p),p,!0,p,p,p,p,p,p,p,p,p,p,new B.aR0(a),p,p,p,p,p,p,p),"Click to check for Web / APK updates")],r),A.c_,8,8)],r),A.q,p,A.k,A.V,0,A.v),p),p,A.a0,A.a9t,p,p,A.at),p,p),p,p,p,p)},
+return B.fo(p,A.a2,B.bI(B.ck(new B.bp(A.a0D,B.B(B.a([m,A.aD,A.bt2,A.aI,A.bwf,A.lC,n,A.bf,B.cC(A.Bg,B.a([k,B.a_N(B.bf(!1,j,!0,B.k(p,B.q(B.a([A.ahv,A.bb,B.d("v1.0.16 (b17)",p,p,p,p,A.bqp,p,p,p),A.dy,A.ahP],r),A.q,A.k,A.V,0,p),A.p,p,p,new B.m(A.bI,p,l,s,p,p,A.t),p,p,p,A.hQ,p,p,p),p,!0,p,p,p,p,p,p,p,p,p,p,new B.aR0(a),p,p,p,p,p,p,p),"Click to check for Web / APK updates")],r),A.c_,8,8)],r),A.q,p,A.k,A.V,0,A.v),p),p,A.a0,A.a9t,p,p,A.at),p,p),p,p,p,p)},
 ajQ(a){var s,r,q,p,o,n,m,l=this,k=null,j=t.p,i=B.a([A.bxb,A.ck],j)
 if(l.e)i.push(A.ba3)
 else{s=l.f
@@ -120513,13 +120513,13 @@ n=A.w.W(m.d,0)
 return B.ahP(B.a([i,h,g,s,B.C(B.k(l,B.B(B.a([A.bqY,A.bN,B.q(B.a([B.d("\u20b9"+n,l,l,l,l,B.a_(l,l,f?A.u:A.L,l,l,l,l,l,l,l,l,24,l,l,A.K,l,l,!0,l,l,l,l,l,l,l,l),l,l,l),A.brN],e),A.q,A.ap,A.l,0,l)],e),A.C,l,A.k,A.l,0,A.v),A.p,l,l,new B.m(q,l,o,p,l,l,A.t),l,l,l,A.ex,l,l,l),r)],e),A.q,j,l,A.k,A.l,0,l,l,A.v)},
 $S:38}
 B.b05.prototype={
-$2(a,b){var s,r,q,p="ACTIVE",o=b.b,n=o<650
-if(n)s=1
-else s=o<950?2:3
-o=n?2.3:1.9
+$2(a,b){var s,r,q,p="ACTIVE",o="https://railway.app/dashboard",n=b.b,m=n<650
+if(m)s=1
+else s=n<950?2:3
+n=m?2.3:1.9
 r=this.a
 q=this.b
-return B.b9G(o,B.a([r.tT(A.a5,"Serverless PostgreSQL database holding all ERP records via Prisma ORM with connection pooling.",A.iL,q,"https://console.neon.tech",p,"Neon PostgreSQL"),r.tT(A.fJ,"Node.js Express backend & Flutter Web host handling APIs, PDF receipts, and E-Way Bill sync 24/7.",A.hm,q,"https://railway.app/dashboard",p,"Railway Cloud Server"),r.tT(A.p9,"Unified client powering the live Web portal, Android Operator APK, and Windows Office app.",A.aco,q,null,p,"Flutter Multi-Platform"),r.tT(A.bG,"Official NIC E-Way Bill v1.03 gateway for EWB generation, CEWB manifests, and transporter updates.",A.ad9,q,"https://api.whitebooks.in","PREPAID","WhiteBooks GSP API"),r.tT(A.er,"Integrated verification for GSTIN lookups, VAHAN RC, Driving License, FASTag, and Pincodes.",A.n5,q,"https://app.appyflow.in",p,"Appyflow & Govt APIs"),r.tT(A.a5N,"On-device camera scanning via mobile_scanner for instant E-Way Bill and parcel slip capture.",A.ez,q,null,p,"Mobile QR & Barcode")],t.p),s,14,14,A.ea,!0)},
+return B.b9G(n,B.a([r.tT(A.a5,"Managed PostgreSQL 18 database on Railway with persistent volume storage and Prisma ORM pooling.",A.iL,q,o,p,"Railway PostgreSQL 18"),r.tT(A.fJ,"Node.js Express backend & Flutter Web host handling APIs, PDF receipts, and E-Way Bill sync 24/7.",A.hm,q,o,p,"Railway Cloud Server"),r.tT(A.p9,"Unified client powering the live Web portal, Android Operator APK, and Windows Office app.",A.aco,q,null,p,"Flutter Multi-Platform"),r.tT(A.bG,"Official NIC E-Way Bill v1.03 gateway for EWB generation, CEWB manifests, and transporter updates.",A.ad9,q,"https://api.whitebooks.in","PREPAID","WhiteBooks GSP API"),r.tT(A.er,"Integrated verification for GSTIN lookups, VAHAN RC, Driving License, FASTag, and Pincodes.",A.n5,q,"https://app.appyflow.in",p,"Appyflow & Govt APIs"),r.tT(A.a5N,"On-device camera scanning via mobile_scanner for instant E-Way Bill and parcel slip capture.",A.ez,q,null,p,"Mobile QR & Barcode")],t.p),s,14,14,A.ea,!0)},
 $S:288}
 B.b06.prototype={
 $1(a){var s,r,q,p,o,n,m,l=null,k="timestamp",j=J.a3(a),i=j.h(a,"status"),h=i==null?l:J.i(i)

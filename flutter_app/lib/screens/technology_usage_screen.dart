@@ -502,12 +502,12 @@ class _TechnologyUsageScreenState extends State<TechnologyUsageScreen> {
                                   childAspectRatio: isNarrow ? 2.3 : 1.9,
                                   children: [
                                     _buildTechCard(
-                                      title: 'Neon PostgreSQL',
-                                      desc: 'Serverless PostgreSQL database holding all ERP records via Prisma ORM with connection pooling.',
+                                      title: 'Railway PostgreSQL 18',
+                                      desc: 'Managed PostgreSQL 18 database on Railway with persistent volume storage and Prisma ORM pooling.',
                                       status: 'ACTIVE',
                                       icon: Icons.storage_rounded,
                                       color: const Color(0xFF10B981),
-                                      link: 'https://console.neon.tech',
+                                      link: 'https://railway.app/dashboard',
                                       isDark: isDark,
                                     ),
                                     _buildTechCard(

@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.15",
-      buildNumber: 16,
+      version: "1.0.16",
+      buildNumber: 17,
       forceUpdate: false,
-      releaseNotes: "• Tech Usage: Removed static summary tiles & updated architecture cards to Neon, Railway, Flutter, WhiteBooks & mobile_scanner"
+      releaseNotes: "• Tech Usage: Updated database architecture card to Railway PostgreSQL 18"
     },
     android: {
       version: "1.0.8",
@@ -37,7 +37,7 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
 // ==============================
 router.get('/health', async (req, res) => {
   try {
-    // Lightweight query to ensure Neon database connection is active
+    // Lightweight query to ensure PostgreSQL connection is active
     await prisma.$queryRaw`SELECT 1`;
     res.status(200).json({ status: 'healthy', db: 'connected', timestamp: new Date() });
   } catch (error) {
