@@ -66,12 +66,17 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
         _healthLatencyMs = sw.elapsedMilliseconds;
       });
 
-      // 3. Check Authentication Keys
+      // 3. Check Authentication Keys & Pre-warm static Master caches
       setState(() => _authState = BootState.loading);
-      await Future.delayed(const Duration(milliseconds: 80));
       if (ApiService.authToken == null) {
         throw Exception('Invalid Session Key');
       }
+      await Future.wait([
+        ApiService.getCompanies().then((_) {}, onError: (_) {}),
+        ApiService.getGodowns().then((_) {}, onError: (_) {}),
+        ApiService.getUnits().then((_) {}, onError: (_) {}),
+        ApiService.getHsnList().then((_) {}, onError: (_) {}),
+      ]);
       if (!mounted) return;
       setState(() {
         _authState = BootState.success;
@@ -188,6 +193,7 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
                   label: 'Authentication Keys',
                   state: _authState,
                   icon: Icons.vpn_key_rounded,
+                  successText: 'Session Verified • Workspace Pre-loaded',
                 ),
 
                 // Error Box
