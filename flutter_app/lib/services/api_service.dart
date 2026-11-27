@@ -504,7 +504,7 @@ class ApiService {
     }
   }
 
-  static Future<void> saveGdm(Map<String, dynamic> data, {int? id}) async {
+  static Future<Map<String, dynamic>> saveGdm(Map<String, dynamic> data, {int? id}) async {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/gdms/$id' : '$baseUrl/gdms');
@@ -514,6 +514,7 @@ class ApiService {
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to save GDM');
     }
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   // --- Fastag / Vahan DL ---

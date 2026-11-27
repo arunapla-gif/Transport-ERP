@@ -69,5 +69,12 @@ class Vehicle {
       'rcVerified': rcVerified,
     };
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is Vehicle && other.id == id);
+
+  @override
+  int get hashCode => id.hashCode;
 }
 

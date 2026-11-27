@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.22",
-      buildNumber: 23,
+      version: "1.0.23",
+      buildNumber: 24,
       forceUpdate: false,
-      releaseNotes: "• Masters: Added safe 1-click Keep & Merge inside Find Duplicates (moves GCs & payments and removes duplicate rows)"
+      releaseNotes: "• GDM Entry: Branch-safe save, Edit Mode + Recent GDMs drawer, searchable Vehicle/Consignee, DL class/expiry check, EWB alerts, package breakdown & Print GDM"
     },
     android: {
       version: "1.0.8",
