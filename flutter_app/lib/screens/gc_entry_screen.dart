@@ -233,6 +233,9 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
       // Goods
       final goods = gc['goods'] as List<dynamic>?;
       if (goods != null && goods.isNotEmpty) {
+        for (final r in _itemRows) {
+          r.dispose();
+        }
         _itemRows.clear();
         for (var item in goods) {
           final row = GcEntryItemRow();
@@ -333,6 +336,9 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
           _freightFixed = draft['freightFixed'] ?? 'Yes';
           
           if (draft['goods'] != null && (draft['goods'] as List).isNotEmpty) {
+            for (final r in _itemRows) {
+              r.dispose();
+            }
             _itemRows.clear();
             for (var g in (draft['goods'] as List)) {
               final row = GcEntryItemRow();
@@ -559,6 +565,9 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
         _partyAutocompleteEpoch++;
 
         if (data['itemList'] != null && data['itemList'] is List && data['itemList'].isNotEmpty) {
+          for (final r in _itemRows) {
+            r.dispose();
+          }
           _itemRows.clear();
           for (var item in data['itemList']) {
             final row = GcEntryItemRow();

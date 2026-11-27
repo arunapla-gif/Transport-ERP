@@ -56,6 +56,22 @@ class _GdmEntryScreenState extends State<GdmEntryScreen> {
     _loadInitialData();
   }
 
+  @override
+  void dispose() {
+    _fromLocationController.dispose();
+    _toNameController.dispose();
+    _deliveryAtController.dispose();
+    _cewbNumberController.dispose();
+    _driverNameController.dispose();
+    _driverPhoneController.dispose();
+    _startKmController.dispose();
+    _licenseController.dispose();
+    _dobController.dispose();
+    _searchGcController.dispose();
+    _overallRateController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadInitialData() async {
     try {
       final vehicles = await ApiService.getVehicles();

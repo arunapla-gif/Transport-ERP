@@ -47,6 +47,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final Set<int> _loadedIndices = {18}; // Lazy-mount screens only when visited
   int _branchReloadEpoch = 0;
   Timer? _inactivityTimer;
+  DateTime? _lastActivityReset;
   static const Duration _inactivityTimeout = Duration(minutes: 30);
 
   @override
@@ -68,7 +69,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  void _resetInactivityTimer() {
+  void _resetInactivityTimer({bool throttle = false}) {
+    final now = DateTime.now();
+    if (throttle &&
+        _lastActivityReset != null &&
+        now.difference(_lastActivityReset!) < const Duration(seconds: 5)) {
+      return;
+    }
+    _lastActivityReset = now;
     _inactivityTimer?.cancel();
     _inactivityTimer = Timer(_inactivityTimeout, _handleInactivityLogout);
   }
@@ -487,8 +495,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: (_) => _resetInactivityTimer(),
-      onPointerMove: (_) => _resetInactivityTimer(),
-      onPointerSignal: (_) => _resetInactivityTimer(),
+      onPointerMove: (_) => _resetInactivityTimer(throttle: true),
+      onPointerSignal: (_) => _resetInactivityTimer(throttle: true),
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: const Color(0xFFF1F5F9),

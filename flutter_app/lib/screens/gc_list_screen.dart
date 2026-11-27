@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/gc.dart';
 import '../services/api_service.dart';
@@ -12,6 +13,7 @@ class GcListScreen extends StatefulWidget {
 class _GcListScreenState extends State<GcListScreen> {
   late Future<List<Gc>> _gcsFuture;
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
   String _selectedFilter = 'ALL';
 
   @override
@@ -22,8 +24,17 @@ class _GcListScreenState extends State<GcListScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String val) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      _loadGcs(query: val.trim());
+    });
   }
 
   void _loadGcs({String query = ''}) {
@@ -479,7 +490,7 @@ class _GcListScreenState extends State<GcListScreen> {
                       borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.8),
                     ),
                   ),
-                  onChanged: (val) => _loadGcs(query: val),
+                  onChanged: _onSearchChanged,
                 ),
                 const SizedBox(height: 16),
                 Row(

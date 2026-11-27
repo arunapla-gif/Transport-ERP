@@ -6,10 +6,10 @@ const { cacheMiddleware } = require('../../middleware/cache');
 router.get('/', cacheMiddleware(3600), async (req, res) => {
   try {
     const branch = req.query.branch || 'MAIN';
-    const page = req.query.page ? parseInt(req.query.page) : null;
-    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-    const q = req.query.q ? req.query.q.trim().toLowerCase() : '';
-    
+    const page = req.query.page ? parseInt(req.query.page, 10) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 50;
+    const q = req.query.q ? req.query.q.trim() : '';
+
     const branchCondition = (branch && branch !== 'ALL') ? {
       OR: [
         { branch: branch },
@@ -18,31 +18,39 @@ router.get('/', cacheMiddleware(3600), async (req, res) => {
       ]
     } : {};
 
-    let consignors = await prisma.consignor.findMany({ 
-      where: branchCondition,
-      orderBy: { id: 'desc' }
-    });
+    const searchCondition = q ? {
+      OR: [
+        { name: { contains: q, mode: 'insensitive' } },
+        { legalName: { contains: q, mode: 'insensitive' } },
+        { city: { contains: q, mode: 'insensitive' } },
+        { gstin: { contains: q, mode: 'insensitive' } },
+        { phone: { contains: q, mode: 'insensitive' } }
+      ]
+    } : {};
 
-    if (q) {
-      consignors = consignors.filter(c => {
-        const nameStr = (c.name || '').toLowerCase();
-        const legalStr = (c.legalName || '').toLowerCase();
-        const cityStr = (c.city || '').toLowerCase();
-        const gstinStr = (c.gstin || '').toLowerCase();
-        const phoneStr = (c.phone || '').toLowerCase();
-        const addrStr = JSON.stringify(c.addresses || []).toLowerCase();
-        return nameStr.includes(q) || legalStr.includes(q) || cityStr.includes(q) || gstinStr.includes(q) || phoneStr.includes(q) || addrStr.includes(q);
-      });
-    }
-
-    const total = consignors.length;
+    const where = (branchCondition.OR && searchCondition.OR)
+      ? { AND: [branchCondition, searchCondition] }
+      : (branchCondition.OR ? branchCondition : searchCondition);
 
     if (!page) {
+      const consignors = await prisma.consignor.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        ...(req.query.limit ? { take: limit } : {})
+      });
       return res.json(consignors);
     }
 
     const skip = (page - 1) * limit;
-    const paginatedData = consignors.slice(skip, skip + limit);
+    const [paginatedData, total] = await Promise.all([
+      prisma.consignor.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.consignor.count({ where })
+    ]);
 
     res.json({
       data: paginatedData,

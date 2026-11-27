@@ -10,24 +10,24 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.1",
-      buildNumber: 2,
+      version: "1.0.2",
+      buildNumber: 3,
       forceUpdate: false,
-      releaseNotes: "• Consignor & Consignee Master UI scaling and alignment\n• All 8 Masters 1:1 parity & full search\n• Live version indicator & in-app update check"
+      releaseNotes: "• SQL-level search & pagination for Consignors & Consignees\n• Debounced GC Register search & controller leak fixes\n• Persistent HTTP pooling & static Master caching"
     },
     android: {
-      version: "1.0.1",
-      buildNumber: 2,
+      version: "1.0.2",
+      buildNumber: 3,
       downloadUrl: "https://transport-erp-production.up.railway.app/downloads/transport-erp-operator.apk",
       forceUpdate: false,
-      releaseNotes: "• Consignor & Consignee Master UI scaling and alignment\n• All 8 Masters 1:1 parity & full search\n• Live version indicator & in-app update check"
+      releaseNotes: "• SQL-level search & pagination for Consignors & Consignees\n• Debounced GC Register search & controller leak fixes\n• Persistent HTTP pooling & static Master caching"
     },
     windows: {
-      version: "1.0.1",
-      buildNumber: 2,
+      version: "1.0.2",
+      buildNumber: 3,
       downloadUrl: "https://transport-erp-production.up.railway.app/downloads/TransportERP-Office-Setup.exe",
       forceUpdate: false,
-      releaseNotes: "• Consignor & Consignee Master UI scaling and alignment\n• All 8 Masters 1:1 parity & full search\n• Live version indicator & in-app update check"
+      releaseNotes: "• SQL-level search & pagination for Consignors & Consignees\n• Debounced GC Register search & controller leak fixes\n• Persistent HTTP pooling & static Master caching"
     }
   });
 });
