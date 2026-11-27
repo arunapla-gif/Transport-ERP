@@ -502,7 +502,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: const Color(0xFFF1F5F9),
         drawer: isMobile ? _buildMobileDrawer() : null,
         appBar: PreferredSize(
-          preferredSize: Size.fromHeight(isMobile ? 56 : 102),
+          preferredSize: Size.fromHeight(isMobile ? 56 : 58),
           child: isMobile ? _buildMobileAppBar() : _buildDesktopAppBar(),
         ),
         body: KeyedSubtree(
@@ -913,9 +913,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- Desktop Two-Tier App Bar (102px) ---
+  // --- Desktop Single-Tier App Bar (58px) ---
   Widget _buildDesktopAppBar() {
     return Container(
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -925,262 +927,205 @@ class _DashboardScreenState extends State<DashboardScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        border: Border(
+          bottom: BorderSide(color: Color(0xFF1E293B), width: 1),
+        ),
         boxShadow: [
           BoxShadow(
             color: Color(0x33000000),
-            blurRadius: 16,
-            offset: Offset(0, 4),
+            blurRadius: 14,
+            offset: Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          // Tier 1: Main Header Row (56px)
-          Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: const BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: Color(0xFF1E293B),
-                  width: 1,
-                ),
+          // Brand Icon & Title
+          InkWell(
+            onTap: () => _navigateToIndex(18),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(9),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2563EB).withValues(alpha: 0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.local_shipping_rounded,
+                      color: Colors.white,
+                      size: 17,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  RichText(
+                    text: const TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'ARUNACHALAM ',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
+                            color: Colors.white,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'TRANSPORT',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            color: Color(0xFF93C5FD),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ),
-            child: Row(
-              children: [
-                // Brand Icon & Title
-                InkWell(
-                  onTap: () => _navigateToIndex(18),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF2563EB).withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.local_shipping_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        RichText(
-                          text: const TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'ARUNACHALAM ',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.3,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              TextSpan(
-                                text: 'TRANSPORT',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.3,
-                                  color: Color(0xFF93C5FD),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Active Screen Breadcrumb Capsule
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.14),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF38BDF8),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 7),
-                        Flexible(
-                          child: Text(
-                            _getActiveScreenTitle(),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFE2E8F0),
-                              letterSpacing: 0.2,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const Spacer(),
-
-                // Station Pill with Live Indicator & Branch Switcher
-                InkWell(
-                  onTap: AuthService.isAdmin ? _showBranchSwitcher : null,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF22C55E),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Station: ${AuthService.activeBranch}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF86EFAC),
-                          ),
-                        ),
-                        if (AuthService.isAdmin) ...[
-                          const SizedBox(width: 4),
-                          const Icon(Icons.swap_horiz_rounded, size: 14, color: Color(0xFF86EFAC)),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // User Profile Chip
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.15),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 11,
-                        backgroundColor: const Color(0xFF2563EB),
-                        child: Text(
-                          AuthService.userName.isNotEmpty
-                              ? AuthService.userName[0].toUpperCase()
-                              : 'U',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        AuthService.userName,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-
-                // Logout Icon Button
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.logout_rounded,
-                      color: Color(0xFF94A3B8),
-                      size: 18,
-                    ),
-                    tooltip: 'Logout Session',
-                    hoverColor: Colors.red.withValues(alpha: 0.2),
-                    onPressed: _handleLogout,
-                  ),
-                ),
-              ],
             ),
           ),
 
-          // Tier 2: Unified Menu Navigation Bar (46px)
-          Container(
-            height: 46,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+          const SizedBox(width: 12),
+
+          // Station Pill with Live Indicator & Branch Switcher
+          InkWell(
+            onTap: AuthService.isAdmin ? _showBranchSwitcher : null,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF22C55E),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    AuthService.activeBranch,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF86EFAC),
+                    ),
+                  ),
+                  if (AuthService.isAdmin) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.swap_horiz_rounded, size: 13, color: Color(0xFF86EFAC)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Center Unified Navigation Menus
+          Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  // Home Button
                   _buildDirectNavTab(
                     title: 'Home',
                     icon: Icons.home_rounded,
                     targetIndex: 18,
                   ),
                   const SizedBox(width: 4),
-
-                  // Category Dropdown Tabs
                   ..._visibleMenus.entries.map((entry) => _buildDropdownNavTab(
                         title: entry.key,
                         items: entry.value,
                       )),
                 ],
               ),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // User Profile Chip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.15),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 10,
+                  backgroundColor: const Color(0xFF2563EB),
+                  child: Text(
+                    AuthService.userName.isNotEmpty
+                        ? AuthService.userName[0].toUpperCase()
+                        : 'U',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  AuthService.userName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // Logout Icon Button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              icon: const Icon(
+                Icons.logout_rounded,
+                color: Color(0xFF94A3B8),
+                size: 18,
+              ),
+              tooltip: 'Logout Session',
+              hoverColor: Colors.red.withValues(alpha: 0.2),
+              onPressed: _handleLogout,
             ),
           ),
         ],
