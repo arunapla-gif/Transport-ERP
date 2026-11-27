@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
@@ -13,6 +12,17 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // React stone & indigo palette
+  static const Color _stone950 = Color(0xFF0C0A09);
+  static const Color _stone900 = Color(0xFF1C1917);
+  static const Color _stone800 = Color(0xFF292524);
+  static const Color _stone700 = Color(0xFF44403C);
+  static const Color _stone500 = Color(0xFF78716C);
+  static const Color _stone400 = Color(0xFFA8A29E);
+  static const Color _indigo500 = Color(0xFF6366F1);
+  static const Color _indigo600 = Color(0xFF4F46E5);
+  static const Color _indigo700 = Color(0xFF4338CA);
+
   List<dynamic> _users = [];
   bool _isLoadingUsers = true;
   String? _errorMessage;
@@ -45,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load user profiles: $e';
+          _errorMessage = 'Connection error. Is the server running? ($e)';
           _isLoadingUsers = false;
         });
       }
@@ -69,6 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleKeyPress(String digit) {
+    if (_isAuthenticating) return;
     if (_pin.length < 4) {
       setState(() {
         _pin += digit;
@@ -81,6 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleDelete() {
+    if (_isAuthenticating) return;
     if (_pin.isNotEmpty) {
       setState(() {
         _pin = _pin.substring(0, _pin.length - 1);
@@ -133,14 +145,14 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
+          backgroundColor: _stone900,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: Color(0xFF334155)),
+            side: const BorderSide(color: _stone800),
           ),
           title: const Row(
             children: [
-              Icon(Icons.dns_rounded, color: Color(0xFF38BDF8), size: 22),
+              Icon(Icons.dns_rounded, color: Color(0xFF818CF8), size: 22),
               SizedBox(width: 10),
               Text(
                 'Server Endpoint Config',
@@ -158,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const Text(
                 'Set the backend server URL for this device (PC localhost, Android emulator, or LAN IP):',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                style: TextStyle(color: _stone400, fontSize: 12),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -171,20 +183,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: const Color(0xFF0F172A),
+                  fillColor: _stone950,
                   hintText: 'http://192.168.1.xxx:5005/api',
-                  hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                  hintStyle: const TextStyle(color: _stone500, fontSize: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF334155)),
+                    borderSide: const BorderSide(color: _stone800),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF334155)),
+                    borderSide: const BorderSide(color: _stone800),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF38BDF8)),
+                    borderSide: const BorderSide(color: _indigo500),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
@@ -195,9 +207,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 runSpacing: 6,
                 children: [
                   ActionChip(
-                    backgroundColor: const Color(0xFF0F172A),
-                    side: const BorderSide(color: Color(0xFF334155)),
-                    label: const Text('Localhost (PC)', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11)),
+                    backgroundColor: _stone950,
+                    side: const BorderSide(color: _stone800),
+                    label: const Text('Localhost (PC)', style: TextStyle(color: Color(0xFFD6D3D1), fontSize: 11)),
                     onPressed: () {
                       setModalState(() {
                         urlController.text = 'http://localhost:5005/api';
@@ -206,9 +218,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   ActionChip(
-                    backgroundColor: const Color(0xFF0F172A),
-                    side: const BorderSide(color: Color(0xFF334155)),
-                    label: const Text('Android Emu (10.0.2.2)', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11)),
+                    backgroundColor: _stone950,
+                    side: const BorderSide(color: _stone800),
+                    label: const Text('Android Emu (10.0.2.2)', style: TextStyle(color: Color(0xFFD6D3D1), fontSize: 11)),
                     onPressed: () {
                       setModalState(() {
                         urlController.text = 'http://10.0.2.2:5005/api';
@@ -226,13 +238,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? const SizedBox(
                             width: 14,
                             height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF38BDF8)),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: _indigo500),
                           )
                         : const Icon(Icons.network_ping_rounded, size: 16),
                     label: const Text('Test Ping'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF38BDF8),
-                      side: const BorderSide(color: Color(0xFF0284C7)),
+                      foregroundColor: const Color(0xFF818CF8),
+                      side: const BorderSide(color: _indigo600),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: isPinging
@@ -272,11 +284,11 @@ class _LoginScreenState extends State<LoginScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+              child: const Text('Cancel', style: TextStyle(color: _stone400)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: _indigo600,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
@@ -299,667 +311,382 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  LinearGradient _getRoleGradient(String role) {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return const LinearGradient(
-          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      case 'manager':
-        return const LinearGradient(
-          colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      case 'operator':
-        return const LinearGradient(
-          colors: [Color(0xFF10B981), Color(0xFF059669)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      default:
-        return const LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-    }
+    ).then((_) => urlController.dispose());
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isDesktop = screenWidth >= 640;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0F1D),
-      body: Stack(
-        children: [
-          // Ambient Radial Glow 1 (Top Left)
-          Positioned(
-            top: -120,
-            left: -120,
-            child: Container(
-              width: 500,
-              height: 500,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFF4F46E5).withValues(alpha: 0.25),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Ambient Radial Glow 2 (Bottom Right)
-          Positioned(
-            bottom: -150,
-            right: -150,
-            child: Container(
-              width: 600,
-              height: 600,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFF06B6D4).withValues(alpha: 0.18),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Subtle Geometric Grid / Vignette Overlay
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    const Color(0xFF0F172A).withValues(alpha: 0.4),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Main Center Console
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 480),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withValues(alpha: 0.75),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        width: 1.2,
+      backgroundColor: _stone950,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 576),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Logo Header (1:1 React Login.jsx)
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [_indigo500, _indigo700],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _indigo500.withValues(alpha: 0.4),
+                        blurRadius: 40,
+                        spreadRadius: 0,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          blurRadius: 40,
-                          offset: const Offset(0, 20),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Corporate Header with Glowing Badge
-                        _buildCorporateHeader(),
-                        const SizedBox(height: 24),
-
-                        // Error Banner
-                        if (_errorMessage != null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            margin: const EdgeInsets.only(bottom: 20),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFBE123C).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFBE123C).withValues(alpha: 0.4)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.error_outline_rounded, size: 18, color: Color(0xFFFB7185)),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: const TextStyle(
-                                      color: Color(0xFFFFE4E6),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFFB7185)),
-                                  onPressed: () => setState(() => _errorMessage = null),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-
-                        // Interactive Screen View (Profiles vs PIN Pad)
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 320),
-                          switchInCurve: Curves.easeOutBack,
-                          switchOutCurve: Curves.easeIn,
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: Tween<Offset>(
-                                  begin: const Offset(0.0, 0.04),
-                                  end: Offset.zero,
-                                ).animate(animation),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: _selectedUser == null ? _buildUserSelectionGrid() : _buildPinAuthPad(),
-                        ),
-
-                        const SizedBox(height: 20),
-                        // Dynamic Server Connection & App Version Pills
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            InkWell(
-                              onTap: _showServerConfigDialog,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0F172A).withValues(alpha: 0.8),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFF334155)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.dns_rounded, size: 13, color: Color(0xFF38BDF8)),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        'SERVER: ${ApiService.baseUrl.replaceAll('/api', '')}',
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          fontFamily: 'monospace',
-                                          color: Color(0xFF94A3B8),
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Icon(Icons.settings_rounded, size: 12, color: Color(0xFF64748B)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Tooltip(
-                              message: 'Click to check for Web / APK updates',
-                              child: InkWell(
-                                onTap: () => UpdateService.checkForUpdate(context, manual: true),
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.45)),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.verified_outlined, size: 13, color: Color(0xFF93C5FD)),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        UpdateService.buildLabel,
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                          color: Color(0xFFBFDBFE),
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      const Icon(Icons.system_update_rounded, size: 12, color: Color(0xFF60A5FA)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-                        const Divider(color: Color(0xFF334155), height: 1),
-                        const SizedBox(height: 16),
-
-                        // Terminal Security Footer
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.shield_outlined, size: 14, color: Color(0xFF64748B)),
-                            SizedBox(width: 6),
-                            Text(
-                              'PROTECTED WORKSTATION • AUDIT TRAIL LOGGING ACTIVE',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF64748B),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.local_shipping_rounded,
+                    size: 32,
+                    color: Colors.white,
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Transport ERP',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Enterprise Authentication',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: _stone400,
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Login Card (bg-stone-900 rounded-3xl border-stone-800)
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(isDesktop ? 32 : 24),
+                  decoration: BoxDecoration(
+                    color: _stone900,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: _stone800),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        blurRadius: 36,
+                        offset: const Offset(0, 18),
+                      ),
+                    ],
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: _selectedUser == null
+                        ? _buildUserSelectionStep(isDesktop)
+                        : _buildPinEntryStep(),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Subtle Footer Pills (Server Config + Version / Update Check)
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    InkWell(
+                      onTap: _showServerConfigDialog,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _stone900,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: _stone800),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.dns_rounded, size: 13, color: _indigo500),
+                            const SizedBox(width: 6),
+                            Text(
+                              'SERVER: ${ApiService.baseUrl.replaceAll('/api', '')}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'monospace',
+                                color: _stone400,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.settings_rounded, size: 12, color: _stone500),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Tooltip(
+                      message: 'Click to check for Web / APK updates',
+                      child: InkWell(
+                        onTap: () => UpdateService.checkForUpdate(context, manual: true),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _stone900,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: _indigo500.withValues(alpha: 0.45)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.verified_outlined, size: 13, color: Color(0xFF818CF8)),
+                              const SizedBox(width: 6),
+                              Text(
+                                UpdateService.buildLabel,
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFC7D2FE),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              const Icon(Icons.system_update_rounded, size: 12, color: Color(0xFF818CF8)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildCorporateHeader() {
+  Widget _buildUserSelectionStep(bool isDesktop) {
     return Column(
+      key: const ValueKey('user-grid'),
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // App / Logo Badge
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF4F46E5), Color(0xFF06B6D4)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF4F46E5).withValues(alpha: 0.4),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.local_shipping_rounded,
-            size: 36,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 16),
         const Text(
-          'ARUNACHALAM & BELL',
+          'Select your profile',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             color: Colors.white,
-            letterSpacing: 0.8,
           ),
         ),
-        const SizedBox(height: 3),
-        const Text(
-          'ENTERPRISE LOGISTICS SUITE • SECURE TERMINAL',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF818CF8),
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Live Status Tag
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFF10B981).withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(radius: 3, backgroundColor: Color(0xFF34D399)),
-              SizedBox(width: 6),
-              Text(
-                'HOST SYSTEM READY • TLS ENCRYPTED',
-                style: TextStyle(
-                  color: Color(0xFF34D399),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5,
-                ),
+        const SizedBox(height: 24),
+        if (_isLoadingUsers)
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: CircularProgressIndicator(color: _indigo500, strokeWidth: 3),
+          )
+        else if (_errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFFFB7185),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
               ),
-            ],
+            ),
+          )
+        else
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 380),
+            child: GridView.builder(
+              shrinkWrap: true,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: isDesktop ? 3 : 2,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: 1.05,
+              ),
+              itemCount: _users.length,
+              itemBuilder: (context, index) {
+                final u = _users[index] as Map<String, dynamic>;
+                final String username = (u['username'] ?? 'User').toString();
+                final String role = (u['role'] ?? 'worker').toString();
+                final bool isAdmin = role.toLowerCase() == 'admin';
+
+                return Material(
+                  color: _stone800,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    onTap: () => _handleUserSelect(u),
+                    borderRadius: BorderRadius.circular(16),
+                    hoverColor: _stone700.withValues(alpha: 0.7),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _stone700),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isAdmin
+                                  ? const Color(0xFFF59E0B).withValues(alpha: 0.2)
+                                  : _indigo500.withValues(alpha: 0.2),
+                            ),
+                            child: Icon(
+                              Icons.account_circle_outlined,
+                              size: 28,
+                              color: isAdmin
+                                  ? const Color(0xFFFBBF24)
+                                  : const Color(0xFF818CF8),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            username,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            role.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: _stone400,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }
 
-  Widget _buildUserSelectionGrid() {
-    if (_isLoadingUsers) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
-        child: Column(
-          children: [
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(color: Color(0xFF818CF8), strokeWidth: 2.5),
-            ),
-            SizedBox(height: 14),
-            Text(
-              'Authenticating Directory...',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_users.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 30),
-        child: Column(
-          children: [
-            const Icon(Icons.person_off_rounded, size: 40, color: Color(0xFF64748B)),
-            const SizedBox(height: 12),
-            const Text(
-              'No active operator profiles found.',
-              style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _fetchUsers,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF334155),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Retry Fetch'),
-            ),
-          ],
-        ),
-      );
-    }
+  Widget _buildPinEntryStep() {
+    final String username = (_selectedUser?['username'] ?? 'User').toString();
+    final String role = (_selectedUser?['role'] ?? 'worker').toString();
+    final bool isAdmin = role.toLowerCase() == 'admin';
+    final bool canSubmit = _pin.length == 4 && !_isAuthenticating;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 14, left: 4),
-          child: Row(
-            children: [
-              Icon(Icons.badge_rounded, size: 16, color: Color(0xFF818CF8)),
-              SizedBox(width: 8),
-              Text(
-                'SELECT OPERATOR PROFILE TO LOG IN',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF94A3B8),
-                  letterSpacing: 0.6,
-                ),
-              ),
-            ],
-          ),
-        ),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isVeryNarrow = constraints.maxWidth < 340;
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: isVeryNarrow ? 1 : 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: isVeryNarrow ? 2.6 : 1.15,
-              ),
-              itemCount: _users.length,
-              itemBuilder: (context, index) {
-            final user = _users[index];
-            final role = (user['role'] ?? 'staff').toString();
-            final branch = (user['branch'] ?? 'ALL').toString();
-            final username = (user['username'] ?? 'User').toString();
-
-            return Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF334155)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _handleUserSelect(user),
-                  borderRadius: BorderRadius.circular(16),
-                  hoverColor: const Color(0xFF4F46E5).withValues(alpha: 0.15),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            gradient: _getRoleGradient(role),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          username,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF334155),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                role.toUpperCase(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 8,
-                                  color: Color(0xFFCBD5E1),
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                            if (branch.isNotEmpty && branch != 'ALL') ...[
-                              const SizedBox(width: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1E293B),
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: const Color(0xFF475569)),
-                                ),
-                                child: Text(
-                                  branch,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 8,
-                                    color: Color(0xFF94A3B8),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    ),
-  ],
-);
-  }
-
-  Widget _buildPinAuthPad() {
-    final role = (_selectedUser!['role'] ?? 'staff').toString();
-    final username = (_selectedUser!['username'] ?? 'User').toString();
-
-    return Column(
+      key: ValueKey('pin-$username'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Back To Profiles Button & Active User Strip
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _handleBackToUsers,
+            icon: const Icon(Icons.arrow_back_rounded, size: 16, color: _stone400),
+            label: const Text(
+              'Back to Users',
+              style: TextStyle(
+                color: _stone400,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Selected User Avatar & Greeting
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          width: 64,
+          height: 64,
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF334155)),
+            shape: BoxShape.circle,
+            color: isAdmin
+                ? const Color(0xFFF59E0B).withValues(alpha: 0.2)
+                : _indigo500.withValues(alpha: 0.2),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: _getRoleGradient(role),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.person_rounded, size: 16, color: Colors.white),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      username,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      role.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF818CF8),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton.icon(
-                onPressed: _isAuthenticating ? null : _handleBackToUsers,
-                icon: const Icon(Icons.arrow_back_rounded, size: 14),
-                label: const Text('Switch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF94A3B8),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                ),
-              ),
-            ],
+          child: Icon(
+            Icons.account_circle_outlined,
+            size: 36,
+            color: isAdmin ? const Color(0xFFFBBF24) : const Color(0xFF818CF8),
           ),
         ),
-        const SizedBox(height: 20),
-
+        const SizedBox(height: 12),
+        Text(
+          'Hi, $username',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
         const Text(
-          'Enter 4-Digit Security PIN',
+          'Enter your 4-digit PIN',
           style: TextStyle(
-            color: Color(0xFFCBD5E1),
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-            letterSpacing: 0.3,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: _stone400,
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 28),
 
-        // Glowing PIN Indicator Dots
+        // PIN Dots
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(4, (index) {
-            final isFilled = _pin.length > index;
+          children: List.generate(4, (i) {
+            final filled = _pin.length > i;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.symmetric(horizontal: 10),
-              width: isFilled ? 18 : 14,
-              height: isFilled ? 18 : 14,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              width: 16,
+              height: 16,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isFilled ? const Color(0xFF818CF8) : const Color(0xFF1E293B),
-                border: Border.all(
-                  color: isFilled ? const Color(0xFFA5B4FC) : const Color(0xFF475569),
-                  width: 1.5,
-                ),
-                boxShadow: isFilled
+                color: filled ? _indigo500 : _stone700,
+                boxShadow: filled
                     ? [
                         BoxShadow(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.6),
-                          blurRadius: 12,
-                          spreadRadius: 2,
+                          color: _indigo500.withValues(alpha: 0.6),
+                          blurRadius: 15,
                         ),
                       ]
                     : null,
@@ -967,103 +694,95 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }),
         ),
+        const SizedBox(height: 20),
 
-        const SizedBox(height: 24),
+        if (_errorMessage != null) ...[
+          Text(
+            _errorMessage!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFFFB7185),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 16),
+        ] else
+          const SizedBox(height: 10),
 
-        // High-Speed Tactile Numpad
-        SizedBox(
-          width: 290,
+        // Numpad (max-w-[280px])
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
           child: GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 3,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.45,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.5,
             children: [
-              for (var i = 1; i <= 9; i++) _buildTactileKeypadButton(i.toString()),
-              _buildKeypadEmptySlot(),
-              _buildTactileKeypadButton('0'),
-              _buildTactileKeypadButton('del'),
+              for (var d = 1; d <= 9; d++) _buildNumKey('$d'),
+              const SizedBox.shrink(),
+              _buildNumKey('0'),
+              _buildNumKey('del'),
             ],
           ),
         ),
+        const SizedBox(height: 28),
 
-        const SizedBox(height: 22),
-
-        // Authenticate Button
+        // Access System Button
         SizedBox(
           width: double.infinity,
-          height: 50,
+          height: 54,
           child: ElevatedButton(
-            onPressed: (_pin.length == 4 && !_isAuthenticating) ? _handleLogin : null,
+            onPressed: canSubmit ? _handleLogin : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4F46E5),
-              disabledBackgroundColor: const Color(0xFF334155),
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              backgroundColor: canSubmit ? _indigo600 : _stone800,
+              disabledBackgroundColor: _stone800,
+              foregroundColor: Colors.white,
+              disabledForegroundColor: _stone500,
+              elevation: canSubmit ? 6 : 0,
+              shadowColor: _indigo500.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: _isAuthenticating
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                  )
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.login_rounded, size: 18, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text(
-                        'Access System Console',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3),
-                      ),
-                    ],
-                  ),
+            child: Text(
+              _isAuthenticating ? 'Authenticating...' : 'Access System',
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildKeypadEmptySlot() {
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildTactileKeypadButton(String action) {
-    final isDel = action == 'del';
+  Widget _buildNumKey(String action) {
+    final isDelete = action == 'del';
     return Material(
-      color: Colors.transparent,
+      color: _stone950,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: _isAuthenticating
-            ? null
-            : () {
-                if (isDel) {
-                  _handleDelete();
-                } else {
-                  _handleKeyPress(action);
-                }
-              },
-        borderRadius: BorderRadius.circular(14),
-        hoverColor: const Color(0xFF4F46E5).withValues(alpha: 0.25),
-        splashColor: const Color(0xFF818CF8).withValues(alpha: 0.3),
+        onTap: isDelete ? _handleDelete : () => _handleKeyPress(action),
+        borderRadius: BorderRadius.circular(16),
+        hoverColor: _stone800,
         child: Container(
-          alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF334155)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _stone800),
           ),
-          child: isDel
-              ? const Icon(Icons.backspace_rounded, color: Color(0xFF94A3B8), size: 20)
-              : Text(
-                  action,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
+          alignment: Alignment.center,
+          child: Text(
+            isDelete ? '⌫' : action,
+            style: TextStyle(
+              fontSize: isDelete ? 18 : 20,
+              fontWeight: FontWeight.w700,
+              color: isDelete ? _stone400 : Colors.white,
+            ),
+          ),
         ),
       ),
     );
