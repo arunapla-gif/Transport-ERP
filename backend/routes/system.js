@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.10",
-      buildNumber: 11,
+      version: "1.0.11",
+      buildNumber: 12,
       forceUpdate: false,
-      releaseNotes: "• Login: Branch tags on operator cards\n• System Boot: Soft slate-50 card & Sivakasi/Bangalore city labels\n• Dashboard: Stone-900 unified header & divider"
+      releaseNotes: "• Login: Compact keyboard-first PIN screen on desktop (with optional keypad toggle)"
     },
     android: {
       version: "1.0.8",

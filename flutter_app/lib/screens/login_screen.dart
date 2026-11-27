@@ -34,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Map<String, dynamic>? _selectedUser;
   String _pin = '';
   bool _isAuthenticating = false;
+  bool _showOnScreenNumpad = false;
 
   @override
   void initState() {
@@ -102,6 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _selectedUser = null;
       _pin = '';
       _errorMessage = null;
+      _showOnScreenNumpad = false;
     });
   }
 
@@ -428,7 +430,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     duration: const Duration(milliseconds: 250),
                     child: _selectedUser == null
                         ? _buildUserSelectionStep(isDesktop)
-                        : _buildPinEntryStep(),
+                        : _buildPinEntryStep(isDesktop),
                   ),
                 ),
 
@@ -695,11 +697,12 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildPinEntryStep() {
+  Widget _buildPinEntryStep(bool isDesktop) {
     final String username = (_selectedUser?['username'] ?? 'User').toString();
     final String role = (_selectedUser?['role'] ?? 'worker').toString();
     final bool isAdmin = role.toLowerCase() == 'admin';
     final bool canSubmit = _pin.length == 4 && !_isAuthenticating;
+    final bool showNumpad = !isDesktop || _showOnScreenNumpad;
 
     return Focus(
       key: ValueKey('pin-$username'),
@@ -775,15 +778,17 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Enter your 4-digit PIN',
-          style: TextStyle(
+        Text(
+          isDesktop && !showNumpad
+              ? 'Type your 4-digit PIN on keyboard'
+              : 'Enter your 4-digit PIN',
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: _stone400,
           ),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 24),
 
         // PIN Dots
         Row(
@@ -826,30 +831,33 @@ class _LoginScreenState extends State<LoginScreen> {
         ] else
           const SizedBox(height: 10),
 
-        // Numpad (max-w-[280px])
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 280),
-          child: GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.5,
-            children: [
-              for (var d = 1; d <= 9; d++) _buildNumKey('$d'),
-              const SizedBox.shrink(),
-              _buildNumKey('0'),
-              _buildNumKey('del'),
-            ],
+        if (showNumpad) ...[
+          // Numpad (max-w-[280px])
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 3,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.5,
+              children: [
+                for (var d = 1; d <= 9; d++) _buildNumKey('$d'),
+                const SizedBox.shrink(),
+                _buildNumKey('0'),
+                _buildNumKey('del'),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 28),
+          const SizedBox(height: 24),
+        ] else
+          const SizedBox(height: 12),
 
         // Access System Button
         SizedBox(
           width: double.infinity,
-          height: 54,
+          height: 52,
           child: ElevatedButton(
             onPressed: canSubmit ? _handleLogin : null,
             style: ElevatedButton.styleFrom(
@@ -872,6 +880,30 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+        if (isDesktop) ...[
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: () => setState(() => _showOnScreenNumpad = !_showOnScreenNumpad),
+            icon: Icon(
+              _showOnScreenNumpad ? Icons.keyboard_hide_rounded : Icons.dialpad_rounded,
+              size: 14,
+              color: _stone400,
+            ),
+            label: Text(
+              _showOnScreenNumpad ? 'Hide on-screen keypad' : 'Use on-screen keypad',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: _stone400,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ],
         ],
       ),
     );
