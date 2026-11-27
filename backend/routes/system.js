@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.11",
-      buildNumber: 12,
+      version: "1.0.12",
+      buildNumber: 13,
       forceUpdate: false,
-      releaseNotes: "• Login: Compact keyboard-first PIN screen on desktop (with optional keypad toggle)"
+      releaseNotes: "• Login: 4 rounded PIN boxes with focus indicator, role/branch pill on PIN step, and branch filter chips"
     },
     android: {
       version: "1.0.8",

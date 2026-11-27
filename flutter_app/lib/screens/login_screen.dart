@@ -35,6 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String _pin = '';
   bool _isAuthenticating = false;
   bool _showOnScreenNumpad = false;
+  String _branchFilter = 'ALL';
 
   @override
   void initState() {
@@ -563,20 +564,63 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           )
-        else
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 380),
-            child: GridView.builder(
-              shrinkWrap: true,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: isDesktop ? 3 : 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 1.02,
-              ),
-              itemCount: _users.length,
-              itemBuilder: (context, index) {
-                final u = _users[index] as Map<String, dynamic>;
+        else ...[
+          if (_users.length > 3) ...[
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final opt in const [
+                  ('ALL', 'All'),
+                  ('MAIN', 'MAIN'),
+                  ('AP_BNG', 'AP BNG'),
+                ])
+                  ChoiceChip(
+                    label: Text(
+                      opt.$2,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _branchFilter == opt.$1 ? Colors.white : _stone400,
+                      ),
+                    ),
+                    selected: _branchFilter == opt.$1,
+                    onSelected: (_) => setState(() => _branchFilter = opt.$1),
+                    selectedColor: _indigo600,
+                    backgroundColor: _stone800,
+                    side: BorderSide(
+                      color: _branchFilter == opt.$1 ? _indigo500 : _stone700,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    showCheckmark: false,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+          Builder(
+            builder: (context) {
+              final visibleUsers = _branchFilter == 'ALL'
+                  ? _users
+                  : _users.where((u) {
+                      final b = (u['branch'] ?? 'MAIN').toString().toUpperCase();
+                      return b == _branchFilter || b == 'ALL';
+                    }).toList();
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 380),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: isDesktop ? 3 : 2,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: 1.02,
+                  ),
+                  itemCount: visibleUsers.length,
+                  itemBuilder: (context, index) {
+                    final u = visibleUsers[index] as Map<String, dynamic>;
                 final String username = (u['username'] ?? 'User').toString();
                 final String role = (u['role'] ?? 'worker').toString();
                 final String branch = (u['branch'] ?? 'MAIN').toString().toUpperCase();
@@ -692,7 +736,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               },
             ),
+          );
+            },
           ),
+        ],
       ],
     );
   }
@@ -700,6 +747,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildPinEntryStep(bool isDesktop) {
     final String username = (_selectedUser?['username'] ?? 'User').toString();
     final String role = (_selectedUser?['role'] ?? 'worker').toString();
+    final String branch = (_selectedUser?['branch'] ?? 'MAIN').toString().toUpperCase();
     final bool isAdmin = role.toLowerCase() == 'admin';
     final bool canSubmit = _pin.length == 4 && !_isAuthenticating;
     final bool showNumpad = !isDesktop || _showOnScreenNumpad;
@@ -777,45 +825,149 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              role.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: _stone400,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: branch == 'AP_BNG'
+                    ? const Color(0xFFF59E0B).withValues(alpha: 0.16)
+                    : branch == 'ALL'
+                        ? _indigo500.withValues(alpha: 0.2)
+                        : const Color(0xFF10B981).withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                branch == 'AP_BNG' ? 'AP BNG' : branch,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  color: branch == 'AP_BNG'
+                      ? const Color(0xFFFCD34D)
+                      : branch == 'ALL'
+                          ? const Color(0xFFC7D2FE)
+                          : const Color(0xFF6EE7B7),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
         Text(
           isDesktop && !showNumpad
               ? 'Type your 4-digit PIN on keyboard'
               : 'Enter your 4-digit PIN',
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 13.5,
             fontWeight: FontWeight.w500,
             color: _stone400,
           ),
         ),
-        const SizedBox(height: 24),
-
-        // PIN Dots
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(4, (i) {
-            final filled = _pin.length > i;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: filled ? _indigo500 : _stone700,
-                boxShadow: filled
-                    ? [
-                        BoxShadow(
-                          color: _indigo500.withValues(alpha: 0.6),
-                          blurRadius: 15,
-                        ),
-                      ]
-                    : null,
-              ),
-            );
-          }),
-        ),
         const SizedBox(height: 20),
+
+        // 4 Rounded PIN Boxes (click-to-focus on desktop)
+        GestureDetector(
+          onTap: () => _pinFocusNode.requestFocus(),
+          child: ListenableBuilder(
+            listenable: _pinFocusNode,
+            builder: (context, _) {
+              final hasFocus = _pinFocusNode.hasFocus;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(4, (i) {
+                      final filled = _pin.length > i;
+                      final isActive = hasFocus && i == _pin.length && !_isAuthenticating;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        width: 48,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: _stone800,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isActive
+                                ? _indigo500
+                                : filled
+                                    ? _indigo500.withValues(alpha: 0.55)
+                                    : _stone700,
+                            width: isActive ? 1.8 : 1.2,
+                          ),
+                          boxShadow: isActive
+                              ? [
+                                  BoxShadow(
+                                    color: _indigo500.withValues(alpha: 0.25),
+                                    blurRadius: 10,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: filled ? 12 : 6,
+                            height: filled ? 12 : 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: filled
+                                  ? Colors.white
+                                  : isActive
+                                      ? _indigo500.withValues(alpha: 0.7)
+                                      : _stone700,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  if (isDesktop && !showNumpad) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: hasFocus
+                                ? const Color(0xFF34D399)
+                                : const Color(0xFFFBBF24),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          hasFocus ? 'Keyboard active' : 'Click boxes to type PIN',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _stone400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
 
         if (_errorMessage != null) ...[
           Text(
