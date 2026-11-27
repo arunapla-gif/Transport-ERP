@@ -1724,28 +1724,30 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                       'Consignor',
                                       Icons.business_outlined,
                                       kIndigo600,
-                                      trailing: InkWell(
-                                        onTap: () => setState(() => _showSenderPhone = !_showSenderPhone),
-                                        borderRadius: BorderRadius.circular(6),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child: Checkbox(
-                                                  value: _showSenderPhone,
-                                                  onChanged: (v) => setState(() => _showSenderPhone = v ?? false),
-                                                  activeColor: kIndigo600,
-                                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                  visualDensity: VisualDensity.compact,
+                                      trailing: ExcludeFocusTraversal(
+                                        child: InkWell(
+                                          onTap: () => setState(() => _showSenderPhone = !_showSenderPhone),
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child: Checkbox(
+                                                    value: _showSenderPhone,
+                                                    onChanged: (v) => setState(() => _showSenderPhone = v ?? false),
+                                                    activeColor: kIndigo600,
+                                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                    visualDensity: VisualDensity.compact,
+                                                  ),
                                                 ),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              const Text('Phone', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-                                            ],
+                                                const SizedBox(width: 4),
+                                                const Text('Phone', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1774,11 +1776,13 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                         return TextFormField(
                                           controller: controller,
                                           focusNode: focusNode,
+                                          textInputAction: TextInputAction.next,
+                                          onFieldSubmitted: (_) => onFieldSubmitted(),
                                           decoration: const InputDecoration(
                                             labelText: 'Search Consignor *',
                                             border: OutlineInputBorder(),
                                             prefixIcon: Icon(Icons.search, size: 18),
-                                            hintText: 'Type to search...',
+                                            hintText: 'Type name or GSTIN (↑↓ + Enter)...',
                                           ),
                                           onChanged: (val) {
                                             if (_selectedConsignor != null && val != _selectedConsignor!.name) {
@@ -1788,23 +1792,55 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                         );
                                       },
                                       optionsViewBuilder: (context, onSelected, options) {
+                                        final highlightedIndex = AutocompleteHighlightedOption.of(context);
                                         return Align(
                                           alignment: Alignment.topLeft,
                                           child: Material(
-                                            elevation: 4.0,
+                                            elevation: 6.0,
+                                            borderRadius: BorderRadius.circular(10),
+                                            color: Colors.white,
                                             child: ConstrainedBox(
-                                              constraints: const BoxConstraints(maxHeight: 250, maxWidth: 300),
+                                              constraints: const BoxConstraints(maxHeight: 260, maxWidth: 380),
                                               child: ListView.builder(
-                                                padding: EdgeInsets.zero,
+                                                padding: const EdgeInsets.symmetric(vertical: 4),
                                                 shrinkWrap: true,
                                                 itemCount: options.length,
                                                 itemBuilder: (BuildContext context, int index) {
                                                   final Consignor option = options.elementAt(index);
+                                                  final isHighlighted = index == highlightedIndex;
+                                                  if (isHighlighted) {
+                                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                                      if (context.mounted) {
+                                                        Scrollable.ensureVisible(context, alignment: 0.5);
+                                                      }
+                                                    });
+                                                  }
                                                   return InkWell(
                                                     onTap: () => onSelected(option),
-                                                    child: Padding(
-                                                      padding: const EdgeInsets.all(16.0),
-                                                      child: Text(option.name, style: const TextStyle(fontSize: 14)),
+                                                    child: Container(
+                                                      color: isHighlighted ? kIndigo50 : Colors.transparent,
+                                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Text(
+                                                            option.name,
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              fontWeight: isHighlighted ? FontWeight.w800 : FontWeight.w600,
+                                                              color: isHighlighted ? kIndigo700 : kSlate800,
+                                                            ),
+                                                          ),
+                                                          if ((option.city?.isNotEmpty ?? false) || (option.gstin?.isNotEmpty ?? false))
+                                                            Text(
+                                                              [if (option.city?.isNotEmpty ?? false) option.city!, if (option.gstin?.isNotEmpty ?? false) option.gstin!].join(' • '),
+                                                              style: const TextStyle(fontSize: 11, color: kSlate500),
+                                                              maxLines: 1,
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                        ],
+                                                      ),
                                                     ),
                                                   );
                                                 },
@@ -1894,28 +1930,30 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                       'Consignee',
                                       Icons.location_on_outlined,
                                       const Color(0xFF059669),
-                                      trailing: InkWell(
-                                        onTap: () => setState(() => _showReceiverPhone = !_showReceiverPhone),
-                                        borderRadius: BorderRadius.circular(6),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child: Checkbox(
-                                                  value: _showReceiverPhone,
-                                                  onChanged: (v) => setState(() => _showReceiverPhone = v ?? false),
-                                                  activeColor: const Color(0xFF059669),
-                                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                  visualDensity: VisualDensity.compact,
+                                      trailing: ExcludeFocusTraversal(
+                                        child: InkWell(
+                                          onTap: () => setState(() => _showReceiverPhone = !_showReceiverPhone),
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child: Checkbox(
+                                                    value: _showReceiverPhone,
+                                                    onChanged: (v) => setState(() => _showReceiverPhone = v ?? false),
+                                                    activeColor: const Color(0xFF059669),
+                                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                    visualDensity: VisualDensity.compact,
+                                                  ),
                                                 ),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              const Text('Phone', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-                                            ],
+                                                const SizedBox(width: 4),
+                                                const Text('Phone', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1944,11 +1982,13 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                         return TextFormField(
                                           controller: controller,
                                           focusNode: focusNode,
+                                          textInputAction: TextInputAction.next,
+                                          onFieldSubmitted: (_) => onFieldSubmitted(),
                                           decoration: const InputDecoration(
                                             labelText: 'Search Consignee *',
                                             border: OutlineInputBorder(),
                                             prefixIcon: Icon(Icons.search, size: 18),
-                                            hintText: 'Type to search...',
+                                            hintText: 'Type name or GSTIN (↑↓ + Enter)...',
                                           ),
                                           onChanged: (val) {
                                             if (_selectedConsignee != null && val != _selectedConsignee!.name) {
@@ -1958,23 +1998,55 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                         );
                                       },
                                       optionsViewBuilder: (context, onSelected, options) {
+                                        final highlightedIndex = AutocompleteHighlightedOption.of(context);
                                         return Align(
                                           alignment: Alignment.topLeft,
                                           child: Material(
-                                            elevation: 4.0,
+                                            elevation: 6.0,
+                                            borderRadius: BorderRadius.circular(10),
+                                            color: Colors.white,
                                             child: ConstrainedBox(
-                                              constraints: const BoxConstraints(maxHeight: 250, maxWidth: 300),
+                                              constraints: const BoxConstraints(maxHeight: 260, maxWidth: 380),
                                               child: ListView.builder(
-                                                padding: EdgeInsets.zero,
+                                                padding: const EdgeInsets.symmetric(vertical: 4),
                                                 shrinkWrap: true,
                                                 itemCount: options.length,
                                                 itemBuilder: (BuildContext context, int index) {
                                                   final Consignee option = options.elementAt(index);
+                                                  final isHighlighted = index == highlightedIndex;
+                                                  if (isHighlighted) {
+                                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                                      if (context.mounted) {
+                                                        Scrollable.ensureVisible(context, alignment: 0.5);
+                                                      }
+                                                    });
+                                                  }
                                                   return InkWell(
                                                     onTap: () => onSelected(option),
-                                                    child: Padding(
-                                                      padding: const EdgeInsets.all(16.0),
-                                                      child: Text(option.name, style: const TextStyle(fontSize: 14)),
+                                                    child: Container(
+                                                      color: isHighlighted ? const Color(0xFFECFDF5) : Colors.transparent,
+                                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Text(
+                                                            option.name,
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              fontWeight: isHighlighted ? FontWeight.w800 : FontWeight.w600,
+                                                              color: isHighlighted ? const Color(0xFF047857) : kSlate800,
+                                                            ),
+                                                          ),
+                                                          if ((option.city?.isNotEmpty ?? false) || (option.gstin?.isNotEmpty ?? false))
+                                                            Text(
+                                                              [if (option.city?.isNotEmpty ?? false) option.city!, if (option.gstin?.isNotEmpty ?? false) option.gstin!].join(' • '),
+                                                              style: const TextStyle(fontSize: 11, color: kSlate500),
+                                                              maxLines: 1,
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                        ],
+                                                      ),
                                                     ),
                                                   );
                                                 },
