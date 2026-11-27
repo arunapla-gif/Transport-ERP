@@ -922,44 +922,23 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
 
   Widget _buildTallyItem(String label, String value, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.25), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, size: 15, color: color),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: Color(0xFF64748B)),
           ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: Color(0xFF64748B)),
-              ),
-              Text(
-                value,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: color),
-              ),
-            ],
+          Text(
+            value,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: color, height: 1.15),
           ),
         ],
       ),
@@ -1089,37 +1068,23 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
   }
 
   Widget _buildSectionHeader(String title, IconData icon, Color color, {Widget? trailing}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: 8.0),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color, color.withValues(alpha: 0.85)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.35),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, size: 16, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
+              Icon(icon, size: 17, color: color),
+              const SizedBox(width: 8),
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
                   color: Color(0xFF0F172A),
@@ -1258,17 +1223,17 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
 
   Widget _buildSwissCard({required Widget child}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.all(22),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF4F46E5).withValues(alpha: 0.03),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -1291,14 +1256,14 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
           // 1. Header Ribbon
           // 1. Header Ribbon
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: const Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1.2)),
+              border: const Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                  blurRadius: 12,
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                  blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
               ],
@@ -1306,90 +1271,56 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width > 32 ? MediaQuery.of(context).size.width - 32 : 0),
+                constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width > 40 ? MediaQuery.of(context).size.width - 40 : 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                // Left: Logo, Title, draft status, toggle, EWB input
+                // Left: Title, draft status, toggle, EWB input
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF2563EB).withValues(alpha: 0.35),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
+                    const Text(
+                      'New GC',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                        color: kIndigo600,
                       ),
-                      child: const Icon(Icons.note_add_rounded, size: 20, color: Colors.white),
                     ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              'New Consignment Note',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.3,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text('2.0 ERP', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
-                            ),
-                            if (widget.initialGc == null && _draftStatus.isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                                ),
-                                child: Text(
-                                  _draftStatus,
-                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'ARUNACHALAM TRANSPORT ERP  •  FY $_financialYear',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
-                        ),
-                      ],
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: kIndigo50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: kIndigo100),
+                      ),
+                      child: Text('FY $_financialYear', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: kIndigo700)),
                     ),
-                    const SizedBox(width: 20),
+                    if (widget.initialGc == null && _draftStatus.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Text(
+                          _draftStatus,
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 16),
                     if (widget.initialGc == null)
                       Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(3),
                         child: Row(
                           children: [
                             InkWell(
@@ -1397,24 +1328,22 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                 _companyMode = 'A';
                                 _fetchNextGcNumber();
                               }),
-                              borderRadius: BorderRadius.circular(9),
+                              borderRadius: BorderRadius.circular(7),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                 decoration: BoxDecoration(
-                                  gradient: _companyMode == 'A'
-                                      ? const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)])
-                                      : null,
-                                  borderRadius: BorderRadius.circular(9),
+                                  color: _companyMode == 'A' ? Colors.white : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(7),
                                   boxShadow: _companyMode == 'A'
-                                      ? [BoxShadow(color: const Color(0xFF2563EB).withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 2))]
+                                      ? [BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 1))]
                                       : null,
                                 ),
                                 child: Text(
                                   'AP',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    color: _companyMode == 'A' ? Colors.white : const Color(0xFF64748B),
+                                    fontWeight: FontWeight.w800,
+                                    color: _companyMode == 'A' ? kIndigo700 : const Color(0xFF64748B),
                                   ),
                                 ),
                               ),
@@ -1424,24 +1353,22 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                 _companyMode = 'B';
                                 _fetchNextGcNumber();
                               }),
-                              borderRadius: BorderRadius.circular(9),
+                              borderRadius: BorderRadius.circular(7),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                 decoration: BoxDecoration(
-                                  gradient: _companyMode == 'B'
-                                      ? const LinearGradient(colors: [Color(0xFF059669), Color(0xFF047857)])
-                                      : null,
-                                  borderRadius: BorderRadius.circular(9),
+                                  color: _companyMode == 'B' ? Colors.white : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(7),
                                   boxShadow: _companyMode == 'B'
-                                      ? [BoxShadow(color: const Color(0xFF059669).withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 2))]
+                                      ? [BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 1))]
                                       : null,
                                 ),
                                 child: Text(
                                   'BELL',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    color: _companyMode == 'B' ? Colors.white : const Color(0xFF64748B),
+                                    fontWeight: FontWeight.w800,
+                                    color: _companyMode == 'B' ? const Color(0xFF047857) : const Color(0xFF64748B),
                                   ),
                                 ),
                               ),
@@ -1654,13 +1581,13 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                     ),
                     const SizedBox(width: 12),
                     OutlinedButton.icon(
-                      icon: const Icon(Icons.history_rounded, size: 16, color: Color(0xFF2563EB)),
+                      icon: const Icon(Icons.history_rounded, size: 16, color: kIndigo600),
                       label: const Text('Recent GCs', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         elevation: 0,
                       ),
                       onPressed: () {
@@ -1686,30 +1613,31 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(16),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1200),
+                    constraints: const BoxConstraints(maxWidth: 1180),
                     child: Theme(
                       data: Theme.of(context).copyWith(
                         inputDecorationTheme: InputDecorationTheme(
+                          isDense: true,
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.8),
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: kIndigo600, width: 1.6),
                           ),
-                          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
-                          floatingLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
+                          labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
+                          floatingLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: kIndigo600),
                         ),
                       ),
                       child: Form(
@@ -2422,53 +2350,54 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
 
           // 3. Action Footer Sticky
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: const BoxDecoration(
               color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1.2)),
+              border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
               boxShadow: [
-                BoxShadow(color: Color(0x0A0F172A), blurRadius: 12, offset: Offset(0, -4)),
+                BoxShadow(color: Color(0x0A0F172A), blurRadius: 10, offset: Offset(0, -3)),
               ],
             ),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
+                constraints: const BoxConstraints(maxWidth: 1180),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Left: Remarks input with rounded modern style
+                    // Left: Remarks input
                     Expanded(
                       flex: 3,
                       child: TextFormField(
                         controller: _remarksController,
                         decoration: InputDecoration(
+                          isDense: true,
                           labelText: 'Remarks / Freight Note',
                           labelStyle: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                          prefixIcon: const Icon(Icons.note_alt_outlined, size: 18, color: Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.note_alt_outlined, size: 16, color: Color(0xFF94A3B8)),
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.6)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: kIndigo600, width: 1.5)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    // Center: Tallies (Pills styled like Login KPI badges)
+                    const SizedBox(width: 14),
+                    // Center: Compact Typographic Tallies
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildTallyItem('TOTAL', _tallyTotal.toString(), const Color(0xFF2563EB), Icons.inventory_2_rounded),
-                        const SizedBox(width: 8),
+                        _buildTallyItem('TOTAL', _tallyTotal.toString(), kIndigo600, Icons.inventory_2_rounded),
+                        const SizedBox(width: 6),
                         _buildTallyItem('BOXES', _tallyBoxes.toString(), const Color(0xFF059669), Icons.all_inbox_rounded),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         _buildTallyItem('BUNDLES', _tallyBundles.toString(), const Color(0xFFD97706), Icons.layers_rounded),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         _buildTallyItem('BAGS', _tallyBags.toString(), const Color(0xFFE11D48), Icons.shopping_bag_rounded),
                       ],
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     // Right: Buttons
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -2478,48 +2407,48 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF64748B),
                             side: const BorderSide(color: Color(0xFFCBD5E1)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          child: const Text('Clear', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          child: const Text('Clear', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         OutlinedButton.icon(
-                          icon: const Icon(Icons.print_outlined, size: 16, color: Color(0xFF2563EB)),
-                          label: const Text('Preview', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                          icon: const Icon(Icons.visibility_outlined, size: 15, color: kIndigo600),
+                          label: const Text('Preview', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF0F172A))),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF0F172A),
-                            backgroundColor: const Color(0xFFF1F5F9),
+                            backgroundColor: const Color(0xFFF8FAFC),
                             side: const BorderSide(color: Color(0xFFCBD5E1)),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           onPressed: _showPreviewDialog,
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Container(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                              colors: [kIndigo600, kIndigo700],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             boxShadow: [
-                              BoxShadow(color: const Color(0xFF2563EB).withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 3)),
+                              BoxShadow(color: kIndigo600.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 2)),
                             ],
                           ),
                           child: ElevatedButton.icon(
-                            icon: const Icon(Icons.check_circle_outline_rounded, size: 18, color: Colors.white),
+                            icon: const Icon(Icons.check_circle_outline_rounded, size: 17, color: Colors.white),
                             label: Text(
                               widget.initialGc == null ? 'Save GC' : 'Update GC',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
-                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                             onPressed: _isSubmitting ? null : _saveGC,
                           ),

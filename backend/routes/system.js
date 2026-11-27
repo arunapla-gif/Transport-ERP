@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.17",
-      buildNumber: 18,
+      version: "1.0.18",
+      buildNumber: 19,
       forceUpdate: false,
-      releaseNotes: "• New GC Entry: Exact EWB party matching, GSTIN party search, edit prefix fallback, clean draft reset & Print GC button"
+      releaseNotes: "• New GC Entry: Compact high-density ERP layout, clean Indigo palette, slimmed headers & typographic tally"
     },
     android: {
       version: "1.0.8",
