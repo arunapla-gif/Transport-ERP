@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/screens/dashboard_screen.dart';
 import 'package:flutter_app/screens/login_screen.dart';
@@ -41,37 +40,38 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
     });
 
     try {
-      // 1. Check Local Internet & Interface
+      // 1. Check Local Internet Connection
       setState(() => _networkState = BootState.loading);
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 220));
+      if (!mounted) return;
       setState(() => _networkState = BootState.success);
 
       // 2. Check Secure Server Connection
       setState(() => _serverState = BootState.loading);
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
       setState(() => _serverState = BootState.success);
 
-      // 3. Core Database Integrity
+      // 3. Check Core Database Integrity (/health)
       setState(() => _databaseState = BootState.loading);
-      bool isHealthy = await ApiService.checkHealth();
+      final bool isHealthy = await ApiService.checkHealth();
       if (!isHealthy) {
-        throw Exception('Database Timeout or Offline');
+        throw Exception('Database Timeout');
       }
+      if (!mounted) return;
       setState(() => _databaseState = BootState.success);
 
-      // 4. Authentication Keys
+      // 4. Check Authentication Keys
       setState(() => _authState = BootState.loading);
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 250));
       if (ApiService.authToken == null) {
-        throw Exception('Invalid Session Key or Token Expired');
+        throw Exception('Invalid Session Key');
       }
-      setState(() => _authState = BootState.success);
-
-      // Boot sequence complete!
-      await Future.delayed(const Duration(milliseconds: 400));
-      if (mounted) {
-        setState(() => _isBootComplete = true);
-      }
+      if (!mounted) return;
+      setState(() {
+        _authState = BootState.success;
+        _isBootComplete = true;
+      });
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -88,323 +88,239 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Midnight Sapphire Mesh Gradient Background
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0B132B)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-
-          // Ambient subtle background glow orbs
-          Positioned(
-            top: -80,
-            right: -80,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -60,
-            left: -60,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF10B981).withValues(alpha: 0.1),
-              ),
-            ),
-          ),
-
-          // Glassmorphism System Card
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 480),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          blurRadius: 40,
-                          offset: const Offset(0, 16),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(36.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildHeader(),
-                        const SizedBox(height: 32),
-
-                        // System Checklist
-                        _buildCheckItem(
-                          label: 'Local Network Interface',
-                          telemetry: 'LATENCY: 4ms // WIRED/WIFI',
-                          state: _networkState,
-                          icon: Icons.wifi_rounded,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildCheckItem(
-                          label: 'Secure API Gateway Handshake',
-                          telemetry: 'PORT: 8085 // TLS ENCRYPTED',
-                          state: _serverState,
-                          icon: Icons.dns_rounded,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildCheckItem(
-                          label: 'Database Integrity & WAL Buffers',
-                          telemetry: 'SQLITE/POSTGRES: ACTIVE',
-                          state: _databaseState,
-                          icon: Icons.storage_rounded,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildCheckItem(
-                          label: 'Session Tokens & Role Credentials',
-                          telemetry: 'JWT VERIFIED // ACCESS GRANTED',
-                          state: _authState,
-                          icon: Icons.vpn_key_rounded,
-                        ),
-
-                        // Boot Actions Area
-                        if (_isBootComplete) ...[
-                          const SizedBox(height: 32),
-                          if (widget.isAdmin) ...[
-                            const Text(
-                              'SELECT OPERATING BRANCH WORKSPACE',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF94A3B8),
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildBranchButton(
-                                    'MAIN',
-                                    'MAIN BRANCH',
-                                    'HQ CENTRAL HUB',
-                                    Icons.business_rounded,
-                                    const Color(0xFF6366F1),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: _buildBranchButton(
-                                    'AP_BNG',
-                                    'AP BANGALORE',
-                                    'REGIONAL TERMINAL',
-                                    Icons.warehouse_rounded,
-                                    const Color(0xFF10B981),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else ...[
-                            SizedBox(
-                              width: double.infinity,
-                              height: 54,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  Navigator.of(context).pushReplacement(
-                                    MaterialPageRoute(builder: (_) => const DashboardScreen()),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF10B981),
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Enter Enterprise Workspace',
-                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 0.5),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Icon(Icons.arrow_forward_rounded, size: 20),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ] else ...[
-                          const SizedBox(height: 32),
-                          Container(
-                            width: double.infinity,
-                            height: 52,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF818CF8)),
-                                ),
-                                SizedBox(width: 12),
-                                Text(
-                                  'Verifying System Services...',
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-
-                        // Error Banner if present
-                        if (_errorMessage != null) ...[
-                          const SizedBox(height: 24),
-                          _buildErrorBox(),
-                        ],
-                      ],
-                    ),
+      backgroundColor: Colors.white,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 448),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header (1:1 React SystemBoot.jsx)
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF4F46E5).withValues(alpha: 0.28),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.dns_rounded, color: Colors.white, size: 32),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'System Dashboard',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1E293B),
                   ),
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 68,
-              height: 68,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+                const SizedBox(height: 4),
+                const Text(
+                  'Initializing Secure Workspace',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
                   ),
+                ),
+                const SizedBox(height: 32),
+
+                // 4 Sequence CheckItems
+                _buildCheckItem(
+                  label: 'Local Internet Connection',
+                  state: _networkState,
+                  icon: Icons.wifi_rounded,
+                ),
+                const SizedBox(height: 12),
+                _buildCheckItem(
+                  label: 'Secure Server Connection',
+                  state: _serverState,
+                  icon: Icons.dns_rounded,
+                ),
+                const SizedBox(height: 12),
+                _buildCheckItem(
+                  label: 'Core Database Integrity',
+                  state: _databaseState,
+                  icon: Icons.storage_rounded,
+                ),
+                const SizedBox(height: 12),
+                _buildCheckItem(
+                  label: 'Authentication Keys',
+                  state: _authState,
+                  icon: Icons.vpn_key_rounded,
+                ),
+
+                // Error Box
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 24),
+                  _buildErrorBox(),
                 ],
-              ),
-              child: const Icon(Icons.dns_rounded, color: Colors.white, size: 34),
+
+                // Bottom Action / Branch Selector
+                const SizedBox(height: 32),
+                if (_isBootComplete) ...[
+                  if (widget.isAdmin) ...[
+                    const Text(
+                      'SELECT OPERATING BRANCH',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildBranchCard(
+                            branchId: 'MAIN',
+                            title: 'MAIN BRANCH',
+                            icon: Icons.storage_rounded,
+                            bgColor: const Color(0xFFEEF2FF),
+                            borderColor: const Color(0xFFE0E7FF),
+                            iconColor: const Color(0xFF6366F1),
+                            textColor: const Color(0xFF312E81),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildBranchCard(
+                            branchId: 'AP_BNG',
+                            title: 'AP BNG',
+                            icon: Icons.dns_rounded,
+                            bgColor: const Color(0xFFFFFBEB),
+                            borderColor: const Color(0xFFFEF3C7),
+                            iconColor: const Color(0xFFD97706),
+                            textColor: const Color(0xFF78350F),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F172A),
+                          foregroundColor: Colors.white,
+                          elevation: 4,
+                          shadowColor: const Color(0xFF0F172A).withValues(alpha: 0.25),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Proceed to Operations',
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward_rounded, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                ] else
+                  Container(
+                    width: double.infinity,
+                    height: 54,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Awaiting System Readiness',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'Transport ERP System Boot',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: 6),
-        const Text(
-          'Initializing secure enterprise workspace and database services',
-          style: TextStyle(
-            fontSize: 13,
-            color: Color(0xFF94A3B8),
-            height: 1.3,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildCheckItem({
     required String label,
-    required String telemetry,
     required BootState state,
     required IconData icon,
   }) {
-    Color bgColor;
-    Color borderColor;
-    Color iconBgColor;
-    Widget leadingWidget;
-    String subText;
+    late Color bgColor;
+    late Color borderColor;
+    late Color iconBgColor;
+    late Color textColor;
+    late Widget leadingWidget;
+    late String subText;
 
     switch (state) {
       case BootState.success:
-        bgColor = const Color(0xFF10B981).withValues(alpha: 0.12);
-        borderColor = const Color(0xFF10B981).withValues(alpha: 0.3);
-        iconBgColor = const Color(0xFF10B981).withValues(alpha: 0.2);
-        leadingWidget = const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20);
-        subText = telemetry;
+        bgColor = const Color(0xFFECFDF5).withValues(alpha: 0.7);
+        borderColor = const Color(0xFFD1FAE5);
+        iconBgColor = const Color(0xFFD1FAE5);
+        textColor = const Color(0xFF047857);
+        leadingWidget = const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF047857), size: 20);
+        subText = 'Connected and Online';
         break;
       case BootState.error:
-        bgColor = const Color(0xFFE11D48).withValues(alpha: 0.12);
-        borderColor = const Color(0xFFE11D48).withValues(alpha: 0.3);
-        iconBgColor = const Color(0xFFE11D48).withValues(alpha: 0.2);
+        bgColor = const Color(0xFFFFF1F2);
+        borderColor = const Color(0xFFFFE4E6);
+        iconBgColor = const Color(0xFFFFE4E6);
+        textColor = const Color(0xFFE11D48);
         leadingWidget = const Icon(Icons.error_outline_rounded, color: Color(0xFFE11D48), size: 20);
-        subText = 'Verification Failed';
+        subText = 'Connection Failed';
         break;
       case BootState.loading:
-        bgColor = const Color(0xFF6366F1).withValues(alpha: 0.12);
-        borderColor = const Color(0xFF6366F1).withValues(alpha: 0.3);
-        iconBgColor = const Color(0xFF6366F1).withValues(alpha: 0.2);
+        bgColor = const Color(0xFFEFF6FF).withValues(alpha: 0.7);
+        borderColor = const Color(0xFFDBEAFE);
+        iconBgColor = const Color(0xFFDBEAFE);
+        textColor = const Color(0xFF1D4ED8);
         leadingWidget = const SizedBox(
           width: 18,
           height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF818CF8)),
+          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D4ED8)),
         );
         subText = 'Verifying connection...';
         break;
       case BootState.pending:
-        bgColor = Colors.white.withValues(alpha: 0.04);
-        borderColor = Colors.white.withValues(alpha: 0.08);
-        iconBgColor = Colors.white.withValues(alpha: 0.06);
-        leadingWidget = Icon(icon, color: const Color(0xFF64748B), size: 18);
-        subText = 'Awaiting sequence...';
+        bgColor = const Color(0xFFF8FAFC);
+        borderColor = const Color(0xFFF1F5F9);
+        iconBgColor = const Color(0xFFE2E8F0);
+        textColor = const Color(0xFF94A3B8);
+        leadingWidget = Icon(icon, color: const Color(0xFF94A3B8), size: 20);
+        subText = 'Waiting for sequence...';
         break;
     }
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      duration: const Duration(milliseconds: 350),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor),
       ),
       child: Row(
@@ -413,11 +329,11 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: iconBgColor,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: leadingWidget,
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,21 +341,17 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    color: state == BootState.pending ? const Color(0xFF94A3B8) : Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subText,
                   style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: state == BootState.success ? 'monospace' : null,
-                    fontWeight: FontWeight.w600,
-                    color: state == BootState.success
-                        ? const Color(0xFFA7F3D0)
-                        : (state == BootState.error ? const Color(0xFFFECDD3) : const Color(0xFF64748B)),
+                    fontSize: 12,
+                    color: textColor.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -452,49 +364,49 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
 
   Widget _buildErrorBox() {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFE11D48).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE11D48).withValues(alpha: 0.3)),
+        color: const Color(0xFFFFF1F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFECDD3)),
       ),
       child: Column(
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.error_outline_rounded, color: Color(0xFFE11D48), size: 20),
-              const SizedBox(width: 12),
+              const Icon(Icons.error_outline_rounded, color: Color(0xFFE11D48), size: 18),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '$_errorMessage. Please check server status.',
+                  '$_errorMessage. Please check your connection.',
                   style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFFECDD3),
-                    height: 1.4,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFFE11D48),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton(
                   onPressed: _runBootSequence,
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: const Color(0xFFE11D48).withValues(alpha: 0.5)),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFFE11D48),
+                    side: const BorderSide(color: Color(0xFFFECDD3)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
-                  child: const Text('Retry Sequence', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Retry Connection', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                 ),
               ),
               if (_authState == BootState.error) ...[
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
@@ -507,10 +419,10 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
                       backgroundColor: const Color(0xFFE11D48),
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text('Reset Session', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text('Reset Session', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                   ),
                 ),
               ],
@@ -521,51 +433,50 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
     );
   }
 
-  Widget _buildBranchButton(
-    String branchId,
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-  ) {
-    return InkWell(
-      onTap: () async {
-        await AuthService.setActiveBranch(branchId);
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const DashboardScreen()),
-          );
-        }
-      },
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
+  Widget _buildBranchCard({
+    required String branchId,
+    required String title,
+    required IconData icon,
+    required Color bgColor,
+    required Color borderColor,
+    required Color iconColor,
+    required Color textColor,
+  }) {
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () async {
+          await AuthService.setActiveBranch(branchId);
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const DashboardScreen()),
+            );
+          }
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: 2),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 28, color: iconColor),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: textColor,
+                ),
               ),
-              child: Icon(icon, size: 24, color: color),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.white),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.5)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

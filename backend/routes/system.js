@@ -10,17 +10,17 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.6",
-      buildNumber: 7,
+      version: "1.0.7",
+      buildNumber: 8,
       forceUpdate: false,
-      releaseNotes: "• Restyled Login screen to match React dark-stone & indigo look and feel\n• Version badge and update check integrated cleanly into Login footer"
+      releaseNotes: "• Restyled System Boot screen to match React light-slate look and feel\n• Faster boot sequence & consistent React-parity branch cards"
     },
     android: {
-      version: "1.0.6",
-      buildNumber: 7,
+      version: "1.0.7",
+      buildNumber: 8,
       downloadUrl: "https://transport-erp-production.up.railway.app/downloads/transport-erp-operator.apk",
       forceUpdate: false,
-      releaseNotes: "• Restyled Login screen to match React dark-stone & indigo look and feel\n• Version badge and update check integrated cleanly into Login footer"
+      releaseNotes: "• Restyled System Boot screen to match React light-slate look and feel\n• Faster boot sequence & consistent React-parity branch cards"
     },
     windows: {
       version: "1.0.2",
