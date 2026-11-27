@@ -9,8 +9,8 @@ import 'web_reload_stub.dart' if (dart.library.html) 'web_reload_web.dart';
 
 class UpdateService {
   // Compiled into the app bundle so open Web tabs know their exact running build.
-  static const String appVersion = '1.0.18';
-  static const int appBuildNumber = 19;
+  static const String appVersion = '1.0.19';
+  static const int appBuildNumber = 20;
   static String get buildLabel => 'v$appVersion (b$appBuildNumber)';
 
   /// Checks for application updates on Web, Android, and Windows clients.

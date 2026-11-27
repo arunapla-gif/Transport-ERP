@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.18",
-      buildNumber: 19,
+      version: "1.0.19",
+      buildNumber: 20,
       forceUpdate: false,
-      releaseNotes: "• New GC Entry: Compact high-density ERP layout, clean Indigo palette, slimmed headers & typographic tally"
+      releaseNotes: "• New GC Entry: Optional Phone checkbox on Party cards & empty default QTY (tally starts at 0)"
     },
     android: {
       version: "1.0.8",

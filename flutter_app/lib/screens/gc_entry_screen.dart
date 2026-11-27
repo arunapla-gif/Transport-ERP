@@ -14,7 +14,7 @@ import 'package:printing/printing.dart';
 import '../services/pdf_service.dart';
 
 class GcEntryItemRow {
-  TextEditingController articlesController = TextEditingController(text: '10');
+  TextEditingController articlesController = TextEditingController();
   String unitCategory = 'Cases';
   String units = 'Cases of Fireworks';
   TextEditingController hsnController = TextEditingController(text: '3604');
@@ -80,6 +80,8 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
   String _searchEditGc = '';
   List<dynamic> _recentGcs = [];
   bool _isLoadingHistory = false;
+  bool _showSenderPhone = false;
+  bool _showReceiverPhone = false;
 
   // Core GC Details
   String _financialYear = '2026-2027';
@@ -202,6 +204,7 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
             );
       }
       _senderPhoneController.text = gc['senderContactPhone'] ?? '';
+      _showSenderPhone = _senderPhoneController.text.trim().isNotEmpty;
       
       if (gc['consigneeId'] != null) {
         final cneeName = gc['consignee']?['name'] ?? gc['consigneeName'] ?? '';
@@ -217,6 +220,7 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
             );
       }
       _receiverPhoneController.text = gc['receiverContactPhone'] ?? '';
+      _showReceiverPhone = _receiverPhoneController.text.trim().isNotEmpty;
       _partyAutocompleteEpoch++;
 
       if (gc['invoiceDate'] != null) _invoiceDate = DateTime.tryParse(gc['invoiceDate']) ?? DateTime.now();
@@ -788,9 +792,9 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
         'date': _date.toIso8601String(),
         'time': '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}',
         'consignorId': _selectedConsignor?.id,
-        'senderContactPhone': _senderPhoneController.text,
+        'senderContactPhone': _showSenderPhone ? _senderPhoneController.text.trim() : '',
         'consigneeId': _selectedConsignee?.id,
-        'receiverContactPhone': _receiverPhoneController.text,
+        'receiverContactPhone': _showReceiverPhone ? _receiverPhoneController.text.trim() : '',
         'invoiceDate': _invoiceDate.toIso8601String(),
         'invoiceNumber': _invoiceNumberController.text,
         'privateMark': _privateMarkController.text,
@@ -1025,6 +1029,8 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
       _selectedConsignee = null;
       _fetchedEwbDetails = null;
       _linkedGdmNumber = null;
+      _showSenderPhone = false;
+      _showReceiverPhone = false;
       _date = DateTime.now();
       _time = TimeOfDay.now();
       _invoiceDate = DateTime.now();
@@ -1714,7 +1720,36 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildSectionHeader('Consignor', Icons.business_outlined, Colors.blue),
+                                    _buildSectionHeader(
+                                      'Consignor',
+                                      Icons.business_outlined,
+                                      kIndigo600,
+                                      trailing: InkWell(
+                                        onTap: () => setState(() => _showSenderPhone = !_showSenderPhone),
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child: Checkbox(
+                                                  value: _showSenderPhone,
+                                                  onChanged: (v) => setState(() => _showSenderPhone = v ?? false),
+                                                  activeColor: kIndigo600,
+                                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  visualDensity: VisualDensity.compact,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              const Text('Phone', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                     KeyedSubtree(
                                       key: ValueKey('cnor_auto_$_partyAutocompleteEpoch'),
                                       child: Autocomplete<Consignor>(
@@ -1780,17 +1815,19 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                       },
                                       ),
                                     ),
-                                    const SizedBox(height: 10),
-                                    TextFormField(
-                                      controller: _senderPhoneController,
-                                      decoration: InputDecoration(
-                                        labelText: 'Sender Phone (B2C)',
-                                        hintText: _selectedConsignor?.phone ?? 'Enter mobile number',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.phone, size: 16),
+                                    if (_showSenderPhone) ...[
+                                      const SizedBox(height: 10),
+                                      TextFormField(
+                                        controller: _senderPhoneController,
+                                        decoration: InputDecoration(
+                                          labelText: 'Sender Phone (B2C)',
+                                          hintText: _selectedConsignor?.phone ?? 'Enter mobile number',
+                                          border: const OutlineInputBorder(),
+                                          prefixIcon: const Icon(Icons.phone, size: 16),
+                                        ),
+                                        keyboardType: TextInputType.phone,
                                       ),
-                                      keyboardType: TextInputType.phone,
-                                    ),
+                                    ],
                                     const SizedBox(height: 10),
                                     Container(
                                       width: double.infinity,
@@ -1853,7 +1890,36 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildSectionHeader('Consignee', Icons.location_on_outlined, const Color(0xFF059669)),
+                                    _buildSectionHeader(
+                                      'Consignee',
+                                      Icons.location_on_outlined,
+                                      const Color(0xFF059669),
+                                      trailing: InkWell(
+                                        onTap: () => setState(() => _showReceiverPhone = !_showReceiverPhone),
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child: Checkbox(
+                                                  value: _showReceiverPhone,
+                                                  onChanged: (v) => setState(() => _showReceiverPhone = v ?? false),
+                                                  activeColor: const Color(0xFF059669),
+                                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  visualDensity: VisualDensity.compact,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              const Text('Phone', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                     KeyedSubtree(
                                       key: ValueKey('cnee_auto_$_partyAutocompleteEpoch'),
                                       child: Autocomplete<Consignee>(
@@ -1919,17 +1985,19 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                       },
                                       ),
                                     ),
-                                    const SizedBox(height: 10),
-                                    TextFormField(
-                                      controller: _receiverPhoneController,
-                                      decoration: InputDecoration(
-                                        labelText: 'Receiver Phone (B2C)',
-                                        hintText: _selectedConsignee?.phone ?? 'Enter mobile number',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.phone, size: 16),
+                                    if (_showReceiverPhone) ...[
+                                      const SizedBox(height: 10),
+                                      TextFormField(
+                                        controller: _receiverPhoneController,
+                                        decoration: InputDecoration(
+                                          labelText: 'Receiver Phone (B2C)',
+                                          hintText: _selectedConsignee?.phone ?? 'Enter mobile number',
+                                          border: const OutlineInputBorder(),
+                                          prefixIcon: const Icon(Icons.phone, size: 16),
+                                        ),
+                                        keyboardType: TextInputType.phone,
                                       ),
-                                      keyboardType: TextInputType.phone,
-                                    ),
+                                    ],
                                     const SizedBox(height: 10),
                                     Container(
                                       width: double.infinity,
@@ -2116,7 +2184,11 @@ class _GcEntryScreenState extends State<GcEntryScreen> {
                                         flex: 1,
                                         child: TextFormField(
                                           controller: row.articlesController,
-                                          decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12)),
+                                          decoration: const InputDecoration(
+                                            hintText: '0',
+                                            border: OutlineInputBorder(),
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                          ),
                                           keyboardType: TextInputType.number,
                                           onChanged: (_) => setState(() {}),
                                         ),
