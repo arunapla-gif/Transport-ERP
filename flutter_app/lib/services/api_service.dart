@@ -935,6 +935,23 @@ class ApiService {
     throw Exception('Failed to scan duplicate $endpoint');
   }
 
+  static Future<Map<String, dynamic>> mergeParties(
+      String endpoint, int keepId, List<int> mergeIds) async {
+    await _ensureAuth();
+    final uri = Uri.parse('$baseUrl/$endpoint/merge');
+    final response = await _client.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode({'keepId': keepId, 'mergeIds': mergeIds}),
+    );
+    _handleUnauthorized(response.statusCode);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200) {
+      return decoded;
+    }
+    throw Exception(decoded['error'] ?? 'Failed to merge $endpoint');
+  }
+
   static Future<void> restoreParty(String endpoint, int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/$endpoint/$id/restore');

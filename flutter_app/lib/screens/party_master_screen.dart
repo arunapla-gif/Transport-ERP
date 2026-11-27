@@ -1818,133 +1818,217 @@ class _PartyMasterScreenState extends State<PartyMasterScreen> {
   }
 
   Future<void> _showDuplicatesDialog() async {
+    Future<Map<String, dynamic>> scanFuture = ApiService.getPartyDuplicates(widget.endpoint);
+    bool isMerging = false;
+
     showDialog(
       context: context,
       builder: (ctx) {
-        return FutureBuilder<Map<String, dynamic>>(
-          future: ApiService.getPartyDuplicates(widget.endpoint),
-          builder: (context, snapshot) {
-            final label = _isConsignor ? 'Consignors' : 'Consignees';
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return AlertDialog(
-                title: Text('Scanning $label...'),
-                content: const SizedBox(
-                  height: 80,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              );
-            }
-            if (snapshot.hasError) {
-              return AlertDialog(
-                title: Text('Duplicate Scan Failed'),
-                content: Text(snapshot.error.toString()),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
-                ],
-              );
-            }
-            final data = snapshot.data ?? {};
-            final total = data['total'] ?? 0;
-            final dupGstin = (data['dupGstin'] as List?) ?? [];
-            final dupName = (data['dupName'] as List?) ?? [];
-            final hasDuplicates = dupGstin.isNotEmpty || dupName.isNotEmpty;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return FutureBuilder<Map<String, dynamic>>(
+              future: scanFuture,
+              builder: (context, snapshot) {
+                final label = _isConsignor ? 'Consignors' : 'Consignees';
+                if (snapshot.connectionState == ConnectionState.waiting || isMerging) {
+                  return AlertDialog(
+                    title: Text(isMerging ? 'Merging $label...' : 'Scanning $label...'),
+                    content: const SizedBox(
+                      height: 80,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return AlertDialog(
+                    title: const Text('Duplicate Scan Failed'),
+                    content: Text(snapshot.error.toString()),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+                    ],
+                  );
+                }
+                final data = snapshot.data ?? {};
+                final total = data['total'] ?? 0;
+                final dupGstin = (data['dupGstin'] as List?) ?? [];
+                final dupName = (data['dupName'] as List?) ?? [];
+                final hasDuplicates = dupGstin.isNotEmpty || dupName.isNotEmpty;
 
-            Widget buildGroupCard(String badge, Color badgeColor, Map<String, dynamic> group) {
-              final items = (group['items'] as List?) ?? [];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: badgeColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: Text(badge, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: badgeColor)),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            group['key']?.toString() ?? '',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                Future<void> handleMergeGroup(Map<String, dynamic> keepItem, List<dynamic> groupItems) async {
+                  final keepId = keepItem['id'] as int;
+                  final mergeIds = groupItems
+                      .map((e) => (e as Map<String, dynamic>)['id'] as int)
+                      .where((id) => id != keepId)
+                      .toList();
+                  if (mergeIds.isEmpty) return;
+
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (cCtx) => AlertDialog(
+                      title: const Text('Confirm Keep & Merge'),
+                      content: Text(
+                        'Keep "#$keepId ${keepItem['name']}" and permanently delete ${mergeIds.length} duplicate record(s)?\n\nAll linked GCs and payments from the deleted record(s) will be safely moved to #$keepId.',
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(cCtx, false), child: const Text('Cancel')),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), foregroundColor: Colors.white),
+                          onPressed: () => Navigator.pop(cCtx, true),
+                          child: const Text('Keep & Merge'),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    ...items.map((raw) {
-                      final m = raw as Map<String, dynamic>;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          '#${m['id']}  ${m['name']}  •  ${m['branch']}  •  ${(m['gstin'] ?? '').toString().isEmpty ? 'No GSTIN' : m['gstin']}  •  ${m['gcCount'] ?? 0} GCs${m['isActive'] == false ? ' (Archived)' : ''}',
-                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF334155)),
+                  );
+                  if (confirmed != true) return;
+
+                  setModalState(() => isMerging = true);
+                  try {
+                    final res = await ApiService.mergeParties(widget.endpoint, keepId, mergeIds);
+                    if (mounted) {
+                      _fetchParties(1);
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Merged ${res['deletedCount'] ?? mergeIds.length} duplicate(s) into #$keepId (${res['movedGcs'] ?? 0} GCs moved).',
+                          ),
+                          backgroundColor: const Color(0xFF059669),
                         ),
                       );
-                    }),
-                  ],
-                ),
-              );
-            }
+                    }
+                    setModalState(() {
+                      isMerging = false;
+                      scanFuture = ApiService.getPartyDuplicates(widget.endpoint);
+                    });
+                  } catch (e) {
+                    setModalState(() => isMerging = false);
+                    if (mounted) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(content: Text('Merge failed: $e'), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                }
 
-            return AlertDialog(
-              title: Row(
-                children: [
-                  Icon(
-                    hasDuplicates ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
-                    color: hasDuplicates ? const Color(0xFFD97706) : const Color(0xFF059669),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text('$label Duplicate Report')),
-                ],
-              ),
-              content: SizedBox(
-                width: 620,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Scanned $total live $label  •  ${dupGstin.length} duplicate GSTIN group(s)  •  ${dupName.length} duplicate Name group(s)',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
-                      ),
-                      const SizedBox(height: 12),
-                      if (!hasDuplicates)
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
-                          ),
-                          child: Text(
-                            'No duplicate $label found in the live database.',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF047857)),
-                          ),
-                        )
-                      else ...[
-                        ...dupGstin.map((g) => buildGroupCard('SAME GSTIN', const Color(0xFFD97706), g as Map<String, dynamic>)),
-                        ...dupName.map((g) => buildGroupCard('SAME NAME', const Color(0xFF4F46E5), g as Map<String, dynamic>)),
+                Widget buildGroupCard(String badge, Color badgeColor, Map<String, dynamic> group) {
+                  final items = (group['items'] as List?) ?? [];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Text(badge, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: badgeColor)),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                group['key']?.toString() ?? '',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...items.map((raw) {
+                          final m = raw as Map<String, dynamic>;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '#${m['id']}  ${m['name']}  •  ${m['branch']}  •  ${(m['gstin'] ?? '').toString().isEmpty ? 'No GSTIN' : m['gstin']}  •  ${m['gcCount'] ?? 0} GCs${m['isActive'] == false ? ' (Archived)' : ''}',
+                                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF334155)),
+                                  ),
+                                ),
+                                if (_canDelete && items.length > 1) ...[
+                                  const SizedBox(width: 8),
+                                  OutlinedButton(
+                                    onPressed: () => handleMergeGroup(m, items),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFF4F46E5),
+                                      backgroundColor: Colors.white,
+                                      side: const BorderSide(color: Color(0xFFC7D2FE)),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                    ),
+                                    child: const Text('Keep & Merge', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        }),
                       ],
+                    ),
+                  );
+                }
+
+                return AlertDialog(
+                  title: Row(
+                    children: [
+                      Icon(
+                        hasDuplicates ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
+                        color: hasDuplicates ? const Color(0xFFD97706) : const Color(0xFF059669),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('$label Duplicate Report')),
                     ],
                   ),
-                ),
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
-              ],
+                  content: SizedBox(
+                    width: 680,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Scanned $total live $label  •  ${dupGstin.length} duplicate GSTIN group(s)  •  ${dupName.length} duplicate Name group(s)',
+                            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 12),
+                          if (!hasDuplicates)
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFDF5),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFA7F3D0)),
+                              ),
+                              child: Text(
+                                'No duplicate $label found in the live database.',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF047857)),
+                              ),
+                            )
+                          else ...[
+                            ...dupGstin.map((g) => buildGroupCard('SAME GSTIN', const Color(0xFFD97706), g as Map<String, dynamic>)),
+                            ...dupName.map((g) => buildGroupCard('SAME NAME', const Color(0xFF4F46E5), g as Map<String, dynamic>)),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+                  ],
+                );
+              },
             );
           },
         );

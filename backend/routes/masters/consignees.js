@@ -148,6 +148,60 @@ router.get('/duplicates', async (req, res) => {
   }
 });
 
+router.post('/merge', async (req, res) => {
+  try {
+    const keepId = parseInt(req.body.keepId, 10);
+    const mergeIds = Array.isArray(req.body.mergeIds)
+      ? req.body.mergeIds.map(id => parseInt(id, 10)).filter(id => Number.isInteger(id) && id !== keepId)
+      : [];
+
+    if (!Number.isInteger(keepId) || mergeIds.length === 0) {
+      return res.status(400).json({ error: 'Valid keepId and non-empty mergeIds are required.' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const kept = await tx.consignee.findUnique({ where: { id: keepId } });
+      if (!kept) throw new Error('Target consignee not found');
+
+      const movedGcs = await tx.gC.updateMany({
+        where: { consigneeId: { in: mergeIds } },
+        data: { consigneeId: keepId }
+      });
+
+      const movedPayments = await tx.partyPayment.updateMany({
+        where: { partyType: 'Consignee', partyId: { in: mergeIds } },
+        data: { partyId: keepId }
+      });
+
+      await tx.consignee.updateMany({
+        where: { parentId: { in: mergeIds } },
+        data: { parentId: keepId }
+      });
+
+      await tx.consignee.update({
+        where: { id: keepId },
+        data: { isActive: true }
+      });
+
+      const deleted = await tx.consignee.deleteMany({
+        where: { id: { in: mergeIds } }
+      });
+
+      return {
+        keepId,
+        movedGcs: movedGcs.count,
+        movedPayments: movedPayments.count,
+        deletedCount: deleted.count
+      };
+    });
+
+    res.json({ status: 'ok', ...result });
+  } catch (error) {
+    console.error('Error merging consignees:', error);
+    res.status(500).json({ error: error.message || 'Failed to merge consignees' });
+  }
+});
+
 router.post('/', async (req, res) => {
   try {
     const { name, branch = 'MAIN', stateCode, ...rest } = req.body;

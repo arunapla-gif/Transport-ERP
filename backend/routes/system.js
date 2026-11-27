@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.21",
-      buildNumber: 22,
+      version: "1.0.22",
+      buildNumber: 23,
       forceUpdate: false,
-      releaseNotes: "• Masters: Added live Find Duplicates scanner for Consignor & Consignee Masters (GSTIN & Name groups)"
+      releaseNotes: "• Masters: Added safe 1-click Keep & Merge inside Find Duplicates (moves GCs & payments and removes duplicate rows)"
     },
     android: {
       version: "1.0.8",
