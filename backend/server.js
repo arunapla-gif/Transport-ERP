@@ -1,19 +1,9 @@
 require('dotenv').config();
-const { execSync } = require('child_process');
-
-// FORCE PRISMA GENERATE ON BOOT: Guarantees schema is updated on Render
-// even if Render ignores the package.json start script or postinstall hooks.
-try {
-  console.log('Forcing Prisma Client Generation on Startup...');
-  execSync('npx prisma generate', { stdio: 'inherit' });
-  console.log('Prisma Client Generation successful.');
-} catch (err) {
-  console.error('Prisma Client Generation failed:', err);
-}
 
 const express = require('express');
+const compression = require('compression');
 const cors = require('cors');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./db');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -66,24 +56,10 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {});
 });
-const prisma = new PrismaClient();
-
-// Auto-invalidate caches on any CUD operation for Master Data
-prisma.$use(async (params, next) => {
-  const result = await next(params);
-  
-  if (['create', 'update', 'delete', 'createMany', 'updateMany', 'deleteMany'].includes(params.action)) {
-    if (params.model === 'Consignor') invalidateCache('/api/consignors*');
-    if (params.model === 'Consignee') invalidateCache('/api/consignees*');
-    if (params.model === 'Vehicle') invalidateCache('/api/vehicles*');
-    if (params.model === 'Godown') invalidateCache('/api/godowns*');
-    if (params.model === 'UnitMaster') invalidateCache('/api/units*');
-  }
-  
-  return result;
-});
 const PORT = process.env.PORT || 5000;
 
+app.set('trust proxy', 1);
+app.use(compression());
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
 
 const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : null;
@@ -195,11 +171,13 @@ const authenticate = async (req, res, next) => {
         return res.status(403).json({ error: 'Session revoked. Please log in again.' });
       }
       
-      // Update last active time async (don't await to save latency)
-      prisma.session.update({
-        where: { token },
-        data: { lastActive: new Date() }
-      }).catch(() => {});
+      // Update last active time async at most once every 5 minutes to avoid DB write per request
+      if (!session.lastActive || (Date.now() - new Date(session.lastActive).getTime()) > 5 * 60 * 1000) {
+        prisma.session.update({
+          where: { token },
+          data: { lastActive: new Date() }
+        }).catch(() => {});
+      }
 
       req.user = { ...decoded, permissions: session.user.permissions };
       next();

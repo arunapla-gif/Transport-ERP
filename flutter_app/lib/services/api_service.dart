@@ -61,9 +61,35 @@ class ApiService {
     }
   }
 
+  static final http.Client _client = http.Client();
   static String? authToken;
   static String activeBranch = 'MAIN';
   static VoidCallback? onUnauthorized;
+
+  // In-memory TTL cache (5 min) for static/semi-static master lists
+  static const Duration _masterCacheTtl = Duration(minutes: 5);
+  static List<dynamic>? _godownsCache;
+  static DateTime? _godownsCacheTime;
+  static List<dynamic>? _hsnCache;
+  static DateTime? _hsnCacheTime;
+  static List<dynamic>? _companiesCache;
+  static DateTime? _companiesCacheTime;
+  static List<UnitModel>? _unitsCache;
+  static DateTime? _unitsCacheTime;
+
+  static void clearMasterCache() {
+    _godownsCache = null;
+    _godownsCacheTime = null;
+    _hsnCache = null;
+    _hsnCacheTime = null;
+    _companiesCache = null;
+    _companiesCacheTime = null;
+    _unitsCache = null;
+    _unitsCacheTime = null;
+  }
+
+  static bool _isCacheValid(DateTime? timestamp) =>
+      timestamp != null && DateTime.now().difference(timestamp) < _masterCacheTtl;
 
   static void _handleUnauthorized(int statusCode) {
     if (statusCode == 401) {
@@ -103,7 +129,7 @@ class ApiService {
 
   // Auth: Fetch Active Users for POS-style login
   static Future<List<dynamic>> getPublicUsers() async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('$baseUrl/public/users'),
       headers: {'Content-Type': 'application/json'},
     );
@@ -124,7 +150,7 @@ class ApiService {
   // Health Check
   static Future<bool> checkHealth() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/health')).timeout(const Duration(seconds: 5));
+      final response = await _client.get(Uri.parse('$baseUrl/health')).timeout(const Duration(seconds: 5));
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -135,7 +161,7 @@ class ApiService {
   static Future<List<Consignor>> getConsignors({String query = '', int limit = 5000}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/consignors?branch=$activeBranch&page=1&limit=$limit&q=${Uri.encodeComponent(query)}');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
@@ -150,7 +176,7 @@ class ApiService {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/consignors/$id' : '$baseUrl/consignors');
-    final method = isUpdate ? http.put : http.post;
+    final method = isUpdate ? _client.put : _client.post;
 
     final response = await method(uri, headers: _headers, body: jsonEncode(data));
     final decoded = jsonDecode(response.body);
@@ -164,7 +190,7 @@ class ApiService {
 
   static Future<void> deleteConsignor(int id) async {
     await _ensureAuth();
-    final response = await http.delete(Uri.parse('$baseUrl/consignors/$id'), headers: _headers);
+    final response = await _client.delete(Uri.parse('$baseUrl/consignors/$id'), headers: _headers);
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to delete consignor');
@@ -175,7 +201,7 @@ class ApiService {
   static Future<List<Consignee>> getConsignees({String query = '', int limit = 5000}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/consignees?branch=$activeBranch&page=1&limit=$limit&q=${Uri.encodeComponent(query)}');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
@@ -190,7 +216,7 @@ class ApiService {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/consignees/$id' : '$baseUrl/consignees');
-    final method = isUpdate ? http.put : http.post;
+    final method = isUpdate ? _client.put : _client.post;
 
     final response = await method(uri, headers: _headers, body: jsonEncode(data));
     final decoded = jsonDecode(response.body);
@@ -204,7 +230,7 @@ class ApiService {
 
   static Future<void> deleteConsignee(int id) async {
     await _ensureAuth();
-    final response = await http.delete(Uri.parse('$baseUrl/consignees/$id'), headers: _headers);
+    final response = await _client.delete(Uri.parse('$baseUrl/consignees/$id'), headers: _headers);
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to delete consignee');
@@ -215,7 +241,7 @@ class ApiService {
   static Future<List<Vehicle>> getVehicles({String query = '', int limit = 500}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/vehicles?page=1&limit=$limit&q=${Uri.encodeComponent(query)}');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     _handleUnauthorized(response.statusCode);
 
     if (response.statusCode == 200) {
@@ -231,7 +257,7 @@ class ApiService {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/vehicles/$id' : '$baseUrl/vehicles');
-    final method = isUpdate ? http.put : http.post;
+    final method = isUpdate ? _client.put : _client.post;
 
     final response = await method(uri, headers: _headers, body: jsonEncode(data));
     final decoded = jsonDecode(response.body);
@@ -245,7 +271,7 @@ class ApiService {
 
   static Future<void> deleteVehicle(int id) async {
     await _ensureAuth();
-    final response = await http.delete(Uri.parse('$baseUrl/vehicles/$id'), headers: _headers);
+    final response = await _client.delete(Uri.parse('$baseUrl/vehicles/$id'), headers: _headers);
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to delete vehicle');
@@ -256,7 +282,7 @@ class ApiService {
   static Future<List<Driver>> getDrivers({String query = ''}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/drivers?page=1&limit=50&q=$query');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
@@ -271,7 +297,7 @@ class ApiService {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/drivers/$id' : '$baseUrl/drivers');
-    final method = isUpdate ? http.put : http.post;
+    final method = isUpdate ? _client.put : _client.post;
 
     final response = await method(uri, headers: _headers, body: jsonEncode(data));
     final decoded = jsonDecode(response.body);
@@ -285,7 +311,7 @@ class ApiService {
 
   static Future<void> deleteDriver(int id) async {
     await _ensureAuth();
-    final response = await http.delete(Uri.parse('$baseUrl/drivers/$id'), headers: _headers);
+    final response = await _client.delete(Uri.parse('$baseUrl/drivers/$id'), headers: _headers);
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to delete driver');
@@ -296,7 +322,7 @@ class ApiService {
   static Future<String> getNextGcNumber({String mode = 'A'}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gcs/next-number?mode=$mode&branch=$activeBranch');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     _handleUnauthorized(response.statusCode);
 
     if (response.statusCode == 200) {
@@ -317,7 +343,7 @@ class ApiService {
     final uri = Uri.parse(
       '$baseUrl/gcs?branch=$activeBranch&page=$page&limit=$limit&searchQuery=${Uri.encodeComponent(query)}',
     );
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     _handleUnauthorized(response.statusCode);
 
     if (response.statusCode == 200) {
@@ -332,7 +358,7 @@ class ApiService {
   static Future<Gc> createGc(Map<String, dynamic> data) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gcs');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(data));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(data));
     final decoded = jsonDecode(response.body);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -345,7 +371,7 @@ class ApiService {
   static Future<Gc> updateGc(int id, Map<String, dynamic> data) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gcs/$id');
-    final response = await http.put(uri, headers: _headers, body: jsonEncode(data));
+    final response = await _client.put(uri, headers: _headers, body: jsonEncode(data));
     final decoded = jsonDecode(response.body);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -359,7 +385,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getReportAggregations(String queryParams) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/reports/aggregations?$queryParams');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -370,7 +396,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getReportGcs(String queryParams) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gcs?$queryParams');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -381,7 +407,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getReportGdms(String queryParams) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gdms?$queryParams');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -392,7 +418,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getGcDetails(String gcNumber) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gcs/$gcNumber');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -404,7 +430,7 @@ class ApiService {
     await _ensureAuth();
     final query = company != null && company.isNotEmpty ? '?company=$company' : '';
     final uri = Uri.parse('$baseUrl/ewaybill/$ewbNumber$query');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -420,7 +446,7 @@ class ApiService {
       'currentCompany': currentCompany,
       'targetCompany': targetCompany,
     });
-    final response = await http.post(uri, headers: _headers, body: body);
+    final response = await _client.post(uri, headers: _headers, body: body);
     if (response.statusCode != 200) {
       throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to reassign transporter');
     }
@@ -430,7 +456,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getNextGdmNumber(String companyMode) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gdms/next-number?branch=$activeBranch&mode=$companyMode');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     _handleUnauthorized(response.statusCode);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -442,7 +468,7 @@ class ApiService {
   static Future<List<dynamic>> getRecentGdms({int page = 1, int limit = 10, String query = ''}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gdms?branch=$activeBranch&page=$page&limit=$limit&searchQuery=${Uri.encodeComponent(query)}');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded['data'] ?? [];
@@ -454,7 +480,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getGdmDetails(String gdmNumber) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gdms/$gdmNumber');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -470,7 +496,7 @@ class ApiService {
   static Future<Map<String, dynamic>> fetchGcRaw(String gcNumber) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gcs/$gcNumber');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -482,7 +508,7 @@ class ApiService {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/gdms/$id' : '$baseUrl/gdms');
-    final method = isUpdate ? http.put : http.post;
+    final method = isUpdate ? _client.put : _client.post;
 
     final response = await method(uri, headers: _headers, body: jsonEncode(data));
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -494,7 +520,7 @@ class ApiService {
   static Future<Map<String, dynamic>> verifyDL(String dlNumber, String dob) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/fastag/dl');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode({
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode({
       'dlNumber': dlNumber.replaceAll(RegExp(r'[\s-]'), ''),
       'dob': dob,
     }));
@@ -507,12 +533,18 @@ class ApiService {
   }
 
   // --- Godowns ---
-  static Future<List<dynamic>> getGodowns() async {
+  static Future<List<dynamic>> getGodowns({bool forceRefresh = false}) async {
+    if (!forceRefresh && _godownsCache != null && _isCacheValid(_godownsCacheTime)) {
+      return List<dynamic>.from(_godownsCache!);
+    }
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/godowns');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) ?? [];
+      final list = List<dynamic>.from(jsonDecode(response.body) ?? []);
+      _godownsCache = list;
+      _godownsCacheTime = DateTime.now();
+      return List<dynamic>.from(list);
     } else {
       throw Exception('Failed to fetch godowns');
     }
@@ -521,36 +553,39 @@ class ApiService {
   static Future<void> createGodown(Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/godowns');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to create godown');
     }
+    _godownsCache = null;
   }
 
   static Future<void> updateGodown(int id, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/godowns/$id');
-    final response = await http.put(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.put(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to update godown');
     }
+    _godownsCache = null;
   }
 
   static Future<void> deleteGodown(int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/godowns/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _client.delete(uri, headers: _headers);
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Failed to delete godown');
     }
+    _godownsCache = null;
   }
 
   // --- Pincode ---
   static Future<List<dynamic>> verifyPincode(String pincode) async {
     final uri = Uri.parse('https://api.postalpincode.in/pincode/$pincode');
-    final response = await http.get(uri);
+    final response = await _client.get(uri);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       if (decoded.isNotEmpty && decoded[0]['Status'] == 'Success') {
@@ -567,7 +602,7 @@ class ApiService {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/warehouse-inward/$id' : '$baseUrl/warehouse-inward');
-    final method = isUpdate ? http.put : http.post;
+    final method = isUpdate ? _client.put : _client.post;
 
     final response = await method(uri, headers: _headers, body: jsonEncode(data));
     final decoded = jsonDecode(response.body);
@@ -581,7 +616,7 @@ class ApiService {
   static Future<List<dynamic>> getRecentWarehouseInward({int limit = 1}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/warehouse-inward?limit=$limit');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       if (decoded is Map && decoded['data'] != null) {
@@ -596,7 +631,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getWarehouseStatement({required String date, int page = 1, int limit = 50}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/warehouse-inward?date=$date&page=$page&limit=$limit');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic>) {
@@ -613,7 +648,7 @@ class ApiService {
   static Future<void> deleteWarehouseInward(int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/warehouse-inward/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _client.delete(uri, headers: _headers);
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to delete warehouse inward entry');
@@ -625,7 +660,7 @@ class ApiService {
   static Future<List<dynamic>> getTrips() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/trips');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body) ?? [];
     } else {
@@ -636,7 +671,7 @@ class ApiService {
   static Future<Map<String, dynamic>> saveTrip(Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/trips');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     final decoded = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
       return decoded;
@@ -648,7 +683,7 @@ class ApiService {
   static Future<List<dynamic>> getGdmsUnassigned() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gdms-unassigned');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body) ?? [];
     } else {
@@ -660,7 +695,7 @@ class ApiService {
   static Future<List<dynamic>> getPendingGdmsForCewb(String branch) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gdms/pending-cewb?branch=$branch');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body) ?? [];
     } else {
@@ -671,7 +706,7 @@ class ApiService {
   static Future<void> bulkVerifyEwaybills(List<Map<String, dynamic>> ewbs) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/ewaybill/bulk-verify');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode({'ewbs': ewbs}));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode({'ewbs': ewbs}));
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to bulk verify E-Way bills');
@@ -681,7 +716,7 @@ class ApiService {
   static Future<void> bulkHealEwaybills(List<dynamic> gcs, String vehicleNo) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/ewaybill/bulk-heal');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode({'gcs': gcs, 'vehicleNo': vehicleNo}));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode({'gcs': gcs, 'vehicleNo': vehicleNo}));
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to auto-heal E-Way bills');
@@ -691,7 +726,7 @@ class ApiService {
   static Future<Map<String, dynamic>> generateCewb(String company, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/ewaybill/cewb?company=$company');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
@@ -703,7 +738,7 @@ class ApiService {
   static Future<void> attachMasterCewb(List<int> gdmIds, String cewbNumber) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gdms/attach-master-cewb');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode({
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode({
       'gdmIds': gdmIds,
       'cewbNumber': cewbNumber
     }));
@@ -713,13 +748,19 @@ class ApiService {
   }
 
   // --- HSN ---
-  static Future<List<dynamic>> getHsnList() async {
+  static Future<List<dynamic>> getHsnList({bool forceRefresh = false}) async {
+    if (!forceRefresh && _hsnCache != null && _isCacheValid(_hsnCacheTime)) {
+      return List<dynamic>.from(_hsnCache!);
+    }
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/hsn');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      return decoded is List ? decoded : [];
+      final list = decoded is List ? List<dynamic>.from(decoded) : <dynamic>[];
+      _hsnCache = list;
+      _hsnCacheTime = DateTime.now();
+      return List<dynamic>.from(list);
     } else {
       throw Exception('Failed to fetch HSN list');
     }
@@ -728,37 +769,40 @@ class ApiService {
   static Future<void> createHsn(Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/hsn');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to create HSN');
     }
+    _hsnCache = null;
   }
 
   static Future<void> updateHsn(int id, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/hsn/$id');
-    final response = await http.put(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.put(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to update HSN');
     }
+    _hsnCache = null;
   }
 
   static Future<void> deleteHsn(int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/hsn/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _client.delete(uri, headers: _headers);
     if (response.statusCode != 200 && response.statusCode != 204) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to delete HSN');
     }
+    _hsnCache = null;
   }
 
   static Future<Map<String, dynamic>> settleTrip(int tripId, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/trips/$tripId/settle');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     final decoded = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
       return decoded;
@@ -770,7 +814,7 @@ class ApiService {
   static Future<Map<String, dynamic>> saveFreightBill(Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/freight-bills');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     final decoded = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
       return decoded;
@@ -782,7 +826,7 @@ class ApiService {
   static Future<Map<String, dynamic>> updateGcFreight(int id, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/gcs/$id/freight');
-    final response = await http.put(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.put(uri, headers: _headers, body: jsonEncode(payload));
     final decoded = jsonDecode(response.body);
     if (response.statusCode == 200) {
       return decoded is Map<String, dynamic> ? decoded : {};
@@ -796,7 +840,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getPartyLedger(String partyType, String partyId, {int page = 1, int limit = 50}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/party-ledger/$partyType/$partyId?page=$page&limit=$limit');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body) ?? {};
     } else {
@@ -807,7 +851,7 @@ class ApiService {
   static Future<void> savePartyPayment(Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/party-payments');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to record payment');
@@ -819,7 +863,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getDriversPaginated({int page = 1, int limit = 50, String q = ''}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/drivers?page=$page&limit=$limit&q=${Uri.encodeComponent(q)}');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded;
@@ -831,7 +875,7 @@ class ApiService {
   static Future<void> createDriver(Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/drivers');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to create driver');
@@ -841,7 +885,7 @@ class ApiService {
   static Future<void> updateDriver(int id, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/drivers/$id');
-    final response = await http.put(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.put(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to update driver');
@@ -858,7 +902,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getPartiesPaginated(String endpoint, {int page = 1, int limit = 50, String q = ''}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/$endpoint?branch=$activeBranch&page=$page&limit=$limit&q=${Uri.encodeComponent(q)}');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     _handleUnauthorized(response.statusCode);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
@@ -883,7 +927,7 @@ class ApiService {
   static Future<void> restoreParty(String endpoint, int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/$endpoint/$id/restore');
-    final response = await http.put(uri, headers: _headers);
+    final response = await _client.put(uri, headers: _headers);
     _handleUnauthorized(response.statusCode);
     if (response.statusCode != 200) {
       throw Exception('Failed to restore party');
@@ -893,7 +937,7 @@ class ApiService {
   static Future<Map<String, dynamic>> trackVehicleFastag(String vehicleNumber) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/fastag/track');
-    final response = await http.post(
+    final response = await _client.post(
       uri,
       headers: _headers,
       body: jsonEncode({'vehicleNumber': vehicleNumber}),
@@ -910,7 +954,7 @@ class ApiService {
   static Future<void> createParty(String endpoint, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/$endpoint');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to create party');
@@ -920,7 +964,7 @@ class ApiService {
   static Future<void> updateParty(String endpoint, int id, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/$endpoint/$id');
-    final response = await http.put(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.put(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to update party');
@@ -930,7 +974,7 @@ class ApiService {
   static Future<void> deleteParty(String endpoint, int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/$endpoint/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _client.delete(uri, headers: _headers);
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Failed to delete party');
     }
@@ -939,7 +983,7 @@ class ApiService {
   static Future<Map<String, dynamic>> verifyGST(String gstin) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/appyflow-gst/$gstin');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -957,13 +1001,19 @@ class ApiService {
   }
 
   // --- Company Master ---
-  static Future<List<dynamic>> getCompanies() async {
+  static Future<List<dynamic>> getCompanies({bool forceRefresh = false}) async {
+    if (!forceRefresh && _companiesCache != null && _isCacheValid(_companiesCacheTime)) {
+      return List<dynamic>.from(_companiesCache!);
+    }
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/companies');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      return decoded is List ? decoded : [];
+      final list = decoded is List ? List<dynamic>.from(decoded) : <dynamic>[];
+      _companiesCache = list;
+      _companiesCacheTime = DateTime.now();
+      return List<dynamic>.from(list);
     } else {
       throw Exception('Failed to fetch companies');
     }
@@ -973,10 +1023,12 @@ class ApiService {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/companies/$id' : '$baseUrl/companies');
-    final method = isUpdate ? http.put : http.post;
-    final response = await method(uri, headers: _headers, body: jsonEncode(data));
+    final response = isUpdate
+        ? await _client.put(uri, headers: _headers, body: jsonEncode(data))
+        : await _client.post(uri, headers: _headers, body: jsonEncode(data));
     final decoded = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
+      _companiesCache = null;
       return decoded is Map<String, dynamic> ? decoded : {};
     } else {
       throw Exception(decoded['error'] ?? 'Failed to save company');
@@ -986,11 +1038,12 @@ class ApiService {
   static Future<void> deleteCompany(int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/companies/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _client.delete(uri, headers: _headers);
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to delete company');
     }
+    _companiesCache = null;
   }
 
 
@@ -998,7 +1051,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getDailyTransactions({int page = 1, int limit = 50}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/daily-transactions?page=$page&limit=$limit');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body) ?? {};
     } else {
@@ -1009,7 +1062,7 @@ class ApiService {
   static Future<void> saveDailyTransaction(Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/daily-transactions');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to record transaction');
@@ -1019,7 +1072,7 @@ class ApiService {
   static Future<void> deleteDailyTransaction(int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/daily-transactions/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _client.delete(uri, headers: _headers);
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Failed to delete transaction');
     }
@@ -1029,7 +1082,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getVehiclesPaginated({int page = 1, int limit = 50, String q = ''}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/vehicles?page=$page&limit=$limit&q=${Uri.encodeComponent(q)}');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is Map<String, dynamic> ? decoded : {'data': decoded, 'hasMore': false, 'total': (decoded as List).length};
@@ -1041,7 +1094,7 @@ class ApiService {
   static Future<void> createVehicle(Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/vehicles');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to create vehicle');
@@ -1051,7 +1104,7 @@ class ApiService {
   static Future<void> updateVehicle(int id, Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/vehicles/$id');
-    final response = await http.put(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.put(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode != 200) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to update vehicle');
@@ -1063,7 +1116,7 @@ class ApiService {
   static Future<Map<String, dynamic>> fetchRcDetails(String vehicleNumber) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/fastag/rc');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode({'vehicleNumber': vehicleNumber}));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode({'vehicleNumber': vehicleNumber}));
     final decoded = jsonDecode(response.body);
     if (response.statusCode == 200) {
       return decoded['data'] ?? decoded;
@@ -1073,14 +1126,20 @@ class ApiService {
   }
 
   // --- UNITS ---
-  static Future<List<UnitModel>> getUnits() async {
+  static Future<List<UnitModel>> getUnits({bool forceRefresh = false}) async {
+    if (!forceRefresh && _unitsCache != null && _isCacheValid(_unitsCacheTime)) {
+      return List<UnitModel>.from(_unitsCache!);
+    }
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/units');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       final List rawList = decoded is List ? decoded : (decoded['data'] ?? []);
-      return rawList.map((item) => UnitModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      final list = rawList.map((item) => UnitModel.fromJson(Map<String, dynamic>.from(item))).toList();
+      _unitsCache = list;
+      _unitsCacheTime = DateTime.now();
+      return List<UnitModel>.from(list);
     } else {
       return [];
     }
@@ -1090,9 +1149,11 @@ class ApiService {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/units/$id' : '$baseUrl/units');
-    final method = isUpdate ? http.put : http.post;
-    final response = await method(uri, headers: _headers, body: jsonEncode(data));
+    final response = isUpdate
+        ? await _client.put(uri, headers: _headers, body: jsonEncode(data))
+        : await _client.post(uri, headers: _headers, body: jsonEncode(data));
     if (response.statusCode == 200 || response.statusCode == 201) {
+      _unitsCache = null;
       final decoded = jsonDecode(response.body);
       return decoded is Map<String, dynamic> ? decoded : {};
     } else {
@@ -1104,18 +1165,19 @@ class ApiService {
   static Future<void> deleteUnit(int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/units/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _client.delete(uri, headers: _headers);
     if (response.statusCode != 200 && response.statusCode != 204) {
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : {};
       throw Exception(decoded['error'] ?? 'Failed to delete unit');
     }
+    _unitsCache = null;
   }
 
   // --- ADMIN & SESSIONS ---
   static Future<List<dynamic>> getAdminUsers() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/admin/users');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is List ? decoded : [];
@@ -1129,7 +1191,7 @@ class ApiService {
     await _ensureAuth();
     final isUpdate = id != null && id > 0;
     final uri = Uri.parse(isUpdate ? '$baseUrl/admin/users/$id' : '$baseUrl/admin/users');
-    final method = isUpdate ? http.put : http.post;
+    final method = isUpdate ? _client.put : _client.post;
     final response = await method(uri, headers: _headers, body: jsonEncode(data));
     final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : {};
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -1142,7 +1204,7 @@ class ApiService {
   static Future<void> deleteAdminUser(int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/admin/users/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _client.delete(uri, headers: _headers);
     if (response.statusCode != 200 && response.statusCode != 204) {
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : {};
       throw Exception(decoded['error'] ?? 'Failed to delete user');
@@ -1152,7 +1214,7 @@ class ApiService {
   static Future<List<dynamic>> getAdminSessions() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/admin/sessions');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is List ? decoded : [];
@@ -1165,7 +1227,7 @@ class ApiService {
   static Future<void> revokeAdminSession(int id) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/admin/sessions/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _client.delete(uri, headers: _headers);
     if (response.statusCode != 200 && response.statusCode != 204) {
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : {};
       throw Exception(decoded['error'] ?? 'Failed to revoke session');
@@ -1186,7 +1248,7 @@ class ApiService {
       if (action != null && action != 'ALL') 'action': action,
     };
     final uri = Uri.parse('$baseUrl/audit-logs').replace(queryParameters: queryParams);
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is List ? decoded : [];
@@ -1200,7 +1262,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getSystemHealth() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/system/health');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is Map<String, dynamic> ? decoded : {};
@@ -1212,7 +1274,7 @@ class ApiService {
   static Future<List<dynamic>> getSystemHealthHistory() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/system/health/history');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic> && decoded['data'] is List) {
@@ -1227,7 +1289,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getUsageStats() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/usage/stats');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is Map<String, dynamic> ? decoded : {};
@@ -1239,7 +1301,7 @@ class ApiService {
   static Future<Map<String, dynamic>> runSandboxTest() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/usage/sandbox-test');
-    final response = await http.post(uri, headers: _headers);
+    final response = await _client.post(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is Map<String, dynamic> ? decoded : {};
@@ -1253,7 +1315,7 @@ class ApiService {
   static Future<List<dynamic>> getGodownStock() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/godown-stock');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is List ? decoded : [];
@@ -1265,7 +1327,7 @@ class ApiService {
   static Future<Map<String, dynamic>> queryGodownAi(Map<String, dynamic> payload) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/godown-ai');
-    final response = await http.post(uri, headers: _headers, body: jsonEncode(payload));
+    final response = await _client.post(uri, headers: _headers, body: jsonEncode(payload));
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is Map<String, dynamic> ? decoded : {};
@@ -1279,7 +1341,7 @@ class ApiService {
   static Future<List<String>> getLegacyCompanies() async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/legacy-mdb/companies');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       final raw = decoded['companies'];
@@ -1296,7 +1358,7 @@ class ApiService {
     await _ensureAuth();
     final encoded = Uri.encodeComponent(company);
     final uri = Uri.parse('$baseUrl/legacy-mdb/$encoded/financial-years');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       final raw = decoded['years'];
@@ -1314,7 +1376,7 @@ class ApiService {
     final encComp = Uri.encodeComponent(company);
     final query = (fy != null && fy.isNotEmpty) ? '?fy=${Uri.encodeComponent(fy)}' : '';
     final uri = Uri.parse('$baseUrl/legacy-mdb/$encComp/$tab$query');
-    final response = await http.get(uri, headers: _headers);
+    final response = await _client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       final data = decoded['data'];
@@ -1327,7 +1389,7 @@ class ApiService {
   // --- Remote Scanner Hub ---
   static Future<void> pushRemoteScan(String code, String data) async {
     final uri = Uri.parse('$baseUrl/scanner/push');
-    final response = await http.post(
+    final response = await _client.post(
       uri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'code': code, 'data': data}),
@@ -1340,7 +1402,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> pollRemoteScan(String code) async {
     final uri = Uri.parse('$baseUrl/scanner/poll?code=${Uri.encodeComponent(code)}');
-    final response = await http.get(uri);
+    final response = await _client.get(uri);
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
       return decoded is Map<String, dynamic> ? decoded : {};

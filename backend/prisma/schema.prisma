@@ -35,6 +35,8 @@ model Consignor {
   gcs      GC[]
   
   @@unique([name, branch])
+  @@index([branch])
+  @@index([branch, isActive])
   @@index([name])
   @@index([gstin])
   @@index([phone])
@@ -69,6 +71,8 @@ model Consignee {
   
   @@unique([name, branch])
   @@index([parentId])
+  @@index([branch])
+  @@index([branch, isActive])
   @@index([name])
   @@index([gstin])
   @@index([phone])
@@ -132,6 +136,8 @@ model Driver {
   vehicleClasses  Json?     @default("[]")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@index([updatedAt])
 }
 
 model GC {
@@ -325,6 +331,7 @@ model FreightBill {
   
   @@index([date])
   @@index([status])
+  @@index([branch])
 }
 
 model Company {
@@ -360,6 +367,8 @@ model Branch {
   status          String?   @default("Active")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@index([updatedAt])
 }
 
 model DailyTransaction {
@@ -372,6 +381,10 @@ model DailyTransaction {
   description String?
   reference   String?  // Bill number, receipt, etc.
   branch      String?  @default("MAIN")
+
+  @@index([date])
+  @@index([type])
+  @@index([branch, date])
 }
 
 model PartyPayment {
@@ -384,6 +397,9 @@ model PartyPayment {
   reference   String?  // UTR number, etc.
   remarks     String?
   branch      String?  @default("MAIN")
+
+  @@index([partyType, partyId])
+  @@index([branch, date])
 }
 
 model WarehouseInward {
@@ -401,6 +417,7 @@ model WarehouseInward {
   
   @@index([ewayBillNo])
   @@index([createdAt])
+  @@index([branch, createdAt])
 }
 
 model ApiUsageLog {
@@ -410,6 +427,8 @@ model ApiUsageLog {
   apiName   String   // e.g., "E-Way Bill Fetch", "RC Verification", "Database Read"
   status    String   // "Success", "Failed"
   cost      Float?   @default(0) // 0 if free, else exact amount in INR
+
+  @@index([timestamp])
 }
 
 model LegacyMaster {
@@ -467,6 +486,9 @@ model AuditLog {
   entity      String
   entityId    String
   details     String?
+
+  @@index([createdAt])
+  @@index([entity, action])
 }
 
 model User {
@@ -478,6 +500,8 @@ model User {
   branch    String    // 'MAIN', 'AP_BNG', or 'ALL'
   status    String    @default("Active")
   sessions  Session[]
+
+  @@index([status])
 }
 
 model Session {
@@ -489,6 +513,7 @@ model Session {
   lastActive DateTime @default(now())
   
   @@index([userId])
+  @@index([lastActive])
 }
 
 model SystemHealthLog {
@@ -498,4 +523,6 @@ model SystemHealthLog {
   dbPing    Int
   uptime    Int
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

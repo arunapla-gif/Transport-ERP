@@ -3,9 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../db');
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'c7e954fa0f3a61c77843d1a3b83ef69b46e387c9d7495b5fa0b467ecbc337894' : null);
 if (!JWT_SECRET) {
   console.error("FATAL ERROR: JWT_SECRET environment variable is strictly required.");

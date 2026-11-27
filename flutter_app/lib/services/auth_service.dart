@@ -57,6 +57,7 @@ class AuthService {
   static Future<void> setActiveBranch(String branch) async {
     _activeBranch = branch;
     ApiService.activeBranch = branch;
+    ApiService.clearMasterCache();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyBranch, branch);
@@ -107,6 +108,7 @@ class AuthService {
     _role = 'worker';
     ApiService.authToken = null;
     ApiService.activeBranch = 'MAIN';
+    ApiService.clearMasterCache();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyToken);

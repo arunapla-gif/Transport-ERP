@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 const logApiUsage = async (provider, apiName, status, cost = 0) => {
   try {
