@@ -1003,46 +1003,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           const SizedBox(width: 12),
 
-          // Station Pill with Live Indicator & Branch Switcher
-          InkWell(
-            onTap: AuthService.isAdmin ? _showBranchSwitcher : null,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.15),
+          // Station Pill with Live Indicator & Branch Color Coding
+          Builder(
+            builder: (context) {
+              final bool isApBng = AuthService.activeBranch.toUpperCase() == 'AP_BNG';
+              final Color badgeColor = isApBng ? const Color(0xFFF59E0B) : const Color(0xFF10B981);
+              final Color textColor = isApBng ? const Color(0xFFFDE68A) : const Color(0xFF86EFAC);
+              return InkWell(
+                onTap: AuthService.isAdmin ? _showBranchSwitcher : null,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: badgeColor.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: badgeColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isApBng ? 'AP BNG' : 'MAIN',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: textColor,
+                        ),
+                      ),
+                      if (AuthService.isAdmin) ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.swap_horiz_rounded, size: 13, color: textColor),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF22C55E),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    AuthService.activeBranch,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF86EFAC),
-                    ),
-                  ),
-                  if (AuthService.isAdmin) ...[
-                    const SizedBox(width: 4),
-                    const Icon(Icons.swap_horiz_rounded, size: 13, color: Color(0xFF86EFAC)),
-                  ],
-                ],
-              ),
-            ),
+              );
+            },
           ),
 
           const SizedBox(width: 16),

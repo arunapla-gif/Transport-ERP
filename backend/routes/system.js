@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.8",
-      buildNumber: 9,
+      version: "1.0.9",
+      buildNumber: 10,
       forceUpdate: false,
-      releaseNotes: "• Unified Dashboard desktop header into a single compact 58px bar"
+      releaseNotes: "• Login: Last-used profile highlight, physical keyboard PIN, Retry button\n• System Boot: Real health latency & auto-enter for operators\n• Dashboard: Distinct MAIN / AP BNG branch color badges"
     },
     android: {
       version: "1.0.8",

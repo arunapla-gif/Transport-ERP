@@ -21,6 +21,7 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
   BootState _authState = BootState.pending;
 
   String? _errorMessage;
+  int? _healthLatencyMs;
   bool _isBootComplete = false;
 
   @override
@@ -32,6 +33,7 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
   Future<void> _runBootSequence() async {
     setState(() {
       _errorMessage = null;
+      _healthLatencyMs = null;
       _networkState = BootState.pending;
       _serverState = BootState.pending;
       _databaseState = BootState.pending;
@@ -42,28 +44,31 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
     try {
       // 1. Check Local Internet Connection
       setState(() => _networkState = BootState.loading);
-      await Future.delayed(const Duration(milliseconds: 220));
+      await Future.delayed(const Duration(milliseconds: 80));
       if (!mounted) return;
       setState(() => _networkState = BootState.success);
 
-      // 2. Check Secure Server Connection
-      setState(() => _serverState = BootState.loading);
-      await Future.delayed(const Duration(milliseconds: 250));
-      if (!mounted) return;
-      setState(() => _serverState = BootState.success);
-
-      // 3. Check Core Database Integrity (/health)
-      setState(() => _databaseState = BootState.loading);
+      // 2. Check Secure Server Connection & Core Database Integrity (/health)
+      setState(() {
+        _serverState = BootState.loading;
+        _databaseState = BootState.loading;
+      });
+      final sw = Stopwatch()..start();
       final bool isHealthy = await ApiService.checkHealth();
+      sw.stop();
       if (!isHealthy) {
         throw Exception('Database Timeout');
       }
       if (!mounted) return;
-      setState(() => _databaseState = BootState.success);
+      setState(() {
+        _serverState = BootState.success;
+        _databaseState = BootState.success;
+        _healthLatencyMs = sw.elapsedMilliseconds;
+      });
 
-      // 4. Check Authentication Keys
+      // 3. Check Authentication Keys
       setState(() => _authState = BootState.loading);
-      await Future.delayed(const Duration(milliseconds: 250));
+      await Future.delayed(const Duration(milliseconds: 80));
       if (ApiService.authToken == null) {
         throw Exception('Invalid Session Key');
       }
@@ -72,6 +77,16 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
         _authState = BootState.success;
         _isBootComplete = true;
       });
+
+      // Auto-enter workspace for non-admin operators once all checks pass
+      if (!widget.isAdmin) {
+        await Future.delayed(const Duration(milliseconds: 450));
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          );
+        }
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -151,6 +166,9 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
                   label: 'Core Database Integrity',
                   state: _databaseState,
                   icon: Icons.storage_rounded,
+                  successText: _healthLatencyMs != null
+                      ? 'Connected and Online • ${_healthLatencyMs}ms'
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 _buildCheckItem(
@@ -268,6 +286,7 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
     required String label,
     required BootState state,
     required IconData icon,
+    String? successText,
   }) {
     late Color bgColor;
     late Color borderColor;
@@ -283,7 +302,7 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
         iconBgColor = const Color(0xFFD1FAE5);
         textColor = const Color(0xFF047857);
         leadingWidget = const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF047857), size: 20);
-        subText = 'Connected and Online';
+        subText = successText ?? 'Connected and Online';
         break;
       case BootState.error:
         bgColor = const Color(0xFFFFF1F2);

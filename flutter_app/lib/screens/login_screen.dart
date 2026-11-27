@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/update_service.dart';
@@ -26,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
   List<dynamic> _users = [];
   bool _isLoadingUsers = true;
   String? _errorMessage;
+  String? _lastUserId;
+  final FocusNode _pinFocusNode = FocusNode();
 
   Map<String, dynamic>? _selectedUser;
   String _pin = '';
@@ -37,8 +41,20 @@ class _LoginScreenState extends State<LoginScreen> {
     _fetchUsers();
   }
 
+  @override
+  void dispose() {
+    _pinFocusNode.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchUsers() async {
+    setState(() {
+      _isLoadingUsers = true;
+      _errorMessage = null;
+    });
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedLastId = prefs.getString('last_login_user_id');
       final users = await ApiService.getPublicUsers();
       final hasAdminFallback = users.any((u) => u['id']?.toString() == 'admin');
       final fullList = [
@@ -46,16 +62,24 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!hasAdminFallback)
           {'id': 'admin', 'username': 'System Admin', 'role': 'admin', 'branch': 'ALL'},
       ];
+      if (savedLastId != null) {
+        fullList.sort((a, b) {
+          final aMatch = a['id']?.toString() == savedLastId ? 0 : 1;
+          final bMatch = b['id']?.toString() == savedLastId ? 0 : 1;
+          return aMatch.compareTo(bMatch);
+        });
+      }
       if (mounted) {
         setState(() {
+          _lastUserId = savedLastId;
           _users = fullList;
           _isLoadingUsers = false;
         });
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Connection error. Is the server running? ($e)';
+          _errorMessage = 'Unable to reach server. Check your connection or server URL.';
           _isLoadingUsers = false;
         });
       }
@@ -67,6 +91,9 @@ class _LoginScreenState extends State<LoginScreen> {
       _selectedUser = user;
       _pin = '';
       _errorMessage = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _pinFocusNode.requestFocus();
     });
   }
 
@@ -111,6 +138,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await AuthService.login(_selectedUser!['id'], _pin);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('last_login_user_id', _selectedUser!['id'].toString());
+      } catch (_) {}
       if (mounted) {
         final role = (_selectedUser!['role'] ?? '').toString().toUpperCase();
         final branch = (_selectedUser!['branch'] ?? '').toString().toUpperCase();
@@ -504,15 +535,30 @@ class _LoginScreenState extends State<LoginScreen> {
           )
         else if (_errorMessage != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFFFB7185),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              children: [
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFFFB7185),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _fetchUsers,
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Retry Connection', style: TextStyle(fontWeight: FontWeight.w700)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFC7D2FE),
+                    side: BorderSide(color: _indigo500.withValues(alpha: 0.5)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
             ),
           )
         else
@@ -524,7 +570,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisCount: isDesktop ? 3 : 2,
                 crossAxisSpacing: 14,
                 mainAxisSpacing: 14,
-                childAspectRatio: 1.05,
+                childAspectRatio: 1.02,
               ),
               itemCount: _users.length,
               itemBuilder: (context, index) {
@@ -532,6 +578,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 final String username = (u['username'] ?? 'User').toString();
                 final String role = (u['role'] ?? 'worker').toString();
                 final bool isAdmin = role.toLowerCase() == 'admin';
+                final bool isLastUsed = _lastUserId != null && u['id']?.toString() == _lastUserId;
 
                 return Material(
                   color: _stone800,
@@ -544,14 +591,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: _stone700),
+                        border: Border.all(
+                          color: isLastUsed ? _indigo500 : _stone700,
+                          width: isLastUsed ? 1.6 : 1,
+                        ),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            width: 48,
-                            height: 48,
+                            width: 46,
+                            height: 46,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isAdmin
@@ -560,13 +610,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: Icon(
                               Icons.account_circle_outlined,
-                              size: 28,
+                              size: 27,
                               color: isAdmin
                                   ? const Color(0xFFFBBF24)
                                   : const Color(0xFF818CF8),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
                           Text(
                             username,
                             maxLines: 1,
@@ -588,6 +638,25 @@ class _LoginScreenState extends State<LoginScreen> {
                               letterSpacing: 0.8,
                             ),
                           ),
+                          if (isLastUsed) ...[
+                            const SizedBox(height: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: _indigo500.withValues(alpha: 0.22),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'LAST USED',
+                                style: TextStyle(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFC7D2FE),
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -606,10 +675,31 @@ class _LoginScreenState extends State<LoginScreen> {
     final bool isAdmin = role.toLowerCase() == 'admin';
     final bool canSubmit = _pin.length == 4 && !_isAuthenticating;
 
-    return Column(
+    return Focus(
       key: ValueKey('pin-$username'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
+      focusNode: _pinFocusNode,
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        final key = event.logicalKey;
+        if (key == LogicalKeyboardKey.backspace) {
+          _handleDelete();
+          return KeyEventResult.handled;
+        }
+        if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
+          if (_pin.length == 4 && !_isAuthenticating) _handleLogin();
+          return KeyEventResult.handled;
+        }
+        final ch = event.character;
+        if (ch != null && ch.length == 1 && ch.codeUnitAt(0) >= 48 && ch.codeUnitAt(0) <= 57) {
+          _handleKeyPress(ch);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
@@ -756,7 +846,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 
