@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.23",
-      buildNumber: 24,
+      version: "1.0.24",
+      buildNumber: 25,
       forceUpdate: false,
-      releaseNotes: "• GDM Entry: Branch-safe save, Edit Mode + Recent GDMs drawer, searchable Vehicle/Consignee, DL class/expiry check, EWB alerts, package breakdown & Print GDM"
+      releaseNotes: "• GDM Entry: Displays formatted 12-digit EWB number & valid-upto date in each Despatch List row"
     },
     android: {
       version: "1.0.8",

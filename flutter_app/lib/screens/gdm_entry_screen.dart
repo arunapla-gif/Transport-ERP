@@ -1786,8 +1786,8 @@ class _GdmEntryScreenState extends State<GdmEntryScreen> {
                 child: DataTable(
                   headingRowColor: const WidgetStatePropertyAll(_slate100),
                   headingRowHeight: 38,
-                  dataRowMinHeight: 42,
-                  dataRowMaxHeight: 52,
+                  dataRowMinHeight: 46,
+                  dataRowMaxHeight: 62,
                   columnSpacing: 18,
                   columns: const [
                     DataColumn(label: Text('GC NO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _slate700))),
@@ -1809,7 +1809,42 @@ class _GdmEntryScreenState extends State<GdmEntryScreen> {
                         DataCell(Text(gc.consignorName, style: const TextStyle(fontSize: 12.5))),
                         DataCell(Text(gc.consigneeName, style: const TextStyle(fontSize: 12.5))),
                         DataCell(Text('$qty', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5))),
-                        DataCell(_buildEwbBadge(row.ewbStatus)),
+                        DataCell(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildEwbBadge(row.ewbStatus),
+                                  if ((row.ewbValidUpto ?? '').trim().isNotEmpty) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      row.ewbValidUpto!.trim(),
+                                      style: const TextStyle(fontSize: 10, color: _slate500, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              if ((gc.ewbNumber ?? '').trim().isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  gc.ewbNumber!
+                                      .replaceAll(RegExp(r'\s+'), '')
+                                      .replaceAllMapped(RegExp(r'^(\d{4})(\d{4})(\d{4})$'), (m) => '${m[1]} ${m[2]} ${m[3]}'),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily: 'monospace',
+                                    color: _slate700,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                         DataCell(Text('₹${gc.freightTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5))),
                         DataCell(
                           IconButton(
