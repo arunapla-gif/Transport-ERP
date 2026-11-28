@@ -4,7 +4,7 @@ import 'package:flutter_app/screens/login_screen.dart';
 import 'package:flutter_app/services/api_service.dart';
 import 'package:flutter_app/services/auth_service.dart';
 
-enum BootState { pending, loading, success, error }
+enum BootState { pending, loading, success, warning, error }
 
 class SystemBootScreen extends StatefulWidget {
   final bool isAdmin;
@@ -19,9 +19,11 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
   BootState _serverState = BootState.pending;
   BootState _databaseState = BootState.pending;
   BootState _authState = BootState.pending;
+  BootState _whitebooksState = BootState.pending;
 
   String? _errorMessage;
   int? _healthLatencyMs;
+  String? _whitebooksStatusText;
   bool _isBootComplete = false;
 
   @override
@@ -38,6 +40,8 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
       _serverState = BootState.pending;
       _databaseState = BootState.pending;
       _authState = BootState.pending;
+      _whitebooksState = BootState.pending;
+      _whitebooksStatusText = null;
       _isBootComplete = false;
     });
 
@@ -66,20 +70,32 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
         _healthLatencyMs = sw.elapsedMilliseconds;
       });
 
-      // 3. Check Authentication Keys & Pre-warm static Master caches
-      setState(() => _authState = BootState.loading);
+      // 3. Check Authentication Keys, Pre-warm static Master caches & check cached WhiteBooks Gateway
+      setState(() {
+        _authState = BootState.loading;
+        _whitebooksState = BootState.loading;
+      });
       if (ApiService.authToken == null) {
         throw Exception('Invalid Session Key');
       }
+      Map<String, dynamic> wbRes = {'ok': false, 'message': 'Unavailable'};
       await Future.wait([
         ApiService.getCompanies().then((_) {}, onError: (_) {}),
         ApiService.getGodowns().then((_) {}, onError: (_) {}),
         ApiService.getUnits().then((_) {}, onError: (_) {}),
         ApiService.getHsnList().then((_) {}, onError: (_) {}),
+        ApiService.checkWhitebooksStatus().then((r) => wbRes = r, onError: (_) {}),
       ]);
       if (!mounted) return;
+      final bool wbOk = wbRes['ok'] == true;
+      final bool wbCached = wbRes['cached'] == true;
+      final int? wbPing = wbRes['pingMs'] is int ? wbRes['pingMs'] as int : null;
       setState(() {
         _authState = BootState.success;
+        _whitebooksState = wbOk ? BootState.success : BootState.warning;
+        _whitebooksStatusText = wbOk
+            ? '${wbRes['message'] ?? 'Online'}${wbPing != null ? ' • ${wbPing}ms' : ''}${wbCached ? ' (cached)' : ''}'
+            : 'Warning: ${wbRes['message'] ?? 'Check Tech Usage'} (non-blocking)';
         _isBootComplete = true;
       });
 
@@ -194,6 +210,13 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
                   state: _authState,
                   icon: Icons.vpn_key_rounded,
                   successText: 'Session Verified • Workspace Pre-loaded',
+                ),
+                const SizedBox(height: 12),
+                _buildCheckItem(
+                  label: 'E-Way Bill Gateway (WhiteBooks)',
+                  state: _whitebooksState,
+                  icon: Icons.cloud_done_rounded,
+                  successText: _whitebooksStatusText,
                 ),
 
                 // Error Box
@@ -324,6 +347,14 @@ class _SystemBootScreenState extends State<SystemBootScreen> {
         textColor = const Color(0xFF047857);
         leadingWidget = const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF047857), size: 20);
         subText = successText ?? 'Connected and Online';
+        break;
+      case BootState.warning:
+        bgColor = const Color(0xFFFFFBEB);
+        borderColor = const Color(0xFFFDE68A);
+        iconBgColor = const Color(0xFFFEF3C7);
+        textColor = const Color(0xFFB45309);
+        leadingWidget = const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 20);
+        subText = successText ?? 'Gateway Warning (non-blocking)';
         break;
       case BootState.error:
         bgColor = const Color(0xFFFFF1F2);

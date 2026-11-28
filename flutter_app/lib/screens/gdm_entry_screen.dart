@@ -1833,7 +1833,7 @@ class _GdmEntryScreenState extends State<GdmEntryScreen> {
                                 Text(
                                   gc.ewbNumber!
                                       .replaceAll(RegExp(r'\s+'), '')
-                                      .replaceAllMapped(RegExp(r'^(\d{4})(\d{4})(\d{4})$'), (m) => '${m[1]} ${m[2]} ${m[3]}'),
+                                      .replaceAllMapped(RegExp(r'^(\d{4})(\d{4})(\d{4})(\d{2,3})?$'), (m) => m[4] != null ? '${m[1]} ${m[2]} ${m[3]} ${m[4]}' : '${m[1]} ${m[2]} ${m[3]}'),
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,

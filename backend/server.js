@@ -1642,8 +1642,8 @@ app.post('/api/ewaybill/bulk-verify', paidApiLimiter, async (req, res) => {
       if (!item.ewbNo) continue;
       
       const cleanEwbNo = item.ewbNo.toString().replace(/\s+/g, '');
-      if (cleanEwbNo.length !== 12) {
-         results.push({ ewbNo: item.ewbNo, error: 'Invalid 12-digit EWB Number', status: 'UNKNOWN' });
+      if (!/^\d{12,15}$/.test(cleanEwbNo)) {
+         results.push({ ewbNo: item.ewbNo, error: 'Invalid EWB Number (expected 12-14 digits)', status: 'UNKNOWN' });
          continue;
       }
       
@@ -2576,9 +2576,9 @@ app.post('/api/scan-ewb', async (req, res) => {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const prompt = `Extract the 12-digit E-Way Bill number from this image. 
-    It is typically a 12 digit number without spaces, though it might be formatted with spaces or dashes. 
-    Return ONLY the 12 digits as a continuous string. If you cannot find a 12-digit number, return "ERROR".`;
+    const prompt = `Extract the E-Way Bill number (12 to 14 digits) from this image. 
+    It is typically a 12 or 14 digit number without spaces, though it might be formatted with spaces or dashes. 
+    Return ONLY the digits as a continuous string. If you cannot find a 12-14 digit E-Way Bill number, return "ERROR".`;
 
     const imagePart = {
       inlineData: {
@@ -2591,11 +2591,12 @@ app.post('/api/scan-ewb', async (req, res) => {
     const response = await result.response;
     const text = response.text().trim().replace(/[^0-9]/g, '');
 
-    if (text.length >= 12) {
-      // In case it captures extra numbers, just take the first 12 consecutive ones if possible
-      res.json({ ewbNo: text.substring(0, 12) });
+    if (text.length >= 12 && text.length <= 15) {
+      res.json({ ewbNo: text });
+    } else if (text.length > 15) {
+      res.json({ ewbNo: text.substring(0, 14) });
     } else {
-      res.status(400).json({ error: 'Could not find a clear 12-digit E-Way bill number.' });
+      res.status(400).json({ error: 'Could not find a clear 12-14 digit E-Way bill number.' });
     }
   } catch (error) {
     console.error('AI Scan Error:', error);

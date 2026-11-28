@@ -44,18 +44,18 @@ class _BarcodeScannerModalState extends State<BarcodeScannerModal> {
     super.dispose();
   }
 
-  /// Extracts a clean 12-digit E-Way Bill number if embedded in a NIC QR payload,
+  /// Extracts a clean 12–15 digit E-Way Bill number if embedded in a NIC QR payload,
   /// otherwise returns the trimmed barcode text.
   String _normalizeScanValue(String raw) {
     final trimmed = raw.trim();
-    // NIC E-Way Bill QR codes often look like "552028120315/33AAUFA.../01-11-2026..."
-    final ewbPrefixMatch = RegExp(r'^(\d{12})(?:[/|\s,-]|$)').firstMatch(trimmed);
+    // NIC E-Way Bill QR codes often look like "552028120315/33AAUFA.../01-11-2026..." (12 or 14 digits)
+    final ewbPrefixMatch = RegExp(r'^(\d{12,15})(?:[/|\s,-]|$)').firstMatch(trimmed);
     if (ewbPrefixMatch != null) {
       return ewbPrefixMatch.group(1)!;
     }
-    final anyTwelveDigits = RegExp(r'\b(\d{12})\b').firstMatch(trimmed);
-    if (anyTwelveDigits != null && trimmed.contains('/')) {
-      return anyTwelveDigits.group(1)!;
+    final anyEwbDigits = RegExp(r'\b(\d{12,15})\b').firstMatch(trimmed);
+    if (anyEwbDigits != null && trimmed.contains('/')) {
+      return anyEwbDigits.group(1)!;
     }
     return trimmed;
   }

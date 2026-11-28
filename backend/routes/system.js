@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.25",
-      buildNumber: 26,
+      version: "1.0.26",
+      buildNumber: 27,
       forceUpdate: false,
-      releaseNotes: "• Govt Compliance: Per-GSTIN CEWB attachment (AP vs BELL), real NIC verify results, HTTP 202 Auto-Heal support, narrow-screen fix & Print CEWB"
+      releaseNotes: "• System Boot: Added 6-hour cached non-blocking WhiteBooks EWB Gateway check\n• E-Way Bill: Future-proofed all local validators & QR scanners for 12–15 digit EWBs (Jan 2027 ready)"
     },
     android: {
       version: "1.0.8",
@@ -43,6 +43,67 @@ router.get('/health', async (req, res) => {
   } catch (error) {
     console.error("Health check failed:", error);
     res.status(503).json({ status: 'unhealthy', db: 'disconnected', error: error.message });
+  }
+});
+
+// Cached WhiteBooks E-Way Bill Gateway status (6-hour TTL, zero-cost single ping)
+let _whitebooksStatusCache = null;
+const WHITEBOOKS_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+router.get('/whitebooks-status', async (req, res) => {
+  const force = req.query.refresh === '1';
+  const now = Date.now();
+  if (!force && _whitebooksStatusCache && (now - _whitebooksStatusCache.timestamp) < WHITEBOOKS_CACHE_TTL_MS) {
+    return res.json({ ..._whitebooksStatusCache.payload, cached: true });
+  }
+
+  const email = process.env.WHITEBOOKS_EMAIL?.trim();
+  const clientId = process.env.WHITEBOOKS_CLIENT_ID?.trim();
+  const clientSecret = process.env.WHITEBOOKS_CLIENT_SECRET?.trim();
+  const gstin = process.env.WHITEBOOKS_GSTIN?.trim();
+
+  if (!email || !clientId || !clientSecret || !gstin) {
+    const payload = { ok: false, pingMs: 0, message: 'WhiteBooks credentials not configured', checkedAt: new Date().toISOString() };
+    _whitebooksStatusCache = { timestamp: now, payload };
+    return res.json({ ...payload, cached: false });
+  }
+
+  const start = Date.now();
+  try {
+    const url = `https://api.whitebooks.in/ewaybillapi/v1.03/ewayapi/getgstindetails?email=${encodeURIComponent(email)}&GSTIN=${gstin}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'client_id': clientId,
+        'client_secret': clientSecret,
+        'gstin': gstin,
+        'ip_address': '127.0.0.1'
+      },
+      signal: AbortSignal.timeout(8000)
+    });
+    const pingMs = Date.now() - start;
+    const rawText = await response.text();
+    let data = null;
+    try { data = JSON.parse(rawText); } catch (_) {}
+
+    const errMsg = data?.error?.message || data?.error?.errorDesc || '';
+    const isAuthErr = errMsg.toLowerCase().includes('auth') || errMsg.toLowerCase().includes('token');
+
+    let payload;
+    if (!data) {
+      payload = { ok: false, pingMs, message: `Gateway HTTP ${response.status}`, checkedAt: new Date().toISOString() };
+    } else if (data.status_cd === '0' && isAuthErr) {
+      payload = { ok: false, pingMs, message: 'Auth Failed — check WhiteBooks credentials', checkedAt: new Date().toISOString() };
+    } else {
+      payload = { ok: true, pingMs, message: 'WhiteBooks v1.03 Online', checkedAt: new Date().toISOString() };
+    }
+    _whitebooksStatusCache = { timestamp: now, payload };
+    return res.json({ ...payload, cached: false });
+  } catch (e) {
+    const payload = { ok: false, pingMs: Date.now() - start, message: e.message || 'Unreachable', checkedAt: new Date().toISOString() };
+    _whitebooksStatusCache = { timestamp: now, payload };
+    return res.json({ ...payload, cached: false });
   }
 });
 

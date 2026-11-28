@@ -207,7 +207,7 @@ class _LegacyRapidEntryScreenState extends State<LegacyRapidEntryScreen> {
 
   Future<void> _handleEwbLookup(String ewbInput) async {
     final ewbNo = ewbInput.replaceAll(RegExp(r'[^0-9]'), '');
-    if (ewbNo.length != 12 || _isFetchingEwb) return;
+    if (ewbNo.length < 12 || ewbNo.length > 15 || _isFetchingEwb) return;
 
     setState(() {
       _isFetchingEwb = true;
@@ -1137,11 +1137,12 @@ class _LegacyRapidEntryScreenState extends State<LegacyRapidEntryScreen> {
                           ),
                           _buildDenseInput(
                             controller: _ewbNumberController,
-                            hint: 'Type 12-digit E-Way Bill for instant auto-fill...',
+                            hint: 'Type E-Way Bill (12–14 digits) for auto-fill...',
                             prefixIcon: Icons.qr_code_2_rounded,
                             onChanged: (val) {
-                              if (val.length == 12) {
-                                _handleEwbLookup(val);
+                              final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
+                              if (digits.length == 12 || digits.length == 14) {
+                                _handleEwbLookup(digits);
                               }
                             },
                           ),

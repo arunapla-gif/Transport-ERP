@@ -158,6 +158,19 @@ class ApiService {
   }
 
   // --- CONSIGNORS ---
+  static Future<Map<String, dynamic>> checkWhitebooksStatus() async {
+    try {
+      final uri = Uri.parse('$baseUrl/whitebooks-status');
+      final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 9));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return {'ok': false, 'message': 'HTTP ${response.statusCode}'};
+    } catch (e) {
+      return {'ok': false, 'message': 'Gateway timeout'};
+    }
+  }
+
   static Future<List<Consignor>> getConsignors({String query = '', int limit = 5000}) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/consignors?branch=$activeBranch&page=1&limit=$limit&q=${Uri.encodeComponent(query)}');
