@@ -704,21 +704,22 @@ class ApiService {
     }
   }
 
-  static Future<void> bulkVerifyEwaybills(List<Map<String, dynamic>> ewbs) async {
+  static Future<Map<String, dynamic>> bulkVerifyEwaybills(List<Map<String, dynamic>> ewbs) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/ewaybill/bulk-verify');
     final response = await _client.post(uri, headers: _headers, body: jsonEncode({'ewbs': ewbs}));
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode != 200) {
-      final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to bulk verify E-Way bills');
     }
+    return decoded;
   }
 
   static Future<void> bulkHealEwaybills(List<dynamic> gcs, String vehicleNo) async {
     await _ensureAuth();
     final uri = Uri.parse('$baseUrl/ewaybill/bulk-heal');
     final response = await _client.post(uri, headers: _headers, body: jsonEncode({'gcs': gcs, 'vehicleNo': vehicleNo}));
-    if (response.statusCode != 200) {
+    if (response.statusCode != 200 && response.statusCode != 202) {
       final decoded = jsonDecode(response.body);
       throw Exception(decoded['error'] ?? 'Failed to auto-heal E-Way bills');
     }

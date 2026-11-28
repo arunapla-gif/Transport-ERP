@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import '../services/api_service.dart';
+import '../services/pdf_service.dart';
 
 class GovtComplianceScreen extends StatefulWidget {
   const GovtComplianceScreen({super.key});
@@ -110,17 +112,28 @@ class _GovtComplianceScreenState extends State<GovtComplianceScreen> {
     return total;
   }
 
+  String? _extractEwbNo(dynamic gc) {
+    final ewb = gc['ewbNumber']?.toString().trim() ?? '';
+    if (ewb.isNotEmpty && ewb.toUpperCase() != 'NO_EWB') return ewb;
+    final pm = gc['privateMark']?.toString().trim() ?? '';
+    if (pm.isNotEmpty && pm.toUpperCase() != 'NO_EWB') return pm;
+    return null;
+  }
+
   Future<void> _handleVerify() async {
     final gcs = _allSelectedGcs;
     if (gcs.isEmpty) return;
 
-    final ewbsToVerify = gcs
-        .where((gc) => gc['ewbNumber'] != null || gc['privateMark'] != null)
-        .map((gc) => {
-              'ewbNo': gc['ewbNumber'] ?? gc['privateMark'],
-              'company': gc['companyString']
-            })
-        .toList();
+    final ewbsToVerify = <Map<String, dynamic>>[];
+    for (final gc in gcs) {
+      final ewbNo = _extractEwbNo(gc);
+      if (ewbNo != null) {
+        ewbsToVerify.add({
+          'ewbNo': ewbNo,
+          'company': gc['companyString'],
+        });
+      }
+    }
 
     if (ewbsToVerify.isEmpty) {
       setState(() => _errorMessage = 'No E-Way Bill numbers found to verify in the selected GDMs.');
@@ -134,16 +147,38 @@ class _GovtComplianceScreenState extends State<GovtComplianceScreen> {
     });
 
     try {
-      await ApiService.bulkVerifyEwaybills(ewbsToVerify);
+      final res = await ApiService.bulkVerifyEwaybills(ewbsToVerify);
+      final results = (res['results'] as List?) ?? [];
+      int okCount = 0;
+      int issueCount = 0;
+      final List<String> issueDetails = [];
+      for (final r in results) {
+        final status = (r['status'] ?? '').toString().toUpperCase();
+        final rej = (r['rejectStatus'] ?? '').toString().toUpperCase();
+        final err = r['error']?.toString();
+        if (err != null && err.isNotEmpty) {
+          issueCount++;
+          issueDetails.add('${r['ewbNo']}: $err');
+        } else if (status == 'CNL' || status == 'REJ' || rej == 'Y' || status == 'ERROR') {
+          issueCount++;
+          issueDetails.add('${r['ewbNo']}: $status');
+        } else {
+          okCount++;
+        }
+      }
       if (mounted) {
         setState(() {
-          _successMessage = 'Successfully verified ${ewbsToVerify.length} E-Way Bills against the NIC Portal!';
+          if (issueCount > 0) {
+            _errorMessage = 'NIC Verify: $okCount OK, $issueCount issue(s) (${issueDetails.take(3).join(', ')})';
+          } else {
+            _successMessage = 'Verified ${results.isNotEmpty ? results.length : ewbsToVerify.length} E-Way Bills on NIC Portal (all active).';
+          }
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Verification failed: $e';
+          _errorMessage = 'Verification failed: ${e.toString().replaceAll('Exception:', '').trim()}';
         });
       }
     } finally {
@@ -185,15 +220,23 @@ class _GovtComplianceScreenState extends State<GovtComplianceScreen> {
     final gcs = _allSelectedGcs;
     if (gcs.isEmpty || _activeVehicleNo == null) return;
 
-    final validEwbsAP = gcs
-        .where((gc) => gc['companyString'] == 'AP' && (gc['privateMark'] != null || gc['ewbNumber'] != null))
-        .map((gc) => (gc['privateMark'] ?? gc['ewbNumber']).toString())
-        .toList();
+    final validEwbsAP = <String>[];
+    final validEwbsBELL = <String>[];
+    final apGdmIds = <int>{};
+    final bellGdmIds = <int>{};
 
-    final validEwbsBELL = gcs
-        .where((gc) => gc['companyString'] == 'BELL' && (gc['privateMark'] != null || gc['ewbNumber'] != null))
-        .map((gc) => (gc['privateMark'] ?? gc['ewbNumber']).toString())
-        .toList();
+    for (final gc in gcs) {
+      final ewbNo = _extractEwbNo(gc);
+      if (ewbNo == null) continue;
+      final gdmId = gc['gdmId'] is int ? gc['gdmId'] as int : int.tryParse(gc['gdmId']?.toString() ?? '');
+      if (gc['companyString'] == 'BELL') {
+        validEwbsBELL.add(ewbNo);
+        if (gdmId != null) bellGdmIds.add(gdmId);
+      } else {
+        validEwbsAP.add(ewbNo);
+        if (gdmId != null) apGdmIds.add(gdmId);
+      }
+    }
 
     if (validEwbsAP.isEmpty && validEwbsBELL.isEmpty) {
       setState(() => _errorMessage = 'No valid E-Way Bills found in staging. Please enter or auto-heal EWBs first.');
@@ -210,38 +253,61 @@ class _GovtComplianceScreenState extends State<GovtComplianceScreen> {
       final vNo = _activeVehicleNo!.replaceAll(RegExp(r'[^A-Z0-9]', caseSensitive: false), '');
       final now = DateTime.now();
       final dateStr = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-      
+
       final basePayload = {
         'vehicleNo': vNo,
-        'fromPlace': 'Sivakasi',
+        'fromPlace': ApiService.activeBranch == 'AP_BNG' ? 'Bengaluru' : 'Sivakasi',
         'transDocNo': 'TRP-${now.millisecondsSinceEpoch ~/ 1000}',
         'transDocDate': dateStr,
       };
 
-      final List<String> generatedCewbs = [];
+      final List<String> summaryParts = [];
+      final List<Map<String, dynamic>> printableGdms = [];
 
       if (validEwbsAP.isNotEmpty) {
         final resAP = await ApiService.generateCewb('AP', {...basePayload, 'ewbNos': validEwbsAP});
-        if (resAP['cEwbNo'] != null) {
-          generatedCewbs.add('AP: ${resAP['cEwbNo']}');
+        final apCewbNo = resAP['cEwbNo']?.toString();
+        if (apCewbNo != null && apCewbNo.isNotEmpty) {
+          final targetIds = apGdmIds.isNotEmpty ? apGdmIds.toList() : _selectedGdmIds.toList();
+          await ApiService.attachMasterCewb(targetIds, apCewbNo);
+          summaryParts.add('AP: $apCewbNo');
+          for (final gdm in _pendingGdms) {
+            if (targetIds.contains(gdm['id'])) {
+              final copy = Map<String, dynamic>.from(gdm as Map);
+              copy['cewbNumber'] = apCewbNo;
+              printableGdms.add(copy);
+            }
+          }
         }
       }
 
       if (validEwbsBELL.isNotEmpty) {
         final resBELL = await ApiService.generateCewb('BELL', {...basePayload, 'ewbNos': validEwbsBELL});
-        if (resBELL['cEwbNo'] != null) {
-          generatedCewbs.add('BELL: ${resBELL['cEwbNo']}');
+        final bellCewbNo = resBELL['cEwbNo']?.toString();
+        if (bellCewbNo != null && bellCewbNo.isNotEmpty) {
+          final targetIds = bellGdmIds.isNotEmpty ? bellGdmIds.toList() : _selectedGdmIds.toList();
+          await ApiService.attachMasterCewb(targetIds, bellCewbNo);
+          summaryParts.add('BELL: $bellCewbNo');
+          for (final gdm in _pendingGdms) {
+            if (targetIds.contains(gdm['id'])) {
+              final copy = Map<String, dynamic>.from(gdm as Map);
+              copy['cewbNumber'] = bellCewbNo;
+              printableGdms.add(copy);
+            }
+          }
         }
       }
 
-      if (generatedCewbs.isNotEmpty) {
-        final cewbString = generatedCewbs.join(' | ');
-        await ApiService.attachMasterCewb(_selectedGdmIds.toList(), cewbString);
+      if (summaryParts.isNotEmpty) {
+        final summary = summaryParts.join('  •  ');
         if (mounted) {
           setState(() {
-            _successMessage = 'Consolidated Master CEWB Created & Attached: $cewbString';
+            _successMessage = 'CEWB Created & Attached separately per GSTIN: $summary';
           });
           await _fetchPendingGdms();
+          if (mounted && printableGdms.isNotEmpty) {
+            _showCewbPrintDialog(summary, printableGdms);
+          }
         }
       } else {
         if (mounted) {
@@ -251,12 +317,41 @@ class _GovtComplianceScreenState extends State<GovtComplianceScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'CEWB Generation failed: $e';
+          _errorMessage = 'CEWB Generation failed: ${e.toString().replaceAll('Exception:', '').trim()}';
         });
       }
     } finally {
       if (mounted) setState(() => _isGeneratingCewb = false);
     }
+  }
+
+  void _showCewbPrintDialog(String summary, List<Map<String, dynamic>> printableGdms) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Row(
+          children: [
+            Icon(Icons.verified_rounded, color: Color(0xFF059669)),
+            SizedBox(width: 8),
+            Text('Master CEWB Ready'),
+          ],
+        ),
+        content: Text('Generated & attached cleanly per GSTIN:\n\n$summary'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), foregroundColor: Colors.white),
+            icon: const Icon(Icons.print_rounded, size: 16),
+            label: const Text('Print CEWB PDF'),
+            onPressed: () async {
+              final bytes = await PdfService.generateGdmsPdf(printableGdms, format: 'cewb');
+              await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'Master_CEWB.pdf');
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   void _showConsignmentDetailsModal(Map<String, dynamic> gc) {
@@ -527,19 +622,28 @@ class _GovtComplianceScreenState extends State<GovtComplianceScreen> {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final isNarrow = constraints.maxWidth < 900;
-                      return Flex(
-                        direction: isNarrow ? Axis.vertical : Axis.horizontal,
+                      if (isNarrow) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildPendingGdmsPanel(filteredGdms),
+                            const SizedBox(height: 16),
+                            _buildCewbStagingPanel(gcs),
+                          ],
+                        );
+                      }
+                      return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Left Panel: Pending GDMs Queue
                           Expanded(
-                            flex: isNarrow ? 0 : 5,
+                            flex: 5,
                             child: _buildPendingGdmsPanel(filteredGdms),
                           ),
-                          SizedBox(width: isNarrow ? 0 : 20, height: isNarrow ? 20 : 0),
+                          const SizedBox(width: 20),
                           // Right Panel: CEWB Staging & Consolidation Matrix
                           Expanded(
-                            flex: isNarrow ? 0 : 7,
+                            flex: 7,
                             child: _buildCewbStagingPanel(gcs),
                           ),
                         ],
@@ -723,7 +827,7 @@ class _GovtComplianceScreenState extends State<GovtComplianceScreen> {
     int validEwbCount = 0;
     int missingEwbCount = 0;
     for (var gc in stagedGcs) {
-      if (gc['privateMark'] != null || gc['ewbNumber'] != null) {
+      if (_extractEwbNo(gc) != null) {
         validEwbCount++;
       } else {
         missingEwbCount++;
@@ -1258,69 +1362,59 @@ class _GovtComplianceScreenState extends State<GovtComplianceScreen> {
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
               border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
             ),
-            child: Row(
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                // Verify Button
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: (stagedGcs.isEmpty || _isVerifying || _isHealing || _isGeneratingCewb)
-                        ? null
-                        : _handleVerify,
-                    icon: _isVerifying
-                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D4ED8)))
-                        : const Icon(Icons.shield_outlined, size: 16),
-                    label: const Text('Verify NIC'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEFF6FF),
-                      foregroundColor: const Color(0xFF1D4ED8),
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: Color(0xFFBFDBFE)),
-                      ),
+                ElevatedButton.icon(
+                  onPressed: (stagedGcs.isEmpty || _isVerifying || _isHealing || _isGeneratingCewb)
+                      ? null
+                      : _handleVerify,
+                  icon: _isVerifying
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D4ED8)))
+                      : const Icon(Icons.shield_outlined, size: 16),
+                  label: const Text('Verify NIC'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    foregroundColor: const Color(0xFF1D4ED8),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: Color(0xFFBFDBFE)),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                // Auto-Heal Button
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: (stagedGcs.isEmpty || _isVerifying || _isHealing || _isGeneratingCewb)
-                        ? null
-                        : _handleHeal,
-                    icon: _isHealing
-                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.auto_fix_high_rounded, size: 16),
-                    label: const Text('Auto-Heal Part-B'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF59E0B),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+                ElevatedButton.icon(
+                  onPressed: (stagedGcs.isEmpty || _isVerifying || _isHealing || _isGeneratingCewb)
+                      ? null
+                      : _handleHeal,
+                  icon: _isHealing
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.auto_fix_high_rounded, size: 16),
+                  label: const Text('Auto-Heal Part-B'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF59E0B),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
-                const SizedBox(width: 10),
-                // Master CEWB Button
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: (stagedGcs.isEmpty || _isVerifying || _isHealing || _isGeneratingCewb)
-                        ? null
-                        : _handleGenerateCEWB,
-                    icon: _isGeneratingCewb
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.verified_rounded, size: 18),
-                    label: const Text('Generate Master CEWB'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+                ElevatedButton.icon(
+                  onPressed: (stagedGcs.isEmpty || _isVerifying || _isHealing || _isGeneratingCewb)
+                      ? null
+                      : _handleGenerateCEWB,
+                  icon: _isGeneratingCewb
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.verified_rounded, size: 18),
+                  label: const Text('Generate Master CEWB'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ],

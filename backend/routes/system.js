@@ -10,10 +10,10 @@ router.get(['/app-version', '/system/app-version'], (req, res) => {
   res.json({
     status: 'ok',
     web: {
-      version: "1.0.24",
-      buildNumber: 25,
+      version: "1.0.25",
+      buildNumber: 26,
       forceUpdate: false,
-      releaseNotes: "• GDM Entry: Displays formatted 12-digit EWB number & valid-upto date in each Despatch List row"
+      releaseNotes: "• Govt Compliance: Per-GSTIN CEWB attachment (AP vs BELL), real NIC verify results, HTTP 202 Auto-Heal support, narrow-screen fix & Print CEWB"
     },
     android: {
       version: "1.0.8",
